@@ -1,3 +1,3 @@
-import base from '@salescrm/eslint-config/base';
+import react from '@salescrm/eslint-config/react';
 
-export default base;
+export default react;

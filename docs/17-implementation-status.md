@@ -6,15 +6,15 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Summary
 
-| Phase                  | Status                                          |
-| ---------------------- | ----------------------------------------------- |
-| 0 Security & docs      | ✅ Done                                         |
-| 1 Foundation           | Plan ready: [18](18-plan-phase-1-foundation.md) |
-| 2 Clients & projects   | Not started                                     |
-| 3 Milestones & billing | Not started                                     |
-| 4 Dashboard            | Not started                                     |
-| 5 Theme & animation    | Waiting for references (Q-09)                   |
-| 6 Launch               | Not started                                     |
+| Phase                  | Status                         |
+| ---------------------- | ------------------------------ |
+| 0 Security & docs      | ✅ Done                        |
+| 1 Foundation           | ✅ Done (pending final review) |
+| 2 Clients & projects   | Not started                    |
+| 3 Milestones & billing | Not started                    |
+| 4 Dashboard            | Not started                    |
+| 5 Theme & animation    | Waiting for references (Q-09)  |
+| 6 Launch               | Not started                    |
 
 ## Tasks
 
@@ -30,6 +30,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P1-6  | Done   | feat/phase-1-foundation | Permission matrix (shared web/API), default-deny guard, ownership helpers, audit log + GET /audit, settings |
 | P1-5b | Done   | feat/phase-1-foundation | Users: invite links, accept, role/active changes (sessions ended), last-admin guard, reset links            |
 | P1-8  | Done   | feat/phase-1-foundation | `pnpm db:seed`: 4 users, 15 clients, 40 projects, overdue/partial/reversal cases, deterministic             |
+| P1-7  | Done   | feat/phase-1-foundation | Web shell: login / invite / reset pages, role-based sidebar, route guards, theme tokens, motion             |
 
 ## Blockers
 

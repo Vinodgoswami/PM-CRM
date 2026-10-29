@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, defaultClientConditions } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -19,4 +20,5 @@ export default defineConfig(({ mode }) => ({
   // Same-origin API calls (D-011): session cookies stay first-party and no CORS is needed.
   server: { port: 5173, proxy: { '/api': { target: 'http://localhost:4000', changeOrigin: false } } },
   preview: { port: 5173, proxy: { '/api': { target: 'http://localhost:4000', changeOrigin: false } } },
+  test: { environment: 'happy-dom', setupFiles: ['./src/test/setup.ts'], css: false },
 }));

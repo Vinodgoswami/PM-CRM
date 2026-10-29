@@ -103,6 +103,13 @@ flowchart LR
 
 Production deploys are manual after CI passes (auto-deploy off).
 
+## Same-origin API (D-011)
+
+The web app always calls the relative path `/api/v1`. In development Vite proxies `/api` to `http://localhost:4000`;
+in production the web host rewrites `/api/*` to the API (Netlify: `/api/* https://<api-host>/api/:splat 200`). Session
+cookies are therefore first-party, `SameSite=Lax` works, and the API needs no CORS. The API trusts one proxy hop for
+client IPs (`trust proxy = 1`).
+
 ## Time
 
 - All timestamps stored in UTC. Dates without time (due date, payment date) stored as `DATE`.
