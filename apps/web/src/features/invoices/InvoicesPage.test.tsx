@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
@@ -73,4 +73,52 @@ test('the CEO sees invoices without Mark as paid', async () => {
   renderApp('/invoices', sessionFor('CEO'));
   await screen.findByRole('region', { name: /Overdue/ });
   expect(screen.queryByRole('button', { name: /as paid/ })).toBeNull();
+});
+
+test('client and salesperson filters reach the API; the salesperson list does not shrink', async () => {
+  const clients = {
+    body: {
+      items: [
+        {
+          id: 'c1',
+          name: 'Acme',
+          company: null,
+          primaryEmail: null,
+          projects: 1,
+          archived: false,
+          currency: 'INR',
+          bookedMinor: 0,
+          collectedMinor: 0,
+          outstandingMinor: 0,
+        },
+      ],
+      page: 1,
+      pageSize: 100,
+      total: 1,
+    },
+  };
+  const api = stubApi({
+    'GET /invoices': invoices,
+    'GET /settings': settings,
+    'GET /clients': clients,
+    'GET /owners': {
+      body: {
+        items: [
+          { id: 'u1', name: 'Test User' },
+          { id: 'u2', name: 'Rohan Sales' },
+        ],
+      },
+    },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/invoices', sessionFor('ADMIN'));
+  const user = userEvent.setup();
+  await screen.findByRole('region', { name: /Overdue/ });
+  await user.selectOptions(screen.getByLabelText('Client'), 'c1');
+  await user.selectOptions(await screen.findByLabelText('Salesperson'), 'u2');
+  await waitFor(() => {
+    const q = api.calls.filter((c) => c.path === '/invoices').at(-1)!.url.searchParams;
+    expect([q.get('clientId'), q.get('ownerId')]).toEqual(['c1', 'u2']);
+  });
+  expect(within(screen.getByLabelText('Salesperson')).getAllByRole('option')).toHaveLength(3);
 });

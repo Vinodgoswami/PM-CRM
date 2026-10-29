@@ -10,6 +10,7 @@ import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
+import { useOwners } from '../filters/api';
 import { HatchedBars, monthLabel, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
 import { useCountUp } from './useCountUp';
@@ -99,6 +100,7 @@ export function DashboardPage() {
   const { data, isPending, isError, refetch } = useDashboard(period, ownerId);
   const firstName = session?.user.name.split(' ')[0] ?? '';
   const canCreate = !!session && can(session.user, 'projects.write');
+  const { enabled: showOwners, owners } = useOwners();
 
   return (
     <section className="space-y-6">
@@ -121,7 +123,7 @@ export function DashboardPage() {
               </button>
             ))}
           </div>
-          {data?.team && (
+          {showOwners && (
             <select
               aria-label="Owner"
               className="h-10 rounded-full border border-border bg-surface px-4 text-sm"
@@ -129,9 +131,9 @@ export function DashboardPage() {
               onChange={(e) => setOwnerId(e.target.value)}
             >
               <option value="">Whole team</option>
-              {data.team.map((t) => (
-                <option key={t.user.id} value={t.user.id}>
-                  {t.user.name}
+              {owners.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
                 </option>
               ))}
             </select>

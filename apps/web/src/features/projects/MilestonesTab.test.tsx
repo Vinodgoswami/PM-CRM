@@ -18,6 +18,7 @@ const payment = {
   note: null,
   createdBy: { id: 'u1', name: 'Test User' },
   createdAt: '2026-10-05T10:00:00.000Z',
+  canEdit: true,
   project: { id: 'p1', code: 'PRJ-0001', name: 'Website Redesign', currency: 'INR' },
   client: { id: 'c1', name: 'Acme' },
 };
