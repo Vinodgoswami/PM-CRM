@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
+import { CurrencyNote } from '../dashboard/CurrencyNote';
 import { usePayments } from '../payments/api';
 import { useSettings } from '../settings/api';
 
@@ -61,6 +62,7 @@ export function BillingPage() {
         </p>
       </div>
 
+      {data && <CurrencyNote count={data.otherCurrencyPayments} noun="payment" currency={currency} />}
       {isPending ? (
         <Skeleton className="h-48 w-full" />
       ) : isError ? (

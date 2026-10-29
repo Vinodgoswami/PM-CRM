@@ -43,6 +43,7 @@ test('payments list with total; reversals marked; filters reach the API', async 
         pageSize: 50,
         total: 2,
         totalMinor: 0,
+        otherCurrencyPayments: 0,
       },
     },
   });

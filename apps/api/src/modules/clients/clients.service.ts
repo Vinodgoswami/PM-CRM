@@ -33,11 +33,12 @@ type ClientRow = Prisma.ClientGetPayload<{ include: typeof LIST_INCLUDE }>;
 type MoneyProject = ClientRow['projects'][number];
 
 /** Booked = contract value of won work; collected and outstanding over all the client's projects (docs/05). */
-function clientTotals(projects: MoneyProject[], today: IsoDate) {
+function clientTotals(projects: MoneyProject[], today: IsoDate, currency: string) {
   let booked = 0n;
   let collected = 0n;
   let outstanding = 0n;
-  for (const p of projects) {
+  // M-4: only projects in the client's currency are summed (the page shows the totals in that currency).
+  for (const p of projects.filter((x) => x.currency === currency)) {
     const t = totalsFor(p, today);
     if (p.wonAt) booked += t.contractValueMinor;
     collected += t.collectedMinor;
@@ -48,7 +49,7 @@ function clientTotals(projects: MoneyProject[], today: IsoDate) {
 
 function toListItem(c: ClientRow, today: IsoDate): ClientListItem {
   return {
-    ...clientTotals(c.projects, today),
+    ...clientTotals(c.projects, today, c.currency),
     id: c.id,
     name: c.name,
     company: c.company,
@@ -167,7 +168,7 @@ export class ClientsService {
     if (!client) throw notFound();
     const today = await this.settings.today();
     return {
-      ...clientTotals(client.projects, today),
+      ...clientTotals(client.projects, today, client.currency),
       id: client.id,
       name: client.name,
       company: client.company,

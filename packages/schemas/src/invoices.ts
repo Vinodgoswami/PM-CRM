@@ -26,6 +26,8 @@ export type InvoiceItem = z.infer<typeof invoiceItemSchema>;
 
 export const invoicesResponseSchema = z.object({
   currency: z.string(),
+  /** Items in another currency are listed but left out of the group totals (M-4). */
+  otherCurrencyItems: z.number(),
   groups: z.array(z.object({ key: z.enum(INVOICE_GROUPS), totalMinor: minorSchema, count: z.number(), items: z.array(invoiceItemSchema) })),
 });
 export type InvoicesResponse = z.infer<typeof invoicesResponseSchema>;

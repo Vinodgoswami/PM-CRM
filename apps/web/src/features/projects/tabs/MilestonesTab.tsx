@@ -15,7 +15,9 @@ type Milestone = ProjectDetail['milestones'][number];
 
 export function MilestonesTab({ project }: { project: ProjectDetail }) {
   const { data: session } = useSession();
-  const canPay = project.canEdit && !!session && can(session.user, 'payments.create', { ownerId: project.owner.id });
+  // P-8: payments only on won work; the server enforces the same rule.
+  const booked = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'].includes(project.status);
+  const canPay = booked && project.canEdit && !!session && can(session.user, 'payments.create', { ownerId: project.owner.id });
   const money = (m: number) => formatApiMoney(m, project.currency);
   const [paying, setPaying] = useState<MarkPaidTarget | null>(null);
   const [editing, setEditing] = useState<string | null>(null);

@@ -23,6 +23,8 @@ export class MilestonesService {
 
   /** The milestone plus its project, with write access checked against the project owner. */
   private async loadForWrite(tx: Prisma.TransactionClient, user: SessionUser, milestoneId: string) {
+    // Same lock as Mark-as-paid: MS-1 / MS-2 decisions must see payments that commit concurrently.
+    await tx.$queryRaw`SELECT id FROM "Milestone" WHERE id = ${milestoneId} FOR UPDATE`;
     const milestone = await tx.milestone.findUnique({
       where: { id: milestoneId },
       include: { payments: { select: { amountMinor: true } } },

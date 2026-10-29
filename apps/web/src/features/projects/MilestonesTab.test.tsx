@@ -26,7 +26,7 @@ const routes = {
   'GET /projects/p1/documents': { body: { items: [] } },
   'GET /projects/p1/activity': { body: { items: [] } },
   'GET /settings': settings,
-  'GET /payments': { body: { items: [payment], page: 1, pageSize: 100, total: 1, totalMinor: 5000000 } },
+  'GET /payments': { body: { items: [payment], page: 1, pageSize: 100, total: 1, totalMinor: 5000000, otherCurrencyPayments: 0 } },
 };
 
 async function openMarkPaid() {
@@ -131,4 +131,14 @@ test('without edit rights there is no Mark as paid and no Add milestone', async 
   await screen.findByText('Design');
   expect(screen.queryByRole('button', { name: /mark .* as paid/i })).toBeNull();
   expect(screen.queryByRole('button', { name: /add milestone/i })).toBeNull();
+});
+
+test('P-8 no Mark as paid on work that is not won yet', async () => {
+  vi.stubGlobal('fetch', stubApi({ ...routes, 'GET /projects/p1': { body: detail({ status: 'PROPOSAL' }) } }).fn);
+  renderApp('/projects/p1', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await screen.findByRole('heading', { name: 'Website Redesign' });
+  await user.click(screen.getByRole('tab', { name: 'Milestones' }));
+  await screen.findByText('Design');
+  expect(screen.queryByRole('button', { name: /mark .* as paid/i })).toBeNull();
 });

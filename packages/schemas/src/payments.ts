@@ -56,6 +56,8 @@ export const billingPageSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   total: z.number(),
+  /** Base-currency payments only (M-4). */
   totalMinor: minorSchema,
+  otherCurrencyPayments: z.number(),
 });
 export type BillingPage = z.infer<typeof billingPageSchema>;

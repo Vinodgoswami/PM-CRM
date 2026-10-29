@@ -31,6 +31,9 @@ const addDays = (d: IsoDate, n: number): IsoDate => {
 const daysBetween = (from: IsoDate, to: IsoDate) =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 const booked = (p: MetricProject) => p.wonAt !== null;
+/** Work whose milestones are real receivables (PS-3: pipeline is not booked; LOST is not owed). */
+export const BOOKED_STATUSES: MetricProject['status'][] = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'];
+const receivable = (p: MetricProject) => BOOKED_STATUSES.includes(p.status);
 
 export interface Summary {
   bookedMinor: bigint;
@@ -44,6 +47,8 @@ export interface Summary {
   dueNext30Minor: bigint;
   pipelineMinor: bigint;
   wonCount: number;
+  /** K12 numerator: expected amount of every project won in the period (upsell projects included). */
+  wonExpectedMinor: bigint;
   lostCount: number;
 }
 
@@ -59,6 +64,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
   let dueNext30Minor = 0n;
   let pipelineMinor = 0n;
   let wonCount = 0;
+  let wonExpectedMinor = 0n;
   const in30 = addDays(today, 30);
 
   for (const p of projects) {
@@ -66,6 +72,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
     // K1 / K8: a project is booked on wonAt; upsell entries on their own date (only on booked projects).
     if (booked(p) && inRange(p.wonAt, range)) {
       bookedMinor += p.expectedAmountMinor;
+      wonExpectedMinor += p.expectedAmountMinor;
       wonCount += 1;
       if (p.isUpsell) upsellMinor += p.expectedAmountMinor;
     }
@@ -77,7 +84,9 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
     for (const m of p.milestones) {
       const paid = paidOf(m);
       const balance = m.amountMinor - paid;
+      // Money actually received always counts; expected / owed only for booked work.
       collectedMinor += sum(m.payments.filter((x) => inRange(x.paymentDate, range)).map((x) => x.amountMinor));
+      if (!receivable(p)) continue;
       if (inRange(m.dueDate, range)) {
         expectedMinor += m.amountMinor;
         paidOnExpected += paid;
@@ -104,6 +113,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
     dueNext30Minor,
     pipelineMinor,
     wonCount,
+    wonExpectedMinor,
     lostCount,
   };
 }
@@ -121,7 +131,7 @@ export function monthlySeries(projects: MetricProject[], months: string[], today
 /** C5: unpaid balance by days past due. */
 export function agingBuckets(projects: MetricProject[], today: IsoDate) {
   const out = { d1_30: 0n, d31_60: 0n, d61_90: 0n, d90plus: 0n };
-  for (const p of projects) {
+  for (const p of projects.filter(receivable)) {
     for (const m of p.milestones) {
       const balance = m.amountMinor - paidOf(m);
       if (balance <= 0n || !m.dueDate || m.dueDate >= today) continue;
@@ -140,7 +150,7 @@ export function cashInForecast(projects: MetricProject[], today: IsoDate, months
   const [y, m] = today.split('-').map(Number) as [number, number];
   const keys = Array.from({ length: months }, (_, i) => new Date(Date.UTC(y, m - 1 + i, 1)).toISOString().slice(0, 7));
   const out = new Map(keys.map((k) => [k, 0n]));
-  for (const p of projects) {
+  for (const p of projects.filter(receivable)) {
     for (const mm of p.milestones) {
       const balance = mm.amountMinor - paidOf(mm);
       if (balance <= 0n || !mm.dueDate || mm.dueDate < today) continue;

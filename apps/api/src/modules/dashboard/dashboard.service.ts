@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { scopeFor } from '@salescrm/auth/permissions';
-import { agingBuckets, cashInForecast, type MetricProject, monthlySeries, periodRange, previousRange, summarise } from '@salescrm/core';
+import { agingBuckets, cashInForecast, comparableRange, type MetricProject, monthlySeries, periodRange, summarise } from '@salescrm/core';
 import { type Dashboard, type DashboardQuery } from '@salescrm/schemas';
 import { minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
@@ -25,7 +25,7 @@ export class DashboardService {
     const company = scopeFor(user.role, 'dashboard.company') === 'all';
     const ownerId = company ? q.ownerId : user.id;
 
-    const rows = await this.prisma.project.findMany({
+    const all = await this.prisma.project.findMany({
       where: { archivedAt: null, ...(ownerId ? { ownerId } : {}) },
       include: {
         client: { select: { id: true, name: true } },
@@ -43,6 +43,8 @@ export class DashboardService {
         },
       },
     });
+    // M-4: totals are in the base currency; other-currency projects are counted for a note, not summed.
+    const rows = all.filter((p) => p.currency === settings.baseCurrency);
     const metric: MetricProject[] = rows.map((p) => ({
       id: p.id,
       ownerId: p.ownerId,
@@ -62,7 +64,7 @@ export class DashboardService {
     const range = periodRange(q.period, today, settings.fyStartMonth);
     const r = range.from && range.to ? { from: range.from, to: range.to } : EVER;
     const s = summarise(metric, r, today);
-    const prevRange = previousRange(q.period, today, settings.fyStartMonth);
+    const prevRange = comparableRange(q.period, today, settings.fyStartMonth);
     const prev = prevRange.from && prevRange.to ? summarise(metric, { from: prevRange.from, to: prevRange.to }, today) : null;
 
     const [y, m] = today.split('-').map(Number) as [number, number];
@@ -135,6 +137,7 @@ export class DashboardService {
     const aging = agingBuckets(metric, today);
     return {
       currency: settings.baseCurrency,
+      otherCurrencyProjects: all.length - rows.length,
       period: { key: q.period, from: range.from ?? null, to: range.to ?? null },
       kpis: {
         bookedMinor: j(s.bookedMinor),
@@ -148,7 +151,7 @@ export class DashboardService {
         dueNext30Minor: j(s.dueNext30Minor),
         pipelineMinor: j(s.pipelineMinor),
         wonCount: s.wonCount,
-        avgDealMinor: s.wonCount > 0 ? j((s.bookedMinor - s.upsellMinor) / BigInt(s.wonCount)) : null,
+        avgDealMinor: s.wonCount > 0 ? j(s.wonExpectedMinor / BigInt(s.wonCount)) : null,
       },
       previous: prev ? { bookedMinor: j(prev.bookedMinor), collectedMinor: j(prev.collectedMinor) } : null,
       monthly: monthlySeries(metric, months, today).map((x) => ({

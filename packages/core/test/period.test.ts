@@ -31,3 +31,11 @@ test('previousRange is the equally long period just before', async () => {
   expect(previousRange('LAST_FY', '2026-10-29', 4)).toEqual({ from: '2024-04-01', to: '2025-03-31' });
   expect(previousRange('ALL', '2026-10-29', 4)).toEqual({});
 });
+
+test('comparableRange compares the same span of the previous period', async () => {
+  const { comparableRange } = await import('../src/period-presets');
+  expect(comparableRange('THIS_FY', '2026-10-29', 4)).toEqual({ from: '2025-04-01', to: '2025-10-29' });
+  expect(comparableRange('THIS_MONTH', '2026-03-10', 4)).toEqual({ from: '2026-02-01', to: '2026-02-10' });
+  expect(comparableRange('THIS_MONTH', '2026-03-31', 4)).toEqual({ from: '2026-02-01', to: '2026-02-28' });
+  expect(comparableRange('LAST_FY', '2026-10-29', 4)).toEqual({ from: '2024-04-01', to: '2025-03-31' });
+});

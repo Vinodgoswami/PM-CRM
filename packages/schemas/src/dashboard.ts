@@ -25,6 +25,8 @@ const kpis = z.object({
 
 export const dashboardSchema = z.object({
   currency: z.string(),
+  /** M-4: projects in another currency are left out of every total; the page shows this count. */
+  otherCurrencyProjects: z.number(),
   period: z.object({ key: z.string(), from: isoDateSchema.nullable(), to: isoDateSchema.nullable() }),
   kpis,
   previous: z.object({ bookedMinor: minorSchema, collectedMinor: minorSchema }).nullable(),

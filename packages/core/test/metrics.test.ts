@@ -70,3 +70,20 @@ test('C1 monthly series buckets by month', () => {
 test('C5 aging buckets by days past due', () => {
   expect(agingBuckets(projects, TODAY)).toEqual({ d1_30: 0n, d31_60: 30000n, d61_90: 0n, d90plus: 30000n });
 });
+
+test('review: milestones of unbooked projects are not receivables', () => {
+  const lead = P({ id: 'l', status: 'LEAD', wonAt: null, milestones: [M(50000n, '2026-09-01')] });
+  const s = summarise([lead], FY, TODAY);
+  expect(s).toMatchObject({ expectedMinor: 0n, outstandingMinor: 0n, overdueMinor: 0n, overdueCount: 0, dueNext30Minor: 0n });
+  expect(agingBuckets([lead], TODAY)).toEqual({ d1_30: 0n, d31_60: 0n, d61_90: 0n, d90plus: 0n });
+});
+
+test('K12 average deal = expected amount of projects won ÷ projects won', () => {
+  const s = summarise(
+    [P({ id: 'n', expectedAmountMinor: 100000n }), P({ id: 'u', expectedAmountMinor: 20000n, isUpsell: true })],
+    FY,
+    TODAY,
+  );
+  expect(s.wonExpectedMinor).toBe(120000n);
+  expect(s.wonCount).toBe(2);
+});

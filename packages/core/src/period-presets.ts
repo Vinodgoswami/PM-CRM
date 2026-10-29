@@ -43,3 +43,17 @@ export function previousRange(key: PeriodKey, today: IsoDate, fyStartMonth: numb
   // The same kind of period, evaluated on the day before this one starts ("last FY" is then the FY containing it).
   return periodRange(key === 'LAST_FY' ? 'THIS_FY' : key, dayBefore, fyStartMonth);
 }
+
+/**
+ * Like-for-like comparison: when the current period is still running, compare it with the same number of days at
+ * the start of the previous period (year-to-date vs last year to the same date), not with the whole previous period.
+ */
+export function comparableRange(key: PeriodKey, today: IsoDate, fyStartMonth: number): { from?: IsoDate; to?: IsoDate } {
+  const current = periodRange(key, today, fyStartMonth);
+  const previous = previousRange(key, today, fyStartMonth);
+  if (!current.from || !current.to || !previous.from || !previous.to) return previous;
+  if (today < current.from || today > current.to) return previous; // a finished period compares with a whole one
+  const elapsed = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${current.from}T00:00:00Z`)) / 86_400_000);
+  const end = new Date(Date.parse(`${previous.from}T00:00:00Z`) + elapsed * 86_400_000).toISOString().slice(0, 10);
+  return { from: previous.from, to: end < previous.to ? end : previous.to };
+}

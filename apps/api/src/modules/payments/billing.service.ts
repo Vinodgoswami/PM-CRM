@@ -5,6 +5,7 @@ import { currencyDigits, minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
 import { ownerWhere } from '../../common/ownership';
 import { PrismaService } from '../prisma/prisma.module';
+import { SettingsService } from '../settings/settings.service';
 import { isoDate } from '../projects/project-money';
 import { PAYMENT_INCLUDE, toPaymentDto } from './payments.service';
 
@@ -19,12 +20,22 @@ function majorUnits(minor: bigint, currency: string): string {
   return negative ? `-${value}` : value;
 }
 
-const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
+/**
+ * CSV cell safe to open in Excel / Sheets: values a spreadsheet would run as a formula get a leading quote, and
+ * anything with a quote, comma or line break is quoted.
+ */
+function csvCell(raw: string): string {
+  const v = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  return /[",\r\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v;
+}
 
 /** Completed Billing (docs/08 S7): every payment, reversals included, scoped by `billing.read`. */
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
+  ) {}
 
   private where(user: SessionUser, q: Omit<BillingQuery, 'page' | 'pageSize'>): Prisma.PaymentWhereInput {
     const scope = ownerWhere(user, 'billing.read');
@@ -40,7 +51,10 @@ export class BillingService {
 
   async list(user: SessionUser, q: BillingQuery): Promise<BillingPage> {
     const where = this.where(user, q);
-    const [rows, total, sum] = await this.prisma.$transaction([
+    const { baseCurrency } = await this.settings.get();
+    // M-4: the total is in the base currency; other-currency payments are listed in their own currency but not summed.
+    const baseOnly: Prisma.PaymentWhereInput = { AND: [where, { milestone: { project: { currency: baseCurrency } } }] };
+    const [rows, total, sum, baseCount] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
         where,
         include: PAYMENT_INCLUDE,
@@ -49,7 +63,8 @@ export class BillingService {
         take: q.pageSize,
       }),
       this.prisma.payment.count({ where }),
-      this.prisma.payment.aggregate({ where, _sum: { amountMinor: true } }),
+      this.prisma.payment.aggregate({ where: baseOnly, _sum: { amountMinor: true } }),
+      this.prisma.payment.count({ where: baseOnly }),
     ]);
     return {
       items: rows.map(toPaymentDto),
@@ -57,6 +72,7 @@ export class BillingService {
       pageSize: q.pageSize,
       total,
       totalMinor: minorToJson(sum._sum.amountMinor ?? 0n),
+      otherCurrencyPayments: total - baseCount,
     };
   }
 
@@ -95,6 +111,7 @@ export class BillingService {
         .map(csvCell)
         .join(',');
     });
-    return [header.join(','), ...lines].join('\n') + '\n';
+    // The BOM tells Excel the file is UTF-8 (₹ and non-English names would be garbled otherwise).
+    return '\uFEFF' + [header.join(','), ...lines].join('\n') + '\n';
   }
 }

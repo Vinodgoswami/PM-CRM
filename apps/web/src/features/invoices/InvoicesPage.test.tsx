@@ -22,6 +22,7 @@ const item = (over: object) => ({
 const invoices = {
   body: {
     currency: 'INR',
+    otherCurrencyItems: 0,
     groups: [
       { key: 'OVERDUE', totalMinor: 600000, count: 1, items: [item({})] },
       {

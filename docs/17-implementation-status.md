@@ -6,15 +6,15 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Summary
 
-| Phase                  | Status                                                                      |
-| ---------------------- | --------------------------------------------------------------------------- |
-| 0 Security & docs      | ✅ Done                                                                     |
-| 1 Foundation           | ✅ Done (reviewed, fixes applied)                                           |
-| 2 Clients & projects   | ✅ Done (pending review)                                                    |
-| 3 Milestones & billing | In progress (resumed by owner): [20](20-plan-phase-3-milestones-billing.md) |
-| 4 Dashboard            | Not started                                                                 |
-| 5 Theme & animation    | Waiting for references (Q-09)                                               |
-| 6 Launch               | Not started                                                                 |
+| Phase                  | Status                            |
+| ---------------------- | --------------------------------- |
+| 0 Security & docs      | ✅ Done                           |
+| 1 Foundation           | ✅ Done (reviewed, fixes applied) |
+| 2 Clients & projects   | ✅ Done (pending review)          |
+| 3 Milestones & billing | ✅ Done (reviewed, fixes applied) |
+| 4 Dashboard            | Not started                       |
+| 5 Theme & animation    | Waiting for references (Q-09)     |
+| 6 Launch               | Not started                       |
 
 ## Tasks
 
@@ -57,6 +57,9 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 - None. Open questions have provisional defaults ([15](15-decisions-and-open-questions.md)).
 
 ## Known gaps
+
+- Billing page: client / owner / custom-period filters and inline detail edit; Invoices page: client filter (APIs support them).
+- Dashboard: PDF export, bar drill-down, due-date calendar, win rate (K11).
 
 - Abandoned uploads leave PENDING document rows (hidden from lists); no cleanup job yet.
 

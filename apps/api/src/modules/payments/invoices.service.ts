@@ -49,6 +49,7 @@ export class InvoicesService {
       orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { number: 'asc' }],
     });
 
+    let otherCurrencyItems = 0;
     const groups = new Map<InvoiceItem['status'] | string, { totalMinor: bigint; items: InvoiceItem[] }>();
     for (const m of milestones) {
       const paid = m.payments.reduce((s, p) => s + p.amountMinor, 0n);
@@ -57,7 +58,9 @@ export class InvoicesService {
       const due = isoDate(m.dueDate);
       const key = invoiceGroup(due, today);
       const group = groups.get(key) ?? { totalMinor: 0n, items: [] };
-      group.totalMinor += balance;
+      // M-4: listed in its own currency, summed only when it is the base currency.
+      if (m.project.currency === settings.baseCurrency) group.totalMinor += balance;
+      else otherCurrencyItems += 1;
       group.items.push({
         milestoneId: m.id,
         number: m.number,
@@ -77,6 +80,7 @@ export class InvoicesService {
     }
     return {
       currency: settings.baseCurrency,
+      otherCurrencyItems,
       groups: INVOICE_GROUP_ORDER.filter((k) => groups.has(k)).map((k) => {
         const g = groups.get(k)!;
         return { key: k, totalMinor: minorToJson(g.totalMinor), count: g.items.length, items: g.items };

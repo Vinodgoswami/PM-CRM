@@ -89,6 +89,9 @@ export class PaymentsService {
         // A concurrent request with the same key may have committed while we waited for the lock.
         if (await tx.payment.findUnique({ where: { idempotencyKey: key }, select: { id: true } })) return null;
 
+        if (!['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'].includes(project.status)) {
+          throw new RuleViolation('P-8', 'Payments can only be recorded on won work. Move the project to Won or Active first.');
+        }
         const paid = milestone.payments.reduce((s, p) => s + p.amountMinor, 0n);
         const amountMinor = minorFromJson(input.amountMinor);
         const check = checkPayment(

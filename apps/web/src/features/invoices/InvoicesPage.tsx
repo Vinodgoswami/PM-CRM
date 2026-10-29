@@ -11,6 +11,7 @@ import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
 import { MarkPaidDialog, type MarkPaidTarget } from '../payments/MarkPaidDialog';
+import { CurrencyNote } from '../dashboard/CurrencyNote';
 import { MilestoneStatusBadge } from '../payments/MilestoneStatusBadge';
 
 const GROUP_LABEL: Record<InvoicesResponse['groups'][number]['key'], string> = {
@@ -70,6 +71,7 @@ export function InvoicesPage() {
         )}
       </div>
 
+      {data && <CurrencyNote count={data.otherCurrencyItems} noun="milestone" currency={data.currency} />}
       {isPending ? (
         <Skeleton className="h-64 w-full" />
       ) : isError ? (

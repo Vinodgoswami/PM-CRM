@@ -66,6 +66,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
   `reversesPaymentId`, with a reason) and, if needed, a new correct payment. A payment can be reversed once.
 - **P-6** `paymentDate` cannot be in the future.
 - **P-7** Payments are never deleted.
+- **P-8** Payments are recorded only on booked work (WON, ACTIVE, ON_HOLD, COMPLETED). Milestones of LEAD, PROPOSAL
+  and LOST projects are not receivables and are left out of expected, outstanding, overdue, aging and forecasts.
 
 ## Upsell
 

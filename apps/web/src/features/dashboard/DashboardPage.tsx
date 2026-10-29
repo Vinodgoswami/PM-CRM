@@ -11,6 +11,7 @@ import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
 import { HatchedBars, monthLabel, Wave } from './charts';
+import { CurrencyNote } from './CurrencyNote';
 import { useCountUp } from './useCountUp';
 
 const PERIODS = [
@@ -189,6 +190,7 @@ function DashboardBody({ data }: { data: Dashboard }) {
 
   return (
     <div className="space-y-5">
+      <CurrencyNote count={data.otherCurrencyProjects} noun="project" currency={data.currency} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <motion.section
           aria-label="Collected"
