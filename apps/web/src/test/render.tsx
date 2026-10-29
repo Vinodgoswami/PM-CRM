@@ -31,3 +31,25 @@ export function stubFetch(status: number, body: unknown) {
   };
   return { fn, calls };
 }
+
+type Reply = { status?: number; body?: unknown };
+/** Fake API keyed by "METHOD /path" (path without /api/v1 and query). Unmatched calls fail the test loudly. */
+export function stubApi(routes: Record<string, Reply | ((req: { url: URL; body: unknown }) => Reply)>) {
+  const calls: { method: string; path: string; url: URL; body: unknown }[] = [];
+  const fn = async (input: string, init?: RequestInit) => {
+    const url = new URL(input, 'http://localhost');
+    const method = init?.method ?? 'GET';
+    const path = url.pathname.replace(/^\/api\/v1/, '');
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body;
+    calls.push({ method, path, url, body });
+    const route = routes[`${method} ${path}`];
+    if (!route) throw new Error(`Unexpected request ${method} ${path}`);
+    const reply = typeof route === 'function' ? route({ url, body }) : route;
+    const status = reply.status ?? 200;
+    return new Response(status === 204 || reply.body === undefined ? null : JSON.stringify(reply.body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  return { fn, calls };
+}

@@ -39,6 +39,11 @@ enum DocumentType {
   OTHER
 }
 
+enum DocumentStatus {
+  PENDING
+  READY
+}
+
 enum AuthTokenKind {
   INVITE
   RESET
@@ -111,6 +116,8 @@ model LoginAttempt {
 model Client {
   id          String    @id @default(cuid(2))
   name        String
+  /// lower(trim(name)) while active, NULL once archived: enforces C-2 (unique active names) with a plain index.
+  nameKey     String?   @unique
   company     String?
   country     String?
   currency    String    @default("INR")
@@ -232,17 +239,19 @@ model Payment {
 }
 
 model Document {
-  id           String       @id @default(cuid(2))
+  id           String         @id @default(cuid(2))
   projectId    String
-  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name         String
   type         DocumentType
-  storageKey   String       @unique
+  storageKey   String         @unique
   mimeType     String
   sizeBytes    Int
+  /// PENDING until the upload is confirmed (object exists with the declared size and type).
+  status       DocumentStatus @default(PENDING)
   uploadedById String
-  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
-  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  uploadedBy   User           @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
 
   @@index([projectId])
 }

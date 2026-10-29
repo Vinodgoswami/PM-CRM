@@ -1,3 +1,5 @@
+import os from 'node:os';
+import path from 'node:path';
 import { type AppConfig } from '@salescrm/config';
 
 /** Config for in-process test apps; never read from the real environment. */
@@ -10,6 +12,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     webOrigin: 'http://localhost:5173',
     cookieSecure: false,
     logLevel: 'silent',
+    storage: { driver: 'local', localDir: path.join(os.tmpdir(), 'salescrm-test-uploads') },
     ...overrides,
   };
 }

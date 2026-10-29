@@ -115,6 +115,8 @@ export async function runSeed(prisma: PrismaClient, opts: { today: IsoDate; pass
       }
 
       await tx.setting.create({ data: { id: 1, companyName: 'SalesCRM Demo' } });
+      // Seeded codes are written directly; move the sequence past them so the next project is PRJ-0041.
+      await tx.$executeRaw`SELECT setval('project_code_seq', ${data.projects.length}, true)`;
     },
     { timeout: 120_000 },
   );

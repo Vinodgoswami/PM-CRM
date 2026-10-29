@@ -76,6 +76,7 @@ Permission keys from [07](07-roles-and-permissions.md).
 | POST   | /projects/:id/upsells      | projects.write    | upsell entry                                                   |
 | DELETE | /projects/:id/upsells/:uid | projects.write    |                                                                |
 | PUT    | /projects/:id/parent       | projects.write    | `{ parentProjectId \| null }`, U-2                             |
+| GET    | /projects/:id/activity     | projects.read     | the project's audit trail (latest 100)                         |
 
 ### Milestones
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { changedFields } from '@salescrm/core';
+import { changedFields, type IsoDate, todayIn } from '@salescrm/core';
 import { type Prisma } from '@salescrm/database';
 import { type Settings, type UpdateSettingsInput } from '@salescrm/schemas';
 import { type SessionUser } from '../../common/current-user';
@@ -32,6 +32,11 @@ export class SettingsService {
 
   async get(): Promise<Settings> {
     return toDto(await this.load());
+  }
+
+  /** "Today" in the company timezone: the reference date for due / overdue / outstanding (docs/04 § Time). */
+  async today(now: Date = new Date()): Promise<IsoDate> {
+    return todayIn((await this.load()).timezone, now);
   }
 
   async update(user: SessionUser, input: UpdateSettingsInput): Promise<Settings> {

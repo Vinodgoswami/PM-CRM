@@ -10,6 +10,7 @@ export const emailSchema = z
 export const passwordSchema = z.string().min(10, 'Use at least 10 characters').max(128, 'Use at most 128 characters');
 
 export const roleSchema = z.enum(ROLES);
+export type Role = z.infer<typeof roleSchema>;
 
 export const loginSchema = z.object({
   email: emailSchema,

@@ -9,7 +9,12 @@ export interface AppConfig {
   webOrigin: string;
   cookieSecure: boolean;
   logLevel: string;
+  storage: StorageConfig;
 }
+
+export type StorageConfig =
+  | { driver: 'local'; localDir: string }
+  | { driver: 's3'; endpoint?: string; bucket: string; region: string; accessKeyId: string; secretAccessKey: string };
 
 export class ConfigError extends Error {
   constructor(problems: string[]) {
@@ -26,6 +31,16 @@ const envSchema = z.object({
   WEB_ORIGIN: z.url().default('http://localhost:5173'),
   COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.string().default('info'),
+  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  STORAGE_LOCAL_DIR: z.string().min(1).default('./uploads'),
+  S3_ENDPOINT: z
+    .url()
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().default('auto'),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
 });
 
 // Values copied from examples or CI must never reach production.
@@ -45,12 +60,29 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     webOrigin: e.WEB_ORIGIN.replace(/\/$/, ''),
     cookieSecure: e.COOKIE_SECURE === 'true',
     logLevel: e.LOG_LEVEL,
+    storage: storageFrom(e),
   };
   if (config.nodeEnv === 'production') {
     const problems: string[] = [];
     if (!config.cookieSecure) problems.push('COOKIE_SECURE: must be true in production');
     if (PLACEHOLDER_SECRET.test(config.sessionSecret)) problems.push('SESSION_SECRET: placeholder value in production');
+    // Local disk is lost on redeploy and is not shared between instances.
+    if (config.storage.driver === 'local') problems.push('STORAGE_DRIVER: use s3 (S3 / R2 bucket) in production');
     if (problems.length) throw new ConfigError(problems);
   }
   return config;
+}
+
+function storageFrom(e: z.infer<typeof envSchema>): StorageConfig {
+  if (e.STORAGE_DRIVER === 'local') return { driver: 'local', localDir: e.STORAGE_LOCAL_DIR };
+  const missing = (['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const).filter((k) => !e[k]);
+  if (missing.length) throw new ConfigError(missing.map((k) => `${k}: required when STORAGE_DRIVER=s3`));
+  return {
+    driver: 's3',
+    ...(e.S3_ENDPOINT ? { endpoint: e.S3_ENDPOINT } : {}),
+    bucket: e.S3_BUCKET!,
+    region: e.S3_REGION,
+    accessKeyId: e.S3_ACCESS_KEY_ID!,
+    secretAccessKey: e.S3_SECRET_ACCESS_KEY!,
+  };
 }

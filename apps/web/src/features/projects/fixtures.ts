@@ -1,0 +1,40 @@
+import { type ProjectDetail, type ProjectListItem } from '@salescrm/schemas';
+
+export const listItem = (over: Partial<ProjectListItem> = {}): ProjectListItem => ({
+  id: 'p1',
+  code: 'PRJ-0001',
+  name: 'Website Redesign',
+  status: 'ACTIVE',
+  currency: 'INR',
+  client: { id: 'c1', name: 'Acme' },
+  owner: { id: 'u1', name: 'Test User' },
+  wonAt: '2026-09-01',
+  contractValueMinor: 12500000,
+  collectedMinor: 5000000,
+  outstandingMinor: 2500000,
+  nextDueDate: '2026-11-15',
+  hasOverdue: true,
+  parentProjectId: null,
+  ...over,
+});
+
+export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
+  ...listItem(),
+  description: 'Full redesign of the marketing site.',
+  startDate: '2026-09-01',
+  durationValue: 3,
+  durationUnit: 'MONTHS',
+  endDate: '2026-12-01',
+  closedAt: null,
+  expectedAmountMinor: 10000000,
+  tags: [],
+  parent: null,
+  upsellProjects: [],
+  upsellEntries: [{ id: 'u1', amountMinor: 2500000, date: '2026-10-01', note: 'Extra pages' }],
+  milestones: [{ id: 'm1', number: 1, title: 'Design', amountMinor: 10000000, dueDate: '2026-10-01', paidMinor: 5000000 }],
+  scheduledMinor: 10000000,
+  unscheduledMinor: 2500000,
+  updatedAt: '2026-10-29T10:00:00.000Z',
+  canEdit: true,
+  ...over,
+});
