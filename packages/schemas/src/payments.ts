@@ -39,3 +39,23 @@ export const paymentDtoSchema = z.object({
   client: z.object({ id: z.string(), name: z.string() }),
 });
 export type PaymentDto = z.infer<typeof paymentDtoSchema>;
+
+export const billingQuerySchema = z.object({
+  projectId: z.string().optional(),
+  clientId: z.string().optional(),
+  ownerId: z.string().optional(),
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type BillingQuery = z.infer<typeof billingQuerySchema>;
+
+export const billingPageSchema = z.object({
+  items: z.array(paymentDtoSchema),
+  page: z.number(),
+  pageSize: z.number(),
+  total: z.number(),
+  totalMinor: minorSchema,
+});
+export type BillingPage = z.infer<typeof billingPageSchema>;

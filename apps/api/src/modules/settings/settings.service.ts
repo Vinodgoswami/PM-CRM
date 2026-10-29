@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { changedFields, type IsoDate, todayIn } from '@salescrm/core';
-import { type Prisma } from '@salescrm/database';
+import { Prisma } from '@salescrm/database';
 import { type Settings, type UpdateSettingsInput } from '@salescrm/schemas';
 import { type SessionUser } from '../../common/current-user';
 import { AuditService } from '../audit/audit.service';
@@ -27,7 +27,15 @@ export class SettingsService {
 
   /** The single settings row, created with the schema defaults on first read. */
   private async load(tx: Prisma.TransactionClient = this.prisma): Promise<Settings> {
-    return tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
+    try {
+      return await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
+    } catch (e) {
+      // Two first-ever reads can race to create the row; the loser simply reads the winner's row.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        return tx.setting.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
+      }
+      throw e;
+    }
   }
 
   async get(): Promise<Settings> {

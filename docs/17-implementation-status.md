@@ -43,6 +43,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P3-1  | Done   | feat/phase-3-milestones-billing | Core: milestone status (MS-3), payment checks (P-2, P-6), invoice groups                                                      |
 | P3-2  | Done   | feat/phase-3-milestones-billing | Milestones API: add, edit (MS-2), delete with renumbering (MS-1), reorder, PS-4 guards; detail has status + balance           |
 | P3-3  | Done   | feat/phase-3-milestones-billing | Payments API: mark as paid (P-2/P-3/P-6, row lock, Idempotency-Key), edit details (P-4), Admin reversal (P-5), DB sign checks |
+| P3-6a | Done   | feat/phase-3-milestones-billing | Billing API: GET /payments (period/client/owner/project filters, total, own scope) + CSV export                               |
 
 ## Blockers
 
