@@ -37,7 +37,7 @@ export function AppLayout() {
       end={path === '/'}
       onClick={() => setMenuOpen(false)}
       className={({ isActive }) =>
-        `relative flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+        `relative flex items-center gap-2 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors ${
           isActive ? 'font-semibold text-text' : 'text-text-muted hover:text-text'
         }`
       }

@@ -23,6 +23,8 @@ export function useSession() {
       }
     },
     staleTime: 5 * 60_000,
+    retry: 3,
+    retryDelay: (n) => Math.min(1000 * 2 ** n, 8000),
   });
 }
 

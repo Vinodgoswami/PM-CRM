@@ -1,10 +1,12 @@
 import {
   type CreateProjectInput,
+  type MilestoneInput,
   documentDtoSchema,
   projectDetailSchema,
   projectListItemSchema,
   type ProjectStatusValue,
   type RequestUploadInput,
+  type UpdateMilestoneInput,
   type UpdateProjectInput,
   type UpsellEntryInput,
   uploadSlotSchema,
@@ -145,3 +147,20 @@ const activitySchema = z.object({
 export function useProjectActivity(id: string) {
   return useQuery({ queryKey: projectKeys.activity(id), queryFn: () => apiFetch(`/projects/${id}/activity`, { schema: activitySchema }) });
 }
+
+export const useAddMilestone = (id: string) =>
+  useProjectMutation(id, (input: MilestoneInput) =>
+    apiFetch(`/projects/${id}/milestones`, { method: 'POST', body: input, schema: projectDetailSchema }),
+  );
+export const useUpdateMilestone = (id: string) =>
+  useProjectMutation(id, ({ milestoneId, ...input }: UpdateMilestoneInput & { milestoneId: string }) =>
+    apiFetch(`/milestones/${milestoneId}`, { method: 'PATCH', body: input, schema: projectDetailSchema }),
+  );
+export const useDeleteMilestone = (id: string) =>
+  useProjectMutation(id, (milestoneId: string) =>
+    apiFetch(`/milestones/${milestoneId}`, { method: 'DELETE', schema: projectDetailSchema }),
+  );
+export const useReorderMilestones = (id: string) =>
+  useProjectMutation(id, (ids: string[]) =>
+    apiFetch(`/projects/${id}/milestones/order`, { method: 'PUT', body: { ids }, schema: projectDetailSchema }),
+  );

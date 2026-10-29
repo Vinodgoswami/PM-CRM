@@ -24,7 +24,9 @@ import { useChangeStatus, useProject } from './api';
 import { STATUS_LABEL, StatusBadge } from './StatusBadge';
 import { ActivityTab } from './tabs/ActivityTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
+import { MilestonesTab } from './tabs/MilestonesTab';
 import { OverviewTab } from './tabs/OverviewTab';
+import { PaymentsTab } from './tabs/PaymentsTab';
 import { UpsellsTab } from './tabs/UpsellsTab';
 
 export function ProjectDetailPage() {
@@ -98,12 +100,20 @@ function ProjectView({ project }: { project: ProjectDetail }) {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="milestones">Milestones</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="upsells">Upsells</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <OverviewTab project={project} />
+        </TabsContent>
+        <TabsContent value="milestones">
+          <MilestonesTab project={project} />
+        </TabsContent>
+        <TabsContent value="payments">
+          <PaymentsTab project={project} />
         </TabsContent>
         <TabsContent value="upsells">
           <UpsellsTab project={project} />
