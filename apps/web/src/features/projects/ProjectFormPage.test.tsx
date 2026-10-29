@@ -6,7 +6,20 @@ import { detail } from './fixtures';
 
 const clients = {
   body: {
-    items: [{ id: 'c1', name: 'Acme', company: null, primaryEmail: null, projects: 2, archived: false, currency: 'INR' }],
+    items: [
+      {
+        id: 'c1',
+        name: 'Acme',
+        company: null,
+        primaryEmail: null,
+        projects: 2,
+        archived: false,
+        currency: 'INR',
+        bookedMinor: 0,
+        collectedMinor: 0,
+        outstandingMinor: 0,
+      },
+    ],
     page: 1,
     pageSize: 20,
     total: 1,
@@ -129,7 +142,20 @@ test('missing required fields are reported before anything is sent', async () =>
 test('amounts follow the chosen client currency and the currency is sent', async () => {
   const tokyo = {
     body: {
-      items: [{ id: 'c7', name: 'Tokyo Co', company: null, primaryEmail: null, projects: 0, archived: false, currency: 'JPY' }],
+      items: [
+        {
+          id: 'c7',
+          name: 'Tokyo Co',
+          company: null,
+          primaryEmail: null,
+          projects: 0,
+          archived: false,
+          currency: 'JPY',
+          bookedMinor: 0,
+          collectedMinor: 0,
+          outstandingMinor: 0,
+        },
+      ],
       page: 1,
       pageSize: 20,
       total: 1,

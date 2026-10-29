@@ -3,6 +3,7 @@ import { Badge, Button, EmptyState, Input, Skeleton, Table, TBody, TD, TH, THead
 import { Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
 import { useClients } from './api';
 import { ClientFormDialog } from './ClientFormDialog';
@@ -61,6 +62,9 @@ export function ClientsListPage() {
               <TH>Company</TH>
               <TH>Primary email</TH>
               <TH className="text-right">Projects</TH>
+              <TH className="text-right">Total booking</TH>
+              <TH className="text-right">Paid</TH>
+              <TH className="text-right">Outstanding</TH>
             </TR>
           </THead>
           <TBody>
@@ -79,6 +83,11 @@ export function ClientsListPage() {
                 <TD>{c.company ?? '—'}</TD>
                 <TD>{c.primaryEmail ?? '—'}</TD>
                 <TD className="text-right tabular-nums">{c.projects}</TD>
+                <TD className="text-right tabular-nums">{formatApiMoney(c.bookedMinor, c.currency)}</TD>
+                <TD className="text-right tabular-nums text-success">{formatApiMoney(c.collectedMinor, c.currency)}</TD>
+                <TD className={`text-right tabular-nums ${c.outstandingMinor > 0 ? 'font-medium text-danger' : ''}`}>
+                  {formatApiMoney(c.outstandingMinor, c.currency)}
+                </TD>
               </TR>
             ))}
           </TBody>
