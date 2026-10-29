@@ -12,6 +12,8 @@
     "postinstall": "node scripts/scan-obfuscation.mjs --quiet",
     "prepare": "husky",
     "dev": "turbo run dev --parallel --filter=./apps/*",
+    "dev:api": "pnpm --filter @salescrm/api dev",
+    "dev:web": "pnpm --filter @salescrm/web dev",
     "prebuild": "pnpm scan:quality",
     "build": "turbo run build",
     "postbuild": "pnpm check:obscure",

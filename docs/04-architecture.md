@@ -16,6 +16,8 @@ packages/
   auth/             Password hashing, session tokens, permission matrix
   ui/               shadcn/ui components + theme tokens + motion presets
   config/           Env loading and validation (server only)
+  typescript-config/ Shared tsconfig presets (base, library, nest, react)
+  eslint-config/    Shared ESLint flat configs (base, react)
 tests/
   e2e/              Playwright end-to-end tests
 scripts/            Security gates (see 11-security.md)

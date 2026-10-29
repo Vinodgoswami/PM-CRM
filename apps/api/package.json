@@ -1,0 +1,37 @@
+{
+  "name": "@salescrm/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.6",
+    "@nestjs/core": "^11.2.6",
+    "@nestjs/platform-express": "^11.2.6",
+    "express": "^5.2.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.2.6",
+    "@salescrm/eslint-config": "workspace:*",
+    "@salescrm/typescript-config": "workspace:*",
+    "@swc/core": "^1.16.2",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.19.0",
+    "@types/supertest": "^6.0.3",
+    "eslint": "^9.39.5",
+    "supertest": "^7.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "^3.2.7"
+  }
+}

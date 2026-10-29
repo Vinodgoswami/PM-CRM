@@ -1,0 +1,32 @@
+{
+  "name": "@salescrm/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@salescrm/eslint-config": "workspace:*",
+    "@salescrm/typescript-config": "workspace:*",
+    "eslint": "^9.39.5",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

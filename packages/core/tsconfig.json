@@ -1,0 +1,4 @@
+{
+  "extends": "@salescrm/typescript-config/library.json",
+  "include": ["src", "test"]
+}
