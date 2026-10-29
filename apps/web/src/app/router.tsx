@@ -5,6 +5,7 @@ import { AcceptInvitePage } from '../features/auth/AcceptInvitePage';
 import { AuditLogPage } from '../features/audit/AuditLogPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { BillingPage } from '../features/billing/BillingPage';
+import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { InvoicesPage } from '../features/invoices/InvoicesPage';
 import { ClientDetailPage } from '../features/clients/ClientDetailPage';
 import { ClientsListPage } from '../features/clients/ClientsListPage';
@@ -14,7 +15,6 @@ import { ProjectDetailPage } from '../features/projects/ProjectDetailPage';
 import { ProjectFormPage } from '../features/projects/ProjectFormPage';
 import { ProjectsListPage } from '../features/projects/ProjectsListPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
-import { PlaceholderPage } from '../pages/PlaceholderPage';
 import { AppLayout } from './AppLayout';
 import { RequireAuth, RequirePermission } from './guards';
 
@@ -31,7 +31,7 @@ export const routes: RouteObject[] = [
       </RequireAuth>
     ),
     children: [
-      { index: true, element: guarded('dashboard.own', <PlaceholderPage title="Dashboard" phase={4} />) },
+      { index: true, element: guarded('dashboard.own', <DashboardPage />) },
       { path: 'invoices', element: guarded('invoices.read', <InvoicesPage />) },
       { path: 'projects', element: guarded('projects.read', <ProjectsListPage />) },
       { path: 'projects/new', element: guarded('projects.write', <ProjectFormPage />) },

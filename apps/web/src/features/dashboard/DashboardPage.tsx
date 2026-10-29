@@ -1,0 +1,457 @@
+import { can } from '@salescrm/auth/permissions';
+import { type Dashboard, dashboardSchema } from '@salescrm/schemas';
+import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { ArrowUpRight, CalendarClock, Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { motion } from 'motion/react';
+import { type ReactNode, useState } from 'react';
+import { Link } from 'react-router';
+import { apiFetch } from '../../lib/api';
+import { formatDate } from '../../lib/dates';
+import { formatApiMoney } from '../../lib/money';
+import { useSession } from '../auth/api';
+import { HatchedBars, monthLabel, Wave } from './charts';
+import { useCountUp } from './useCountUp';
+
+const PERIODS = [
+  { key: 'THIS_MONTH', label: 'Month' },
+  { key: 'THIS_QUARTER', label: 'Quarter' },
+  { key: 'THIS_FY', label: 'Year' },
+  { key: 'LAST_FY', label: 'Last year' },
+] as const;
+type Period = (typeof PERIODS)[number]['key'];
+
+function useDashboard(period: Period, ownerId: string) {
+  const search = new URLSearchParams({ period, ...(ownerId ? { ownerId } : {}) }).toString();
+  return useQuery({
+    queryKey: ['dashboard', search],
+    queryFn: () => apiFetch(`/dashboard?${search}`, { schema: dashboardSchema }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+const pct = (current: number, previous: number | undefined) =>
+  previous === undefined || previous === 0 ? null : Math.round(((current - previous) / previous) * 100);
+
+function Delta({ value, inverse = false }: { value: number | null; inverse?: boolean }) {
+  if (value === null) return null;
+  const good = inverse ? value <= 0 : value >= 0;
+  const Icon = value >= 0 ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${good ? 'bg-white/90 text-primary' : 'bg-danger/15 text-danger'}`}
+    >
+      <Icon className="size-3" aria-hidden />
+      {value >= 0 ? '+' : ''}
+      {value}%
+    </span>
+  );
+}
+
+function Panel({
+  title,
+  subtitle,
+  action,
+  children,
+  className = '',
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <motion.section
+      aria-label={title}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.2, 0, 0, 1] }}
+      className={`min-w-0 rounded-xl bg-surface p-5 shadow-card ${className}`}
+    >
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-bold">{title}</h2>
+          {subtitle && <p className="text-xs text-text-muted">{subtitle}</p>}
+        </div>
+        {action}
+      </header>
+      {children}
+    </motion.section>
+  );
+}
+
+const CornerLink = ({ to, label }: { to: string; label: string }) => (
+  <Link
+    to={to}
+    aria-label={label}
+    className="grid size-8 place-items-center rounded-full border border-border text-text-muted hover:bg-accent hover:text-text"
+  >
+    <ArrowUpRight className="size-4" />
+  </Link>
+);
+
+export function DashboardPage() {
+  const { data: session } = useSession();
+  const [period, setPeriod] = useState<Period>('THIS_FY');
+  const [ownerId, setOwnerId] = useState('');
+  const { data, isPending, isError, refetch } = useDashboard(period, ownerId);
+  const firstName = session?.user.name.split(' ')[0] ?? '';
+  const canCreate = !!session && can(session.user, 'projects.write');
+
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Welcome back, <span className="font-medium text-text-muted">{firstName}</span>
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="radiogroup" aria-label="Period" className="flex rounded-full bg-surface p-1 shadow-card">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                role="radio"
+                aria-checked={period === p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`rounded-full px-4 py-1.5 text-sm transition-colors ${period === p.key ? 'bg-primary font-semibold text-primary-contrast' : 'text-text-muted hover:text-text'}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {data?.team && (
+            <select
+              aria-label="Owner"
+              className="h-10 rounded-full border border-border bg-surface px-4 text-sm"
+              value={ownerId}
+              onChange={(e) => setOwnerId(e.target.value)}
+            >
+              <option value="">Whole team</option>
+              {data.team.map((t) => (
+                <option key={t.user.id} value={t.user.id}>
+                  {t.user.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {canCreate && (
+            <Button asChild variant="outline">
+              <Link to="/projects/new">
+                <Plus className="size-4" /> New project
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isPending ? (
+        <div className="grid gap-5 lg:grid-cols-12" aria-busy="true">
+          <Skeleton className="h-72 lg:col-span-4" />
+          <Skeleton className="h-72 lg:col-span-5" />
+          <Skeleton className="h-72 lg:col-span-3" />
+        </div>
+      ) : isError ? (
+        <EmptyState
+          title="Could not load the dashboard"
+          action={
+            <Button variant="outline" onClick={() => refetch()}>
+              Try again
+            </Button>
+          }
+        />
+      ) : (
+        <DashboardBody data={data} />
+      )}
+    </section>
+  );
+}
+
+function DashboardBody({ data }: { data: Dashboard }) {
+  const k = data.kpis;
+  const money = (m: number) => formatApiMoney(m, data.currency);
+  const collected = useCountUp(k.collectedMinor);
+  const outstanding = useCountUp(k.outstandingMinor);
+  const [series, setSeries] = useState<'collected' | 'booked'>('collected');
+  const bars = data.monthly.map((m) => ({
+    key: m.month,
+    label: monthLabel(m.month),
+    value: series === 'collected' ? m.collectedMinor : m.bookedMinor,
+  }));
+  const agingRows = [
+    { label: '1–30 days', value: data.aging.d1_30 },
+    { label: '31–60 days', value: data.aging.d31_60 },
+    { label: '61–90 days', value: data.aging.d61_90 },
+    { label: '90+ days', value: data.aging.d90plus },
+  ];
+  const agingMax = Math.max(1, ...agingRows.map((r) => r.value));
+  const periodText = data.period.from ? `${formatDate(data.period.from)} – ${formatDate(data.period.to)}` : 'All time';
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <motion.section
+          aria-label="Collected"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative min-w-0 overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary-strong p-6 text-primary-contrast shadow-card lg:col-span-4"
+        >
+          <div aria-hidden className="absolute -top-16 -right-12 size-56 rounded-full bg-white/10" />
+          <div aria-hidden className="absolute -bottom-20 left-10 size-44 rounded-full bg-white/5" />
+          <div className="relative flex h-full flex-col justify-between gap-8">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white/80">Collected</p>
+                <p className="text-xs text-white/60">{periodText}</p>
+              </div>
+              <Delta value={pct(k.collectedMinor, data.previous?.collectedMinor)} />
+            </div>
+            <p className="text-4xl font-extrabold tracking-tight tabular-nums">{money(collected)}</p>
+            <div className="flex items-end justify-between text-sm">
+              <div>
+                <p className="text-white/70">Booked</p>
+                <p className="font-bold">{money(k.bookedMinor)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white/70">Projects won</p>
+                <p className="font-bold">{k.wonCount}</p>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        <Panel
+          title="Monthly performance"
+          subtitle="Last 12 months"
+          className="lg:col-span-5"
+          action={
+            <div role="radiogroup" aria-label="Series" className="flex rounded-full bg-background p-1 text-xs">
+              {(['collected', 'booked'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={series === s}
+                  onClick={() => setSeries(s)}
+                  className={`rounded-full px-3 py-1 capitalize ${series === s ? 'bg-primary font-semibold text-primary-contrast' : 'text-text-muted'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <HatchedBars key={series} data={bars} currency={data.currency} highlightIndex={bars.length - 1} label={`Monthly ${series}`} />
+        </Panel>
+
+        <Panel
+          title="Outstanding"
+          subtitle="Due and unpaid today"
+          className="flex flex-col lg:col-span-3"
+          action={<CornerLink to="/invoices" label="Open upcoming invoices" />}
+        >
+          <p className="text-3xl font-extrabold tracking-tight tabular-nums">{money(outstanding)}</p>
+          <p className="mt-1 text-sm">
+            <span className="font-semibold text-danger">{k.overdueCount} overdue</span>
+            <span className="text-text-muted"> · {money(k.overdueMinor)}</span>
+          </p>
+          <div className="mt-auto pt-4">
+            <Wave values={data.forecast.map((f) => f.scheduledMinor)} />
+            <p className="text-xs text-text-muted">Cash due over the next 6 months</p>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <Kpi label="Booked" value={money(k.bookedMinor)} delta={pct(k.bookedMinor, data.previous?.bookedMinor)} />
+        <Kpi label="Expected in period" value={money(k.expectedMinor)} />
+        <Kpi label="Due next 30 days" value={money(k.dueNext30Minor)} />
+        <Kpi label="Pipeline" value={money(k.pipelineMinor)} />
+        <Kpi
+          label="Upsell share"
+          value={k.bookedMinor > 0 ? `${Math.round((k.upsellMinor * 100) / k.bookedMinor)}%` : '—'}
+          hint={money(k.upsellMinor)}
+        />
+        <Kpi
+          label="Collection rate"
+          value={k.collectionRate === null ? '—' : `${Math.round(k.collectionRate * 100)}%`}
+          hint={k.avgDealMinor ? `Avg deal ${money(k.avgDealMinor)}` : undefined}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <Panel
+          title="Upcoming dues"
+          subtitle="Next 30 days"
+          className="lg:col-span-7"
+          action={<CornerLink to="/invoices" label="All upcoming invoices" />}
+        >
+          {data.upcoming.length === 0 ? (
+            <p className="text-sm text-text-muted">Nothing due in the next 30 days.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {data.upcoming.map((u) => (
+                <li key={u.milestoneId} className="flex items-center gap-3 py-2.5">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-primary">
+                    <CalendarClock className="size-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/projects/${u.project.id}`} className="block truncate font-medium hover:underline">
+                      M{u.number} {u.title}
+                    </Link>
+                    <p className="truncate text-xs text-text-muted">
+                      {u.client.name} · {u.project.code}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold tabular-nums">{money(u.balanceMinor)}</p>
+                    <p className="text-xs text-text-muted">{formatDate(u.dueDate)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-5">
+          <ul className="space-y-3">
+            {agingRows.map((r, i) => (
+              <li key={r.label} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">{r.label}</span>
+                  <span className="font-semibold tabular-nums">{money(r.value)}</span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-background">
+                  <motion.div
+                    className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(r.value / agingMax) * 100}%` }}
+                    transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <Panel
+          title="Recent payments"
+          subtitle="Latest money in"
+          className="lg:col-span-7"
+          action={<CornerLink to="/billing" label="Completed billing" />}
+        >
+          {data.recentPayments.length === 0 ? (
+            <p className="text-sm text-text-muted">No payments yet.</p>
+          ) : (
+            <Table className="text-sm">
+              <THead>
+                <TR>
+                  <TH>Client</TH>
+                  <TH>Date</TH>
+                  <TH>Invoice</TH>
+                  <TH className="text-right">Amount</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {data.recentPayments.map((p) => (
+                  <TR key={p.id}>
+                    <TD>
+                      <p className="font-medium">{p.client.name}</p>
+                      <p className="text-xs text-text-muted">{p.project.code}</p>
+                    </TD>
+                    <TD>{formatDate(p.paymentDate)}</TD>
+                    <TD>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span aria-hidden className={`size-1.5 rounded-full ${p.amountMinor < 0 ? 'bg-danger' : 'bg-success'}`} />
+                        {p.invoiceId ?? '—'}
+                      </span>
+                    </TD>
+                    <TD className={`text-right font-semibold tabular-nums ${p.amountMinor < 0 ? 'text-danger' : ''}`}>
+                      {money(p.amountMinor)}
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          )}
+        </Panel>
+
+        <Panel title="Top clients" subtitle="By money collected in the period" className="lg:col-span-5">
+          {data.topClients.length === 0 ? (
+            <p className="text-sm text-text-muted">No client activity in this period.</p>
+          ) : (
+            <ul className="space-y-3">
+              {data.topClients.map((c, i) => (
+                <li key={c.id} className="flex items-center gap-3">
+                  <span
+                    className={`grid size-9 place-items-center rounded-full text-sm font-bold ${i === 0 ? 'bg-primary text-primary-contrast' : 'bg-accent text-primary'}`}
+                  >
+                    {c.name.slice(0, 1)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/clients/${c.id}`} className="block truncate font-medium hover:underline">
+                      {c.name}
+                    </Link>
+                    <p className="text-xs text-text-muted">Booked {money(c.bookedMinor)}</p>
+                  </div>
+                  <span className="font-semibold tabular-nums">{money(c.collectedMinor)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
+
+      {data.team && (
+        <Panel title="Team performance" subtitle="Per salesperson, this period">
+          <Table>
+            <THead>
+              <TR>
+                <TH>Salesperson</TH>
+                <TH className="text-right">Booked</TH>
+                <TH className="text-right">Collected</TH>
+                <TH className="text-right">Outstanding</TH>
+                <TH className="text-right">Overdue</TH>
+                <TH className="text-right">Upsell</TH>
+                <TH className="text-right">Active projects</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {data.team.map((t) => (
+                <TR key={t.user.id}>
+                  <TD className="font-medium">{t.user.name}</TD>
+                  <TD className="text-right tabular-nums">{money(t.bookedMinor)}</TD>
+                  <TD className="text-right tabular-nums text-success">{money(t.collectedMinor)}</TD>
+                  <TD className="text-right tabular-nums">{money(t.outstandingMinor)}</TD>
+                  <TD className={`text-right tabular-nums ${t.overdueMinor > 0 ? 'text-danger' : ''}`}>{money(t.overdueMinor)}</TD>
+                  <TD className="text-right tabular-nums">{money(t.upsellMinor)}</TD>
+                  <TD className="text-right tabular-nums">{t.activeProjects}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+function Kpi({ label, value, delta, hint }: { label: string; value: string; delta?: number | null; hint?: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="min-w-0 rounded-xl bg-surface p-4 shadow-card">
+      <p className="text-xs text-text-muted">{label}</p>
+      <p className="mt-1 truncate text-lg font-extrabold tabular-nums">{value}</p>
+      <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
+        {delta !== undefined && delta !== null && (
+          <span className={`rounded-full px-2 py-0.5 font-semibold ${delta >= 0 ? 'bg-accent text-primary' : 'bg-danger/10 text-danger'}`}>
+            {delta >= 0 ? '+' : ''}
+            {delta}%
+          </span>
+        )}
+        {hint && <span className="truncate">{hint}</span>}
+      </div>
+    </motion.div>
+  );
+}
