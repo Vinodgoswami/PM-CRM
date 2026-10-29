@@ -38,6 +38,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P2-4  | Done   | feat/phase-2-clients-projects | Documents: local + S3/R2 drivers, signed PUT/GET, confirm checks size/type, allow-list, 25 MB                             |
 | P2-5  | Done   | feat/phase-2-clients-projects | Web: projects list (views, search, sort, paging) and detail (totals, status menu, upsells, documents, activity)           |
 | P2-6  | Done   | feat/phase-2-clients-projects | Web: project form (client combobox + "Add new client", milestone rows, duplicate-client recovery), edit form              |
+| P2-7  | Done   | feat/phase-2-clients-projects | Web: clients list (search, archived), detail (contacts, primary, totals, upsell tree), create/edit/archive                |
 
 ## Blockers
 

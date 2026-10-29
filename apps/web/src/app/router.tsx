@@ -3,6 +3,8 @@ import { type ReactNode } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { AcceptInvitePage } from '../features/auth/AcceptInvitePage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { ClientDetailPage } from '../features/clients/ClientDetailPage';
+import { ClientsListPage } from '../features/clients/ClientsListPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { ProjectDetailPage } from '../features/projects/ProjectDetailPage';
 import { ProjectFormPage } from '../features/projects/ProjectFormPage';
@@ -32,7 +34,8 @@ export const routes: RouteObject[] = [
       { path: 'projects/:id', element: guarded('projects.read', <ProjectDetailPage />) },
       { path: 'projects/:id/edit', element: guarded('projects.write', <ProjectFormPage />) },
       { path: 'billing', element: guarded('billing.read', <PlaceholderPage title="Completed Billing" phase={3} />) },
-      { path: 'clients', element: guarded('clients.read', <PlaceholderPage title="Clients" phase={2} />) },
+      { path: 'clients', element: guarded('clients.read', <ClientsListPage />) },
+      { path: 'clients/:id', element: guarded('clients.read', <ClientDetailPage />) },
       { path: 'settings', element: guarded('settings.manage', <PlaceholderPage title="Settings" phase={2} />) },
       { path: 'audit', element: guarded('audit.read', <PlaceholderPage title="Audit log" phase={2} />) },
     ],
