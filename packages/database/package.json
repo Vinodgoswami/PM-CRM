@@ -45,5 +45,12 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3"
+  },
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "./dist/testing.d.ts"
+      ]
+    }
   }
 }

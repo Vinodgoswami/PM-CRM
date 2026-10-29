@@ -30,6 +30,7 @@
     "vitest": "^3.2.7"
   },
   "dependencies": {
+    "@salescrm/types": "workspace:*",
     "zod": "^4.6.7"
   }
 }
