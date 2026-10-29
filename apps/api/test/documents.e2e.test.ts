@@ -1,0 +1,137 @@
+import { type INestApplication } from '@nestjs/common';
+import { type PrismaClient } from '@salescrm/database';
+import request from 'supertest';
+import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
+import { createTestApp, loginAs, resetDatabase } from './harness';
+
+let app: INestApplication;
+let prisma: PrismaClient;
+
+beforeAll(async () => {
+  ({ app, prisma } = await createTestApp());
+});
+beforeEach(async () => {
+  await resetDatabase(prisma);
+});
+afterAll(async () => {
+  await app.close();
+});
+
+type Agent = ReturnType<typeof request.agent>;
+const PDF = Buffer.from('%PDF-1.7\nhello proposal\n%%EOF');
+const http = () => request(app.getHttpServer());
+
+async function newProject(agent: Agent, csrf: string) {
+  const res = await agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', csrf)
+    .send({ name: 'P', expectedAmountMinor: 1000, newClient: { name: `C ${Math.random()}` } });
+  return res.body.id as string;
+}
+
+async function requestUpload(agent: Agent, csrf: string, projectId: string, overrides: object = {}) {
+  return agent
+    .post(`/api/v1/projects/${projectId}/documents/upload-url`)
+    .set('X-CSRF-Token', csrf)
+    .send({ name: 'Proposal.pdf', type: 'PROPOSAL', mimeType: 'application/pdf', sizeBytes: PDF.length, ...overrides });
+}
+
+const pathOf = (url: string) => (url.startsWith('http') ? new URL(url).pathname + new URL(url).search : url);
+
+test('full round trip: request → upload → confirm → list → download', async () => {
+  const { agent, csrf, user } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const slot = await requestUpload(agent, csrf, projectId);
+  expect(slot.status).toBe(201);
+  expect(slot.body.headers).toEqual({ 'Content-Type': 'application/pdf' });
+
+  const put = await http().put(pathOf(slot.body.url)).set('Content-Type', 'application/pdf').send(PDF);
+  expect(put.status).toBe(200);
+  expect((await agent.post(`/api/v1/documents/${slot.body.documentId}/confirm`).set('X-CSRF-Token', csrf)).status).toBe(200);
+
+  const list = await agent.get(`/api/v1/projects/${projectId}/documents`);
+  expect(list.body.items).toMatchObject([
+    { id: slot.body.documentId, name: 'Proposal.pdf', type: 'PROPOSAL', sizeBytes: PDF.length, uploadedBy: { id: user.id } },
+  ]);
+
+  const link = await agent.get(`/api/v1/documents/${slot.body.documentId}/download`);
+  expect(link.status).toBe(200);
+  const file = await http()
+    .get(pathOf(link.body.url))
+    .buffer(true)
+    .parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks)));
+    });
+  expect(file.status).toBe(200);
+  expect(file.headers['content-disposition']).toBe('attachment; filename="Proposal.pdf"');
+  expect(Buffer.compare(file.body as Buffer, PDF)).toBe(0);
+  expect(await prisma.auditLog.count({ where: { action: 'document.upload' } })).toBe(1);
+});
+
+test('files over 25 MB and disallowed types are refused up front', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  expect((await requestUpload(agent, csrf, projectId, { sizeBytes: 30 * 1024 * 1024 })).status).toBe(400);
+  expect((await requestUpload(agent, csrf, projectId, { mimeType: 'application/x-msdownload', name: 'run.exe' })).status).toBe(400);
+});
+
+test('confirming an upload that never happened leaves no document', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const slot = await requestUpload(agent, csrf, projectId);
+  const res = await agent.post(`/api/v1/documents/${slot.body.documentId}/confirm`).set('X-CSRF-Token', csrf);
+  expect(res.status).toBe(400);
+  expect(await prisma.document.count()).toBe(0);
+});
+
+test('an upload with a different type than declared fails confirmation', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const slot = await requestUpload(agent, csrf, projectId);
+  const put = await http().put(pathOf(slot.body.url)).set('Content-Type', 'application/zip').send(PDF);
+  expect(put.status).toBe(400);
+});
+
+test('a body larger than declared is rejected', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const slot = await requestUpload(agent, csrf, projectId, { sizeBytes: 5 });
+  const put = await http().put(pathOf(slot.body.url)).set('Content-Type', 'application/pdf').send(PDF);
+  expect(put.status).toBe(413);
+});
+
+test('tampered and expired storage tokens are refused', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const slot = await requestUpload(agent, csrf, projectId);
+  const path = pathOf(slot.body.url);
+  const tampered = path.slice(0, -2) + (path.endsWith('aa') ? 'bb' : 'aa');
+  expect((await http().put(tampered).set('Content-Type', 'application/pdf').send(PDF)).status).toBe(403);
+
+  const [prefix, token] = [path.slice(0, path.lastIndexOf('/') + 1), path.slice(path.lastIndexOf('/') + 1)];
+  const [body, sig] = token.split('.');
+  const payload = JSON.parse(Buffer.from(body!, 'base64url').toString());
+  const expired = Buffer.from(JSON.stringify({ ...payload, e: Date.now() - 1000 })).toString('base64url');
+  expect((await http().put(`${prefix}${expired}.${sig}`).set('Content-Type', 'application/pdf').send(PDF)).status).toBe(403);
+});
+
+test('roles: another rep cannot upload or delete; CEO can download', async () => {
+  const owner = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(owner.agent, owner.csrf);
+  const slot = await requestUpload(owner.agent, owner.csrf, projectId);
+  await http().put(pathOf(slot.body.url)).set('Content-Type', 'application/pdf').send(PDF);
+  await owner.agent.post(`/api/v1/documents/${slot.body.documentId}/confirm`).set('X-CSRF-Token', owner.csrf).expect(200);
+
+  const other = await loginAs(app, prisma, 'SALES');
+  expect((await requestUpload(other.agent, other.csrf, projectId)).status).toBe(403);
+  expect((await other.agent.delete(`/api/v1/documents/${slot.body.documentId}`).set('X-CSRF-Token', other.csrf)).status).toBe(403);
+
+  const ceo = await loginAs(app, prisma, 'CEO');
+  expect((await ceo.agent.get(`/api/v1/documents/${slot.body.documentId}/download`)).status).toBe(200);
+  expect((await requestUpload(ceo.agent, ceo.csrf, projectId)).status).toBe(403);
+
+  expect((await owner.agent.delete(`/api/v1/documents/${slot.body.documentId}`).set('X-CSRF-Token', owner.csrf)).status).toBe(204);
+  expect(await prisma.document.count()).toBe(0);
+});

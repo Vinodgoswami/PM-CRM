@@ -42,5 +42,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Known gaps
 
+- Abandoned uploads leave PENDING document rows (hidden from lists); no cleanup job yet.
+
 - GitHub repository not created yet; branch protection pending (P6-3).
 - No remote yet; local `main` holds the initial commit, work continues on `development`.

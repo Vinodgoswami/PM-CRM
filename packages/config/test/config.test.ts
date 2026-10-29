@@ -13,7 +13,32 @@ test('valid env produces typed config with defaults', () => {
     webOrigin: 'http://localhost:5173',
     cookieSecure: false,
     logLevel: 'info',
+    storage: { driver: 'local', localDir: './uploads' },
   });
+});
+
+test('s3 storage needs bucket and credentials', () => {
+  expect(() => loadConfig({ ...valid, STORAGE_DRIVER: 's3', S3_BUCKET: 'docs' })).toThrow(/S3_ACCESS_KEY_ID/);
+  const config = loadConfig({
+    ...valid,
+    STORAGE_DRIVER: 's3',
+    S3_ENDPOINT: 'https://acc.r2.cloudflarestorage.com',
+    S3_BUCKET: 'docs',
+    S3_ACCESS_KEY_ID: 'key',
+    S3_SECRET_ACCESS_KEY: 'secret',
+  });
+  expect(config.storage).toEqual({
+    driver: 's3',
+    endpoint: 'https://acc.r2.cloudflarestorage.com',
+    bucket: 'docs',
+    region: 'auto',
+    accessKeyId: 'key',
+    secretAccessKey: 'secret',
+  });
+});
+
+test('production refuses local disk storage', () => {
+  expect(() => loadConfig({ ...valid, NODE_ENV: 'production', COOKIE_SECURE: 'true' })).toThrow(/STORAGE_DRIVER/);
 });
 
 test('every bad key is reported in one error', () => {
@@ -41,6 +66,15 @@ test.each(['ci-only-session-secret-000000000000000000000', 'change-me-change-me-
 );
 
 test('production with real values passes', () => {
-  const config = loadConfig({ ...valid, NODE_ENV: 'production', COOKIE_SECURE: 'true', WEB_ORIGIN: 'https://crm.example.com' });
+  const config = loadConfig({
+    ...valid,
+    NODE_ENV: 'production',
+    COOKIE_SECURE: 'true',
+    WEB_ORIGIN: 'https://crm.example.com',
+    STORAGE_DRIVER: 's3',
+    S3_BUCKET: 'docs',
+    S3_ACCESS_KEY_ID: 'key',
+    S3_SECRET_ACCESS_KEY: 'secret',
+  });
   expect(config.cookieSecure).toBe(true);
 });
