@@ -102,4 +102,10 @@ export class ProjectsController {
   ): Promise<ProjectDetail> {
     return this.projects.setParent(user, id, body.parentProjectId);
   }
+
+  @Get(':id/activity')
+  @RequirePermission('projects.read')
+  activity(@CurrentUser() user: SessionUser, @Param('id') id: string) {
+    return this.projects.activity(user, id);
+  }
 }

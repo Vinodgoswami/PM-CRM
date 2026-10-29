@@ -250,3 +250,14 @@ test('unknown project is 404', async () => {
   const { agent } = await loginAs(app, prisma, 'ADMIN');
   expect((await agent.get('/api/v1/projects/does-not-exist')).status).toBe(404);
 });
+
+test('project activity is visible to anyone who can see the project', async () => {
+  const owner = await loginAs(app, prisma, 'SALES');
+  const p = await post(owner.agent, owner.csrf, '/projects', { ...base, clientId: await clientId(owner.agent, owner.csrf) });
+  await post(owner.agent, owner.csrf, `/projects/${p.body.id}/status`, { status: 'PROPOSAL' });
+  const other = await loginAs(app, prisma, 'SALES');
+  const res = await other.agent.get(`/api/v1/projects/${p.body.id}/activity`);
+  expect(res.status).toBe(200);
+  expect(res.body.items.map((i: { action: string }) => i.action)).toEqual(['project.status', 'project.create']);
+  expect(res.body.items[0]).toMatchObject({ actor: { id: owner.user.id }, before: { status: 'LEAD' }, after: { status: 'PROPOSAL' } });
+});

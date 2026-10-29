@@ -424,4 +424,18 @@ export class ProjectsService {
       });
     });
   }
+
+  /** The project's own audit trail, visible to anyone who may read the project (unlike the global log). */
+  async activity(user: SessionUser, id: string) {
+    await this.load(id, user);
+    const items = await this.prisma.auditLog.findMany({
+      where: { entity: 'Project', entityId: id },
+      orderBy: { at: 'desc' },
+      take: 100,
+      include: { actor: { select: { id: true, name: true } } },
+    });
+    return {
+      items: items.map((i) => ({ id: i.id, action: i.action, at: i.at.toISOString(), actor: i.actor, before: i.before, after: i.after })),
+    };
+  }
 }
