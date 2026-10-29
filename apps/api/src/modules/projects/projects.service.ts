@@ -1,0 +1,331 @@
+import { Injectable } from '@nestjs/common';
+import { can } from '@salescrm/auth/permissions';
+import { changedFields, checkTransition, endDateFor, type IsoDate, type ProjectStatus, statusDates } from '@salescrm/core';
+import { type Prisma } from '@salescrm/database';
+import {
+  type CreateProjectInput,
+  type ProjectDetail,
+  type ProjectListItem,
+  type ProjectListQuery,
+  type UpdateProjectInput,
+} from '@salescrm/schemas';
+import { minorFromJson, minorToJson } from '@salescrm/types';
+import { type SessionUser } from '../../common/current-user';
+import { AppError, conflict, notFound, RuleViolation } from '../../common/errors';
+import { assertCanAccess, ownerWhere } from '../../common/ownership';
+import { AuditService } from '../audit/audit.service';
+import { ClientsService } from '../clients/clients.service';
+import { PrismaService } from '../prisma/prisma.module';
+import { SettingsService } from '../settings/settings.service';
+import { isoDate, PROJECT_MONEY_INCLUDE, totalsFor } from './project-money';
+
+const LIST_INCLUDE = {
+  ...PROJECT_MONEY_INCLUDE,
+  client: { select: { id: true, name: true } },
+  owner: { select: { id: true, name: true } },
+} satisfies Prisma.ProjectInclude;
+
+const DETAIL_INCLUDE = {
+  ...LIST_INCLUDE,
+  upsellEntries: { select: { id: true, amountMinor: true, date: true, note: true }, orderBy: { date: 'asc' } },
+  milestones: {
+    select: { id: true, number: true, title: true, amountMinor: true, dueDate: true, payments: { select: { amountMinor: true } } },
+    orderBy: { number: 'asc' },
+  },
+  parentProject: { select: { id: true, code: true, name: true } },
+  upsellProjects: { select: { id: true, code: true, name: true, status: true }, orderBy: { code: 'asc' } },
+} satisfies Prisma.ProjectInclude;
+
+type ListRow = Prisma.ProjectGetPayload<{ include: typeof LIST_INCLUDE }>;
+type DetailRow = Prisma.ProjectGetPayload<{ include: typeof DETAIL_INCLUDE }>;
+
+const toDate = (d: IsoDate | null | undefined) => (d ? new Date(`${d}T00:00:00Z`) : null);
+const paidOf = (m: { payments: { amountMinor: bigint }[] }) => m.payments.reduce((s, p) => s + p.amountMinor, 0n);
+
+function toListItem(p: ListRow, today: IsoDate): ProjectListItem {
+  const t = totalsFor(p, today);
+  return {
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    status: p.status,
+    currency: p.currency,
+    client: p.client,
+    owner: p.owner,
+    wonAt: isoDate(p.wonAt),
+    contractValueMinor: minorToJson(t.contractValueMinor),
+    collectedMinor: minorToJson(t.collectedMinor),
+    outstandingMinor: minorToJson(t.outstandingMinor),
+    nextDueDate: t.nextDueDate,
+    hasOverdue: t.hasOverdue,
+    parentProjectId: p.parentProjectId,
+  };
+}
+
+const SORTERS: Record<ProjectListQuery['sort'], (a: ProjectListItem, b: ProjectListItem) => number> = {
+  code: (a, b) => a.code.localeCompare(b.code),
+  name: (a, b) => a.name.localeCompare(b.name),
+  wonAt: (a, b) => (a.wonAt ?? '').localeCompare(b.wonAt ?? ''),
+  contractValue: (a, b) => a.contractValueMinor - b.contractValueMinor,
+  outstanding: (a, b) => a.outstandingMinor - b.outstandingMinor,
+  nextDue: (a, b) => (a.nextDueDate ?? '9999').localeCompare(b.nextDueDate ?? '9999'),
+};
+
+@Injectable()
+export class ProjectsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly clients: ClientsService,
+    private readonly settings: SettingsService,
+  ) {}
+
+  toDetail(p: DetailRow, user: SessionUser, today: IsoDate): ProjectDetail {
+    const t = totalsFor(p, today);
+    return {
+      ...toListItem(p, today),
+      description: p.description,
+      startDate: isoDate(p.startDate),
+      durationValue: p.durationValue,
+      durationUnit: p.durationUnit,
+      endDate: isoDate(p.endDate),
+      closedAt: isoDate(p.closedAt),
+      expectedAmountMinor: minorToJson(p.expectedAmountMinor),
+      tags: p.tags,
+      parent: p.parentProject,
+      upsellProjects: p.upsellProjects,
+      upsellEntries: p.upsellEntries.map((u) => ({
+        id: u.id,
+        amountMinor: minorToJson(u.amountMinor),
+        date: isoDate(u.date)!,
+        note: u.note,
+      })),
+      milestones: p.milestones.map((m) => ({
+        id: m.id,
+        number: m.number,
+        title: m.title,
+        amountMinor: minorToJson(m.amountMinor),
+        dueDate: isoDate(m.dueDate),
+        paidMinor: minorToJson(paidOf(m)),
+      })),
+      scheduledMinor: minorToJson(t.scheduledMinor),
+      unscheduledMinor: minorToJson(t.unscheduledMinor),
+      updatedAt: p.updatedAt.toISOString(),
+      canEdit: can(user, 'projects.write', { ownerId: p.ownerId }),
+    };
+  }
+
+  /** Loads a project the user may see (404 otherwise) — used by every project-scoped endpoint. */
+  async load(id: string, user: SessionUser, tx: Prisma.TransactionClient = this.prisma): Promise<DetailRow> {
+    const p = await tx.project.findUnique({ where: { id }, include: DETAIL_INCLUDE });
+    if (!p || p.archivedAt) throw notFound();
+    assertCanAccess(user, 'projects.read', p.ownerId, 'read');
+    return p;
+  }
+
+  async loadForWrite(id: string, user: SessionUser, tx: Prisma.TransactionClient = this.prisma): Promise<DetailRow> {
+    const p = await this.load(id, user, tx);
+    assertCanAccess(user, 'projects.write', p.ownerId, 'write');
+    return p;
+  }
+
+  async get(id: string, user: SessionUser): Promise<ProjectDetail> {
+    return this.toDetail(await this.load(id, user), user, await this.settings.today());
+  }
+
+  async list(user: SessionUser, q: ProjectListQuery) {
+    const where: Prisma.ProjectWhereInput = {
+      archivedAt: null,
+      ...ownerWhere(user, 'projects.read'),
+      ...(q.status?.length ? { status: { in: q.status } } : {}),
+      ...(q.clientId ? { clientId: q.clientId } : {}),
+      ...(q.ownerId ? { ownerId: q.ownerId } : {}),
+      ...(q.wonFrom || q.wonTo
+        ? { wonAt: { ...(q.wonFrom ? { gte: toDate(q.wonFrom)! } : {}), ...(q.wonTo ? { lte: toDate(q.wonTo)! } : {}) } }
+        : {}),
+      ...(q.q ? { OR: [{ name: { contains: q.q, mode: 'insensitive' } }, { code: { contains: q.q, mode: 'insensitive' } }] } : {}),
+    };
+    const today = await this.settings.today();
+    // Computed columns (contract value, outstanding, next due) are derived in core, so sort/paginate after the DB filter.
+    let items = (await this.prisma.project.findMany({ where, include: LIST_INCLUDE })).map((p) => toListItem(p, today));
+    if (q.hasOverdue !== undefined) items = items.filter((i) => i.hasOverdue === q.hasOverdue);
+    const sorter = SORTERS[q.sort];
+    items.sort((a, b) => (q.dir === 'desc' ? -sorter(a, b) : sorter(a, b)));
+    const total = items.length;
+    return { items: items.slice((q.page - 1) * q.pageSize, q.page * q.pageSize), page: q.page, pageSize: q.pageSize, total };
+  }
+
+  async create(user: SessionUser, input: CreateProjectInput): Promise<ProjectDetail> {
+    const today = await this.settings.today();
+    try {
+      const id = await this.prisma.$transaction(async (tx) => {
+        let clientId = input.clientId;
+        if (input.newClient) {
+          // C-1: the client is created in the same transaction; if anything below fails, it is rolled back too.
+          const created = await this.clients.createIn(tx, user, {
+            name: input.newClient.name,
+            ...(input.newClient.email ? { contact: { email: input.newClient.email } } : {}),
+          });
+          clientId = created.id;
+        }
+        const client = await tx.client.findUnique({ where: { id: clientId! } });
+        if (!client || client.archivedAt) throw new RuleViolation('C-3', 'Choose an active client.');
+
+        const ownerId = await this.resolveOwner(tx, user, input.ownerId);
+        const milestones = input.milestones.map((m, i) => ({ ...m, number: i + 1 }));
+        // PS-4 applies to the initial status too; the PS-1 arrows only govern later changes.
+        if (input.status === 'ACTIVE') {
+          const check = checkTransition('WON', 'ACTIVE', {
+            isAdmin: true,
+            milestones: milestones.map((m) => ({ dueDate: m.dueDate ?? null })),
+            hasPayments: false,
+          });
+          if (!check.ok) throw new RuleViolation(check.rule, check.message);
+        }
+        const dates = statusDates('LEAD', input.status, { wonAt: null, closedAt: null }, today);
+        const [seq] = await tx.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('project_code_seq')`;
+        const nextval = seq!.nextval;
+
+        const project = await tx.project.create({
+          data: {
+            code: `PRJ-${String(nextval).padStart(4, '0')}`,
+            name: input.name,
+            description: input.description,
+            clientId: client.id,
+            ownerId,
+            status: input.status,
+            startDate: toDate(input.startDate),
+            durationValue: input.durationValue ?? null,
+            durationUnit: input.durationUnit ?? null,
+            endDate: toDate(endDateFor(input.startDate ?? null, input.durationValue ?? null, input.durationUnit ?? null)),
+            expectedAmountMinor: minorFromJson(input.expectedAmountMinor),
+            currency: input.currency ?? client.currency,
+            wonAt: toDate(dates.wonAt),
+            tags: input.tags,
+            createdById: user.id,
+            milestones: {
+              create: milestones.map((m) => ({
+                number: m.number,
+                title: m.title,
+                description: m.description ?? null,
+                amountMinor: minorFromJson(m.amountMinor),
+                dueDate: toDate(m.dueDate),
+                createdById: user.id,
+              })),
+            },
+          },
+        });
+        await this.audit.record(tx, {
+          actorId: user.id,
+          action: 'project.create',
+          entity: 'Project',
+          entityId: project.id,
+          after: {
+            code: project.code,
+            name: project.name,
+            status: project.status,
+            expectedAmountMinor: project.expectedAmountMinor.toString(),
+          },
+        });
+        return project.id;
+      });
+      return this.get(id, user);
+    } catch (e) {
+      if (input.newClient) return this.clients.rethrowDuplicate(e, input.newClient.name);
+      throw e;
+    }
+  }
+
+  /** Owner is the caller unless they may reassign (Admin), in which case it must be an active Admin or Sales user. */
+  private async resolveOwner(tx: Prisma.TransactionClient, user: SessionUser, requested: string | undefined): Promise<string> {
+    if (!requested || !can(user, 'projects.reassign')) return user.id;
+    const owner = await tx.user.findUnique({ where: { id: requested } });
+    if (!owner || !owner.active || owner.role === 'CEO')
+      throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active Admin or Sales user as owner.');
+    return owner.id;
+  }
+
+  async update(user: SessionUser, id: string, input: UpdateProjectInput): Promise<ProjectDetail> {
+    await this.prisma.$transaction(async (tx) => {
+      const before = await this.loadForWrite(id, user, tx);
+      if (before.updatedAt.toISOString() !== input.updatedAt) {
+        throw conflict('CONFLICT', 'This project was changed by someone else. Reload and try again.');
+      }
+      if (input.currency && input.currency !== before.currency && before.milestones.length > 0) {
+        throw new RuleViolation('M-3', 'The currency cannot change once the project has milestones.');
+      }
+      const startDate = input.startDate !== undefined ? input.startDate : isoDate(before.startDate);
+      const durationValue = input.durationValue !== undefined ? input.durationValue : before.durationValue;
+      const durationUnit = input.durationUnit !== undefined ? input.durationUnit : before.durationUnit;
+      const after = await tx.project.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.tags !== undefined ? { tags: input.tags } : {}),
+          ...(input.currency !== undefined ? { currency: input.currency } : {}),
+          ...(input.expectedAmountMinor !== undefined ? { expectedAmountMinor: minorFromJson(input.expectedAmountMinor) } : {}),
+          startDate: toDate(startDate),
+          durationValue,
+          durationUnit,
+          endDate: toDate(endDateFor(startDate, durationValue, durationUnit)), // D-1
+        },
+      });
+      const pick = (p: typeof after) => ({
+        name: p.name,
+        description: p.description,
+        tags: p.tags,
+        currency: p.currency,
+        expectedAmountMinor: p.expectedAmountMinor,
+        startDate: p.startDate,
+        durationValue: p.durationValue,
+        durationUnit: p.durationUnit,
+      });
+      const diff = changedFields(pick(before), pick(after));
+      if (diff) await this.audit.record(tx, { actorId: user.id, action: 'project.update', entity: 'Project', entityId: id, ...diff });
+    });
+    return this.get(id, user);
+  }
+
+  async changeStatus(user: SessionUser, id: string, to: ProjectStatus): Promise<ProjectDetail> {
+    const today = await this.settings.today();
+    await this.prisma.$transaction(async (tx) => {
+      const p = await this.loadForWrite(id, user, tx);
+      const check = checkTransition(p.status, to, {
+        isAdmin: user.role === 'ADMIN',
+        milestones: p.milestones.map((m) => ({ dueDate: isoDate(m.dueDate) })),
+        hasPayments: p.milestones.some((m) => m.payments.length > 0),
+      });
+      if (!check.ok) throw new RuleViolation(check.rule, check.message);
+      const dates = statusDates(p.status, to, { wonAt: isoDate(p.wonAt), closedAt: isoDate(p.closedAt) }, today);
+      await tx.project.update({ where: { id }, data: { status: to, wonAt: toDate(dates.wonAt), closedAt: toDate(dates.closedAt) } });
+      await this.audit.record(tx, {
+        actorId: user.id,
+        action: 'project.status',
+        entity: 'Project',
+        entityId: id,
+        before: { status: p.status },
+        after: { status: to },
+      });
+    });
+    return this.get(id, user);
+  }
+
+  async changeOwner(user: SessionUser, id: string, ownerId: string): Promise<ProjectDetail> {
+    await this.prisma.$transaction(async (tx) => {
+      const p = await this.load(id, user, tx);
+      const newOwner = await this.resolveOwner(tx, user, ownerId);
+      if (newOwner === p.ownerId) return;
+      await tx.project.update({ where: { id }, data: { ownerId: newOwner } });
+      await this.audit.record(tx, {
+        actorId: user.id,
+        action: 'project.owner',
+        entity: 'Project',
+        entityId: id,
+        before: { ownerId: p.ownerId },
+        after: { ownerId: newOwner },
+      });
+    });
+    return this.get(id, user);
+  }
+}

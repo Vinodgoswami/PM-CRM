@@ -22,6 +22,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 ```
 
 - **PS-1** Allowed transitions are exactly the arrows above; Admin may move any status (audited).
+  A new project may start as LEAD, PROPOSAL, WON or ACTIVE; the arrows govern later changes, while PS-2 and PS-4
+  apply from creation. Moving to the status it already has is refused.
 - **PS-2** `wonAt` is set the first time status becomes WON (or ACTIVE if WON was skipped). It is the date the
   project counts as **booked**.
 - **PS-3** LEAD and PROPOSAL projects form the **pipeline**; they are not booked sales.
