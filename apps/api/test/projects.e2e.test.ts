@@ -261,3 +261,14 @@ test('project activity is visible to anyone who can see the project', async () =
   expect(res.body.items.map((i: { action: string }) => i.action)).toEqual(['project.status', 'project.create']);
   expect(res.body.items[0]).toMatchObject({ actor: { id: owner.user.id }, before: { status: 'LEAD' }, after: { status: 'PROPOSAL' } });
 });
+
+test('two simultaneous edits of the same version: one wins, the other gets 409', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const p = await post(agent, csrf, '/projects', { ...base, clientId: await clientId(agent, csrf) });
+  const results = await Promise.all(
+    ['First', 'Second'].map((name) =>
+      agent.patch(`/api/v1/projects/${p.body.id}`).set('X-CSRF-Token', csrf).send({ name, updatedAt: p.body.updatedAt }),
+    ),
+  );
+  expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+});

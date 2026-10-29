@@ -8,12 +8,12 @@ import { z } from 'zod';
 import { ApiError, apiFetch } from '../../lib/api';
 import { useSession } from '../auth/api';
 import { useClient } from '../clients/api';
+import { useSettings } from '../settings/api';
 import { useCreateProject, useProject, useUpdateProject } from './api';
 import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
 import { MoneyInput } from './MoneyInput';
 
-const CURRENCY = 'INR';
 const selectClass = 'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm';
 
 type Errors = Record<string, string>;
@@ -60,7 +60,8 @@ function CreateProject() {
   const preset = useClient(presetClient ?? '');
   const [client, setClient] = useState<ClientChoice>(null);
   useEffect(() => {
-    if (presetClient && preset.data && !client) setClient({ clientId: presetClient, name: preset.data.name });
+    if (presetClient && preset.data && !client)
+      setClient({ clientId: presetClient, name: preset.data.name, currency: preset.data.currency });
   }, [presetClient, preset.data, client]);
 
   const [name, setName] = useState('');
@@ -75,6 +76,9 @@ function CreateProject() {
   const [errors, setErrors] = useState<Errors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const parentProjectId = params.get('parent') ?? undefined;
+  const baseCurrency = useSettings().data?.baseCurrency ?? 'INR';
+  // Amounts are entered in the project's currency: the client's, or the base currency for a new client.
+  const currency = client && 'clientId' in client ? client.currency : baseCurrency;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +95,7 @@ function CreateProject() {
       ...(startDate ? { startDate } : {}),
       ...(durationValue ? { durationValue: Number(durationValue), durationUnit } : {}),
       expectedAmountMinor: expected.minor ?? undefined,
+      currency,
       ...(parentProjectId ? { parentProjectId } : {}),
       milestones: rows.map((r) => ({
         title: r.title,
@@ -119,7 +124,7 @@ function CreateProject() {
         const clientId =
           err instanceof ApiError && err.status === 409 ? (err.details as { clientId?: string } | undefined)?.clientId : undefined;
         if (clientId && client && 'newClient' in client) {
-          setClient({ clientId, name: client.newClient.name });
+          setClient({ clientId, name: client.newClient.name, currency });
           setNotice(
             `A client called ${client.newClient.name} already exists. Using the existing client ${client.newClient.name} — submit again to continue.`,
           );
@@ -219,12 +224,12 @@ function CreateProject() {
               </div>
             </Field>
             <Field id="expected" label="Expected amount" error={errors.expectedAmountMinor}>
-              <MoneyInput id="expected" currency={CURRENCY} onValue={(minor, error) => setExpected({ minor, error })} />
+              <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
             </Field>
           </div>
         </Card>
         <Card>
-          <MilestoneRowsEditor rows={rows} onChange={setRows} expectedMinor={expected.minor} currency={CURRENCY} errors={errors} />
+          <MilestoneRowsEditor rows={rows} onChange={setRows} expectedMinor={expected.minor} currency={currency} errors={errors} />
         </Card>
         <div className="flex justify-end gap-2">
           <Button asChild variant="outline">

@@ -1,6 +1,6 @@
 import { currencyDigits, MoneyParseError, minorToJson, toMinor } from '@salescrm/types';
 import { Input } from '@salescrm/ui';
-import { type ComponentProps, useState } from 'react';
+import { type ComponentProps, useEffect, useRef, useState } from 'react';
 
 /** Parses typed amounts with the shared money rules (M-1); reports minor units, or null with a message. */
 export function MoneyInput({
@@ -13,6 +13,28 @@ export function MoneyInput({
   'onChange' | 'defaultValue'
 >) {
   const [text, setText] = useState(defaultMinor ? minorToText(defaultMinor, currency) : '');
+  const report = useRef(onValue);
+  report.current = onValue;
+
+  const parse = (value: string) => {
+    if (!value.trim()) return report.current(null, 'Enter an amount');
+    try {
+      const minor = toMinor(value, currency);
+      if (minor <= 0n) return report.current(null, 'Enter an amount above zero');
+      report.current(minorToJson(minor), null);
+    } catch (err) {
+      report.current(null, err instanceof MoneyParseError ? 'Enter an amount like 1,25,000.50' : 'Amount is too large');
+    }
+  };
+
+  // The same typed text means a different number of minor units in another currency (₹ has 2 decimals, ¥ none).
+  const lastCurrency = useRef(currency);
+  useEffect(() => {
+    if (lastCurrency.current === currency) return;
+    lastCurrency.current = currency;
+    if (text) parse(text);
+  }); // runs after every render; re-parses only when the currency actually changed
+
   return (
     <div className="relative">
       <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-text-muted">{currency}</span>
@@ -21,16 +43,8 @@ export function MoneyInput({
         className="pl-12 text-right tabular-nums"
         value={text}
         onChange={(e) => {
-          const next = e.target.value;
-          setText(next);
-          if (!next.trim()) return onValue(null, 'Enter an amount');
-          try {
-            const minor = toMinor(next, currency);
-            if (minor <= 0n) return onValue(null, 'Enter an amount above zero');
-            onValue(minorToJson(minor), null);
-          } catch (err) {
-            onValue(null, err instanceof MoneyParseError ? 'Enter an amount like 1,25,000.50' : 'Amount is too large');
-          }
+          setText(e.target.value);
+          parse(e.target.value);
         }}
         {...props}
       />

@@ -3,7 +3,7 @@ import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useClients } from '../clients/api';
 
-export type ClientChoice = { clientId: string; name: string } | { newClient: { name: string; email?: string } } | null;
+export type ClientChoice = { clientId: string; name: string; currency: string } | { newClient: { name: string; email?: string } } | null;
 
 /** Client dropdown with "+ Add new client" (R1, C-1): new clients are created together with the project. */
 export function ClientCombobox({
@@ -53,7 +53,7 @@ export function ClientCombobox({
                 key={c.id}
                 value={c.id}
                 onSelect={() => {
-                  onChange({ clientId: c.id, name: c.name });
+                  onChange({ clientId: c.id, name: c.name, currency: c.currency });
                   setOpen(false);
                 }}
               >

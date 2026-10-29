@@ -35,7 +35,30 @@ export const createClientSchema = z.object({
 });
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 
-export const updateClientSchema = createClientSchema.omit({ contact: true }).partial();
+/** On update an emptied field means "clear it" (null), unlike create where it means "not given". */
+const clearable = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => (v === '' ? null : v))
+    .nullable()
+    .optional();
+
+export const updateClientSchema = z.object({
+  name: clientNameSchema.optional(),
+  company: clearable(160),
+  country: z
+    .string()
+    .regex(/^[A-Z]{2}$/, 'Use a 2-letter country code')
+    .nullable()
+    .optional(),
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, 'Use a 3-letter currency code')
+    .optional(),
+  notes: clearable(2000),
+});
 export type UpdateClientInput = z.infer<typeof updateClientSchema>;
 
 export const updateContactSchema = contactSchema.partial();
@@ -59,6 +82,7 @@ export const clientListItemSchema = z.object({
   primaryEmail: z.string().nullable(),
   projects: z.number(),
   archived: z.boolean(),
+  currency: z.string(),
 });
 export type ClientListItem = z.infer<typeof clientListItemSchema>;
 

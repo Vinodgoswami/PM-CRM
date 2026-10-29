@@ -37,6 +37,7 @@ function toListItem(c: ClientRow): ClientListItem {
     primaryEmail: c.contacts[0]?.email ?? null,
     projects: c._count.projects,
     archived: c.archivedAt !== null,
+    currency: c.currency,
   };
 }
 

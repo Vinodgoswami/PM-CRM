@@ -151,3 +151,19 @@ test('validation: blank name is rejected', async () => {
 test('unauthenticated list is 401', async () => {
   expect((await request(app.getHttpServer()).get('/api/v1/clients')).status).toBe(401);
 });
+
+test('editing a client can clear company and notes', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const c = await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Acme', company: 'Acme Pvt', notes: 'Pays late' });
+  const res = await agent.patch(`/api/v1/clients/${c.body.id}`).set('X-CSRF-Token', csrf).send({ company: '', notes: '' });
+  expect(res.status).toBe(200);
+  const detail = await agent.get(`/api/v1/clients/${c.body.id}`);
+  expect(detail.body).toMatchObject({ company: null, notes: null });
+  expect(await prisma.auditLog.count({ where: { action: 'client.update', entityId: c.body.id } })).toBe(1);
+});
+
+test('client list items carry the client currency', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Tokyo Co', currency: 'JPY' });
+  expect((await agent.get('/api/v1/clients')).body.items[0]).toMatchObject({ currency: 'JPY' });
+});

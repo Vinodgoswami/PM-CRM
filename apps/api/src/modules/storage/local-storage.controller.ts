@@ -4,7 +4,7 @@ import { type Request, type Response } from 'express';
 import { Public } from '../../common/decorators';
 import { AppError, forbidden, notFound } from '../../common/errors';
 import { LocalDriver } from './local.driver';
-import { safeFileName, STORAGE_DRIVER, type StorageDriver } from './storage.driver';
+import { attachmentDisposition, STORAGE_DRIVER, type StorageDriver } from './storage.driver';
 
 /**
  * Serves signed local-disk URLs in development. The HMAC-signed token is the authorisation (like an S3 presigned
@@ -44,7 +44,7 @@ export class LocalStorageController {
     if (!meta) throw notFound();
     res.setHeader('Content-Type', meta.mimeType);
     res.setHeader('Content-Length', String(meta.sizeBytes));
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName(grant.f ?? 'download')}"`);
+    res.setHeader('Content-Disposition', attachmentDisposition(grant.f ?? 'download'));
     createReadStream(local.filePath(grant.k)).pipe(res);
   }
 }

@@ -22,5 +22,7 @@ test('presigned upload URL targets the bucket and key and expires in 5 minutes',
 test('presigned download URL forces attachment and expires in 60 seconds', async () => {
   const u = new URL(await driver.presignGet('projects/p1/d1', 'Proposal "final".pdf'));
   expect(u.searchParams.get('X-Amz-Expires')).toBe('60');
-  expect(u.searchParams.get('response-content-disposition')).toBe('attachment; filename="Proposal final.pdf"');
+  expect(u.searchParams.get('response-content-disposition')).toBe(
+    `attachment; filename="Proposal final.pdf"; filename*=UTF-8''Proposal%20final.pdf`,
+  );
 });

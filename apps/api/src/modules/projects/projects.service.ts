@@ -268,8 +268,9 @@ export class ProjectsService {
       const startDate = input.startDate !== undefined ? input.startDate : isoDate(before.startDate);
       const durationValue = input.durationValue !== undefined ? input.durationValue : before.durationValue;
       const durationUnit = input.durationUnit !== undefined ? input.durationUnit : before.durationUnit;
-      const after = await tx.project.update({
-        where: { id },
+      // Conditional on the version the editor saw: a concurrent save that committed first makes this match 0 rows.
+      const { count } = await tx.project.updateMany({
+        where: { id, updatedAt: before.updatedAt },
         data: {
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.description !== undefined ? { description: input.description } : {}),
@@ -282,6 +283,8 @@ export class ProjectsService {
           endDate: toDate(endDateFor(startDate, durationValue, durationUnit)), // D-1
         },
       });
+      if (count === 0) throw conflict('CONFLICT', 'This project was changed by someone else. Reload and try again.');
+      const after = await tx.project.findUniqueOrThrow({ where: { id } });
       const pick = (p: typeof after) => ({
         name: p.name,
         description: p.description,

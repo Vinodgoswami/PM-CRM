@@ -3,7 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
 
-const acme = { id: 'c1', name: 'Acme', company: 'Acme Pvt Ltd', primaryEmail: 'ap@acme.test', projects: 3, archived: false };
+const acme = {
+  id: 'c1',
+  name: 'Acme',
+  company: 'Acme Pvt Ltd',
+  primaryEmail: 'ap@acme.test',
+  projects: 3,
+  archived: false,
+  currency: 'INR',
+};
 const list = (items: unknown[]) => ({ body: { items, page: 1, pageSize: 25, total: items.length } });
 const detail = {
   ...acme,

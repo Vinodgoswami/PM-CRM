@@ -1,7 +1,7 @@
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { type StorageConfig } from '@salescrm/config';
-import { GET_TTL_MS, PUT_TTL_MS, safeFileName, type StorageDriver } from './storage.driver';
+import { attachmentDisposition, GET_TTL_MS, PUT_TTL_MS, type StorageDriver } from './storage.driver';
 
 /** S3-compatible storage (AWS S3, Cloudflare R2, MinIO). */
 export class S3Driver implements StorageDriver {
@@ -27,7 +27,7 @@ export class S3Driver implements StorageDriver {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
-      ResponseContentDisposition: `attachment; filename="${safeFileName(fileName)}"`,
+      ResponseContentDisposition: attachmentDisposition(fileName),
     });
     return getSignedUrl(this.client, command, { expiresIn: GET_TTL_MS / 1000 });
   }

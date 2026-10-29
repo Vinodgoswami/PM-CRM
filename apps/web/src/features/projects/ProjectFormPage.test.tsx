@@ -6,14 +6,16 @@ import { detail } from './fixtures';
 
 const clients = {
   body: {
-    items: [{ id: 'c1', name: 'Acme', company: null, primaryEmail: null, projects: 2, archived: false }],
+    items: [{ id: 'c1', name: 'Acme', company: null, primaryEmail: null, projects: 2, archived: false, currency: 'INR' }],
     page: 1,
     pageSize: 20,
     total: 1,
   },
 };
+const settings = { body: { companyName: '', baseCurrency: 'INR', fyStartMonth: 4, timezone: 'Asia/Kolkata', dueSoonDays: 7 } };
 const created = { status: 201, body: detail({ id: 'p9', code: 'PRJ-0009' }) };
 const projectRoutes = {
+  'GET /settings': settings,
   'GET /projects/p9': { body: detail({ id: 'p9', code: 'PRJ-0009' }) },
   'GET /projects/p9/documents': { body: { items: [] } },
   'GET /projects/p9/activity': { body: { items: [] } },
@@ -114,7 +116,7 @@ test('milestone rows show what is left to schedule and are sent with the project
 });
 
 test('missing required fields are reported before anything is sent', async () => {
-  const api = stubApi({ 'GET /clients': clients });
+  const api = stubApi({ 'GET /clients': clients, 'GET /settings': settings });
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/new', sessionFor('SALES'));
   await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
@@ -122,4 +124,26 @@ test('missing required fields are reported before anything is sent', async () =>
   expect(screen.getByText('Choose an existing client or add a new one')).toBeInTheDocument();
   expect(screen.getByText('Enter an amount')).toBeInTheDocument();
   expect(api.calls.filter((c) => c.method === 'POST')).toHaveLength(0);
+});
+
+test('amounts follow the chosen client currency and the currency is sent', async () => {
+  const tokyo = {
+    body: {
+      items: [{ id: 'c7', name: 'Tokyo Co', company: null, primaryEmail: null, projects: 0, archived: false, currency: 'JPY' }],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    },
+  };
+  const api = stubApi({ 'GET /clients': tokyo, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user); // types 1,00,000 before the client is known
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.click(await screen.findByRole('option', { name: 'Tokyo Co' }));
+  expect(screen.getAllByText('JPY').length).toBeGreaterThan(0);
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ currency: 'JPY', expectedAmountMinor: 100000 });
 });

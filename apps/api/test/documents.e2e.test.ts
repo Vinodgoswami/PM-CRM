@@ -65,7 +65,7 @@ test('full round trip: request → upload → confirm → list → download', as
       res.on('end', () => cb(null, Buffer.concat(chunks)));
     });
   expect(file.status).toBe(200);
-  expect(file.headers['content-disposition']).toBe('attachment; filename="Proposal.pdf"');
+  expect(file.headers['content-disposition']).toBe(`attachment; filename="Proposal.pdf"; filename*=UTF-8''Proposal.pdf`);
   expect(Buffer.compare(file.body as Buffer, PDF)).toBe(0);
   expect(await prisma.auditLog.count({ where: { action: 'document.upload' } })).toBe(1);
 });
@@ -134,4 +134,40 @@ test('roles: another rep cannot upload or delete; CEO can download', async () =>
 
   expect((await owner.agent.delete(`/api/v1/documents/${slot.body.documentId}`).set('X-CSRF-Token', owner.csrf)).status).toBe(204);
   expect(await prisma.document.count()).toBe(0);
+});
+
+test('download names with non-ASCII characters work', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const slot = await requestUpload(agent, csrf, projectId, { name: 'Proposal – Acme.pdf' });
+  await http().put(pathOf(slot.body.url)).set('Content-Type', 'application/pdf').send(PDF);
+  await agent.post(`/api/v1/documents/${slot.body.documentId}/confirm`).set('X-CSRF-Token', csrf).expect(200);
+  const link = await agent.get(`/api/v1/documents/${slot.body.documentId}/download`);
+  const file = await http().get(pathOf(link.body.url));
+  expect(file.status).toBe(200);
+  expect(file.headers['content-disposition']).toBe(
+    `attachment; filename="Proposal _ Acme.pdf"; filename*=UTF-8''Proposal%20%E2%80%93%20Acme.pdf`,
+  );
+});
+
+test('the raw upload body parser is only mounted for local storage', async () => {
+  // With S3 nothing may buffer up-to-26 MB anonymous bodies on this route (review finding).
+  const hasRawParser = (a: INestApplication) =>
+    (a.getHttpAdapter().getInstance() as { router: { stack: { name: string }[] } }).router.stack.some((l) => l.name === 'rawParser');
+  expect(hasRawParser(app)).toBe(true);
+  const { app: s3App } = await createTestApp({
+    storage: {
+      driver: 's3',
+      bucket: 'b',
+      region: 'auto',
+      accessKeyId: 'k',
+      secretAccessKey: 's',
+      endpoint: 'https://acc.r2.cloudflarestorage.com',
+    },
+  });
+  try {
+    expect(hasRawParser(s3App)).toBe(false);
+  } finally {
+    await s3App.close();
+  }
 });
