@@ -1,3 +1,20 @@
 @import 'tailwindcss';
 @import '@salescrm/ui/styles.css';
 @source '../../../packages/ui/src';
+
+/* Dashboard "Export PDF" prints the page; the browser's dialog saves it as PDF (D-015). */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  body {
+    background: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  section,
+  [aria-label] {
+    break-inside: avoid;
+  }
+}

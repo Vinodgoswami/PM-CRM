@@ -61,7 +61,7 @@ export function AppLayout() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="mx-auto flex min-h-dvh max-w-[1440px] flex-col px-3 pb-8 sm:px-5">
-        <header className="sticky top-3 z-30 mt-3 flex items-center gap-3 rounded-xl bg-surface/90 px-3 py-2.5 shadow-card backdrop-blur sm:px-4">
+        <header className="sticky top-3 z-30 mt-3 flex print:hidden items-center gap-3 rounded-xl bg-surface/90 px-3 py-2.5 shadow-card backdrop-blur sm:px-4">
           <NavLink to="/" className="flex shrink-0 items-center gap-2 pr-2">
             <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">S</span>
             <span className="text-base font-bold tracking-tight">SalesCRM</span>
@@ -117,7 +117,7 @@ export function AppLayout() {
         </header>
 
         {menuOpen && (
-          <nav aria-label="Main" className="mt-2 flex flex-col gap-1 rounded-xl bg-surface p-2 shadow-card lg:hidden">
+          <nav aria-label="Main" className="mt-2 flex flex-col gap-1 rounded-xl bg-surface p-2 shadow-card lg:hidden print:hidden">
             {items.map(({ label, path, icon: Icon }) => (
               <NavLink
                 key={path}
