@@ -1,4 +1,3 @@
-import { can } from '@salescrm/auth/permissions';
 import { type InvoiceItem, type InvoicesResponse, invoicesResponseSchema } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton } from '@salescrm/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -9,9 +8,10 @@ import { Link } from 'react-router';
 import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
-import { useSession } from '../auth/api';
 import { MarkPaidDialog, type MarkPaidTarget } from '../payments/MarkPaidDialog';
 import { CurrencyNote } from '../dashboard/CurrencyNote';
+import { useClientOptions, useOwners } from '../filters/api';
+import { FilterSelect } from '../filters/FilterSelect';
 import { MilestoneStatusBadge } from '../payments/MilestoneStatusBadge';
 
 const GROUP_LABEL: Record<InvoicesResponse['groups'][number]['key'], string> = {
@@ -33,16 +33,16 @@ const when = (days: number | null) =>
         : `in ${days} day${days === 1 ? '' : 's'}`;
 
 export function InvoicesPage() {
-  const { data: session } = useSession();
+  const clients = useClientOptions();
+  const { enabled: showOwners, owners } = useOwners();
+  const [clientId, setClientId] = useState('');
   const [owner, setOwner] = useState('');
-  const search = new URLSearchParams(owner ? { ownerId: owner } : {}).toString();
+  const search = new URLSearchParams({ ...(clientId ? { clientId } : {}), ...(owner ? { ownerId: owner } : {}) }).toString();
   const { data, isPending, isError } = useQuery({
     queryKey: ['invoices', search],
     queryFn: () => apiFetch(`/invoices${search ? `?${search}` : ''}`, { schema: invoicesResponseSchema }),
   });
   const [paying, setPaying] = useState<MarkPaidTarget | null>(null);
-  const showOwnerFilter = !!session && can(session.user, 'dashboard.company');
-  const owners = data ? [...new Map(data.groups.flatMap((g) => g.items.map((i) => [i.owner.id, i.owner.name] as const))).entries()] : [];
   const grandTotal = data?.groups.reduce((s, g) => s + g.totalMinor, 0) ?? 0;
 
   return (
@@ -54,21 +54,26 @@ export function InvoicesPage() {
             {data ? `${formatApiMoney(grandTotal, data.currency)} still to collect` : 'Everything still to collect, by due date'}
           </p>
         </div>
-        {showOwnerFilter && (
-          <select
-            aria-label="Owner"
-            className="h-10 rounded-full border border-border bg-surface px-4 text-sm"
-            value={owner}
-            onChange={(e) => setOwner(e.target.value)}
-          >
-            <option value="">All owners</option>
-            {owners.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
+        <div className="flex flex-wrap items-end gap-2">
+          <FilterSelect label="Client" value={clientId} onChange={setClientId}>
+            <option value="">All clients</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
-          </select>
-        )}
+          </FilterSelect>
+          {showOwners && (
+            <FilterSelect label="Salesperson" value={owner} onChange={setOwner}>
+              <option value="">Everyone</option>
+              {owners.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+        </div>
       </div>
 
       {data && <CurrencyNote count={data.otherCurrencyItems} noun="milestone" currency={data.currency} />}

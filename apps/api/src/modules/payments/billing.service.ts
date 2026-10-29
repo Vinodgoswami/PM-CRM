@@ -67,7 +67,7 @@ export class BillingService {
       this.prisma.payment.count({ where: baseOnly }),
     ]);
     return {
-      items: rows.map(toPaymentDto),
+      items: rows.map((r) => toPaymentDto(r, user)),
       page: q.page,
       pageSize: q.pageSize,
       total,

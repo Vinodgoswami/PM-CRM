@@ -89,3 +89,19 @@ test('CSV export has exact amounts and the same scope', async () => {
   expect(header).toBe('Date,Client,Project code,Project,Milestone,Invoice ID,Amount,Currency,Recorded by,Reversal of');
   expect(row).toMatch(/^2026-04-10,"Acme, Inc",PRJ-0001,"Project Acme, Inc",M1,INV-\d+,12345\.67,INR,[^,]+,$/);
 });
+
+test('each payment says whether the viewer may edit its details', async () => {
+  const owner = await loginAs(app, prisma, 'SALES');
+  await paidProject(owner.agent, owner.csrf, 'Acme', [['2026-04-10', 100000]]);
+  const [mine] = (await owner.agent.get('/api/v1/payments')).body.items;
+  expect(mine.canEdit).toBe(true);
+
+  const admin = await loginAs(app, prisma, 'ADMIN');
+  await admin.agent.post(`/api/v1/payments/${mine.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({ reason: 'Wrong' }).expect(201);
+  const rows = (await admin.agent.get('/api/v1/payments')).body.items as { reversesPaymentId: string | null; canEdit: boolean }[];
+  expect(rows.find((r) => r.reversesPaymentId)!.canEdit).toBe(false);
+  expect(rows.find((r) => !r.reversesPaymentId)!.canEdit).toBe(true);
+
+  const ceo = await loginAs(app, prisma, 'CEO');
+  expect(((await ceo.agent.get('/api/v1/payments')).body.items as { canEdit: boolean }[]).every((r) => !r.canEdit)).toBe(true);
+});
