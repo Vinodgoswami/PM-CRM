@@ -1,6 +1,7 @@
 export * from './audit-diff';
 export * from './duration';
 export * from './invoice-groups';
+export * from './metrics';
 export * from './milestone-status';
 export * from './payments';
 export * from './period';

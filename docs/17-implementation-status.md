@@ -48,6 +48,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P3-5  | Done   | feat/phase-3-milestones-billing | Upcoming Invoices: API (grouped, balances, own scope) + page with Mark as paid                                                               |
 | P3-6  | Done   | feat/phase-3-milestones-billing | Completed Billing page: FY/quarter/month presets, total, reversals, CSV export                                                               |
 | P2-7b | Done   | feat/phase-3-milestones-billing | Clients list: total booking, paid and outstanding per client (owner request)                                                                 |
+| P4-1  | Done   | feat/phase-3-milestones-billing | Core dashboard metrics: K1–K9 summary, monthly series (C1), aging (C5), cash-in forecast (C4)                                                |
 
 ## Blockers
 
