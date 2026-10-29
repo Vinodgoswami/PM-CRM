@@ -88,7 +88,8 @@ Company (name, base currency, FY start month, timezone, due-soon days); Users (i
 
 ### S10 Auth
 
-Login, accept invite (set password), forgot / reset password.
+Login; accept invite (set name + password); reset password from a link the Admin generates. No email in v1 (D-010):
+the login page says "Forgot your password? Ask your admin for a reset link."
 
 ## Key flows
 

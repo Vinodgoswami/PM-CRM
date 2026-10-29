@@ -40,7 +40,32 @@ erDiagram
 | active       | boolean                      | Deactivated users cannot log in       |
 | lastLoginAt  | timestamptz?                 |                                       |
 
-`Session` (id hash, userId, expiresAt, ip, userAgent) and `Invite` (token hash, email, role, expiresAt) support auth.
+### Session
+
+| Field         | Type           | Notes                                                          |
+| ------------- | -------------- | -------------------------------------------------------------- |
+| tokenHash     | string, unique | HMAC-SHA256 of the cookie token; the raw token is never stored |
+| userId        | FK User        | Cascade on user delete                                         |
+| lastSeenAt    | timestamptz    | Idle timeout 12 h (updated at most every 5 min)                |
+| expiresAt     | timestamptz    | Absolute timeout: created + 7 days                             |
+| ip, userAgent | string?        |                                                                |
+
+### AuthToken (invites and password resets)
+
+| Field       | Type                   | Notes                                        |
+| ----------- | ---------------------- | -------------------------------------------- |
+| kind        | enum `INVITE \| RESET` |                                              |
+| tokenHash   | string, unique         | Single-use; raw token only in the link       |
+| email, name | string                 | Invitee details (INVITE)                     |
+| role        | Role?                  | Role granted on accept (INVITE)              |
+| userId      | FK User?               | Account being reset (RESET)                  |
+| expiresAt   | timestamptz            | INVITE 72 h, RESET 24 h                      |
+| usedAt      | timestamptz?           | Set in the same transaction that consumes it |
+| createdById | FK User                | Admin who issued it                          |
+
+### LoginAttempt
+
+`email`, `ip`, `success`, `at` — indexed `(email, ip, at)`; drives the 5-failures-per-15-min login limit.
 
 ### Client
 

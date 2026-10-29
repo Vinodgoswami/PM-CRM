@@ -10,6 +10,11 @@ allowBuilds:
   prisma: true
   esbuild: true
   argon2: true
+  '@swc/core': true
+  '@embedded-postgres/darwin-arm64': true
+  '@embedded-postgres/darwin-x64': true
+  '@embedded-postgres/linux-x64': true
+  '@embedded-postgres/linux-arm64': true
 
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.11.5'

@@ -16,6 +16,8 @@ packages/
   auth/             Password hashing, session tokens, permission matrix
   ui/               shadcn/ui components + theme tokens + motion presets
   config/           Env loading and validation (server only)
+  typescript-config/ Shared tsconfig presets (base, library, nest, react)
+  eslint-config/    Shared ESLint flat configs (base, react)
 tests/
   e2e/              Playwright end-to-end tests
 scripts/            Security gates (see 11-security.md)
@@ -49,8 +51,10 @@ auth → api
 | audit      | Audit log read (Admin)                                        |
 | settings   | Company settings: base currency, FY start month, timezone     |
 
-Cross-cutting (`apps/api/src/common`): session guard, `@Permission()` guard, audit interceptor, Zod pipe, error filter,
-request id, rate limiter.
+Cross-cutting (`apps/api/src/common`): session guard, CSRF guard, default-deny `@RequirePermission()` / `@Authenticated()`
+guard, ownership helpers (`assertCanAccess`, `ownerWhere`), Zod pipe, error filter. Audit rows are written by an
+explicit `AuditService.record(tx, …)` inside each business transaction (D-012), not an interceptor. Login rate
+limiting lives in the auth service.
 
 ## Request flow
 
@@ -98,6 +102,13 @@ flowchart LR
 | Production | Netlify/Vercel  | Render/Railway, daily backups | R2 bucket (prod)    |
 
 Production deploys are manual after CI passes (auto-deploy off).
+
+## Same-origin API (D-011)
+
+The web app always calls the relative path `/api/v1`. In development Vite proxies `/api` to `http://localhost:4000`;
+in production the web host rewrites `/api/*` to the API (Netlify: `/api/* https://<api-host>/api/:splat 200`). Session
+cookies are therefore first-party, `SameSite=Lax` works, and the API needs no CORS. The API trusts one proxy hop for
+client IPs (`trust proxy = 1`).
 
 ## Time
 

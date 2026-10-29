@@ -1,0 +1,53 @@
+{
+  "name": "@salescrm/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "seed": "node ../../scripts/with-env.mjs tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.6",
+    "@nestjs/core": "^11.2.6",
+    "@nestjs/platform-express": "^11.2.6",
+    "@salescrm/auth": "workspace:*",
+    "@salescrm/config": "workspace:*",
+    "@salescrm/core": "workspace:*",
+    "@salescrm/database": "workspace:*",
+    "@salescrm/schemas": "workspace:*",
+    "@salescrm/types": "workspace:*",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "nestjs-pino": "^4.6.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.2.6",
+    "@salescrm/eslint-config": "workspace:*",
+    "@salescrm/typescript-config": "workspace:*",
+    "@swc/core": "^1.16.2",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.19.0",
+    "@types/supertest": "^6.0.3",
+    "argon2": "^0.45.1",
+    "eslint": "^9.39.5",
+    "pino-pretty": "^13.2.0",
+    "supertest": "^7.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "^3.2.7"
+  }
+}

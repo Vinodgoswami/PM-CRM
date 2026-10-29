@@ -13,6 +13,9 @@
 | D-007 | 2026-10-29 | Partial payments allowed per milestone                                                       | Common in practice                                               |
 | D-008 | 2026-10-29 | All docs in `docs/`, numbered files                                                          | Owner request                                                    |
 | D-009 | 2026-10-29 | Documentation set approved; Phase 1 may start                                                | Owner approval (was Q-00)                                        |
+| D-010 | 2026-10-29 | No outbound email in v1: invite and reset links are returned to the Admin to share           | Phase 1 plan; avoids an email provider until needed              |
+| D-011 | 2026-10-29 | Same-origin API: web calls relative `/api/v1`; dev proxy / host rewrite to the API; no CORS  | First-party session cookies                                      |
+| D-012 | 2026-10-29 | Audit rows written by explicit `AuditService.record(tx, …)` inside the business transaction  | An interceptor cannot share the transaction                      |
 
 ## Open questions
 
