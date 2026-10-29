@@ -1,0 +1,42 @@
+name: Security
+
+# Server-side guard: runs on every push to every branch and on pull requests. Local git hooks can be
+# skipped (`--no-verify`, a stolen credential pushing from elsewhere); this cannot.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Use the scanners from protected `main`, so a commit cannot disable the checks by editing them.
+      - name: Load trusted scanners from main
+        run: |
+          git fetch -q origin main
+          mkdir -p "$RUNNER_TEMP/trusted"
+          git show origin/main:scripts/guard-integrity.mjs > "$RUNNER_TEMP/trusted/guard-integrity.mjs" 2>/dev/null || cp scripts/guard-integrity.mjs "$RUNNER_TEMP/trusted/"
+          git show origin/main:scripts/scan-obfuscation.mjs > "$RUNNER_TEMP/trusted/scan-obfuscation.mjs"
+      - name: Injection signatures, migration SQL and append-only migrations
+        run: |
+          cp "$RUNNER_TEMP/trusted/guard-integrity.mjs" scripts/.guard-trusted.mjs
+          MIGRATION_BASE=origin/main node scripts/.guard-trusted.mjs
+      # Run from outside the repo under its real file name: the scanner skips its own rule file by name.
+      - name: Obfuscation scan (trusted copy)
+        run: node "$RUNNER_TEMP/trusted/scan-obfuscation.mjs"
+      - name: Scanners changed in this push need review
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        run: |
+          if ! git diff --quiet origin/main -- scripts/guard-integrity.mjs scripts/scan-obfuscation.mjs scripts/check-security-baseline.mjs .husky .github; then
+            echo "::warning::Security scripts / hooks / workflows differ from main — they need a CODEOWNERS review before merging."
+          fi

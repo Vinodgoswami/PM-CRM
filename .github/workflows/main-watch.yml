@@ -1,0 +1,39 @@
+name: Main watch
+
+# Alarm, not a gate (GitHub Free cannot block pushes on private repos): fails, so GitHub emails the
+# owner, when main is force-pushed or a new main commit trips the integrity guard. Render auto-deploy
+# should be OFF so nothing reaches production without a manual deploy.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Force-push is an incident
+        if: github.event.forced
+        run: |
+          echo "::error::main was FORCE-PUSHED (before ${{ github.event.before }}, after ${{ github.sha }}). Do not deploy. See docs/11-security.md"
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Use the guard from the previous main commit, so the new commit cannot weaken it.
+      - name: Integrity guard (previous main's copy)
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if git cat-file -e "$BEFORE:scripts/guard-integrity.mjs" 2>/dev/null; then
+            git show "$BEFORE:scripts/guard-integrity.mjs" > scripts/.guard-trusted.mjs
+          else
+            cp scripts/guard-integrity.mjs scripts/.guard-trusted.mjs
+          fi
+          MIGRATION_BASE="$BEFORE" node scripts/.guard-trusted.mjs

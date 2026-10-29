@@ -1,0 +1,25 @@
+# Full verification before code leaves the machine. Tests need PostgreSQL (pnpm db:local).
+# Skip the test step only with a reason: SKIP_PUSH_TESTS="reason" git push
+echo "🚀 SalesCRM pre-push"
+# Refuse pushes to main from this machine unless explicitly allowed for this one push:
+#   ALLOW_MAIN_PUSH=1 git push origin main
+# (Git passes "<local ref> <local sha> <remote ref> <remote sha>" lines on stdin.)
+while read -r _lref _lsha rref _rsha; do
+  if [ "$rref" = "refs/heads/main" ] && [ "${ALLOW_MAIN_PUSH:-}" != "1" ]; then
+    echo "✖ Push to main blocked. Merge development into main yourself, or run: ALLOW_MAIN_PUSH=1 git push origin main"
+    exit 1
+  fi
+done
+pnpm check:obscure
+# Applied migrations are append-only (compared with the remote main).
+git fetch -q origin main 2>/dev/null || true
+MIGRATION_BASE=origin/main pnpm guard:integrity
+pnpm security:check
+pnpm typecheck
+pnpm lint
+if [ -n "$SKIP_PUSH_TESTS" ]; then
+  echo "• tests skipped: $SKIP_PUSH_TESTS"
+else
+  pnpm test
+fi
+echo "✅ pre-push checks passed"

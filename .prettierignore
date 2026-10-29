@@ -1,0 +1,13 @@
+dist
+node_modules
+pnpm-lock.yaml
+packages/database/prisma/migrations
+.local-postgres
+.storage
+uploads
+.turbo
+coverage
+playwright-report
+test-results
+graphify-out
+*.pdf

@@ -1,0 +1,7 @@
+# Fast gate — only what protects the commit itself. The full suite runs on pre-push and in CI.
+echo "🔍 SalesCRM pre-commit"
+pnpm exec lint-staged
+pnpm check:obscure
+pnpm guard:integrity
+pnpm security:check
+pnpm docs:check

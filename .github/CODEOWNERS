@@ -1,0 +1,8 @@
+# Changes here need the owner's review (enable "Require review from Code Owners" in branch protection).
+/packages/database/prisma/migrations/ @Vinodgoswami
+/packages/database/prisma/schema.prisma @Vinodgoswami
+/scripts/ @Vinodgoswami
+/.husky/ @Vinodgoswami
+/.github/ @Vinodgoswami
+/packages/auth/ @Vinodgoswami
+/apps/api/src/common/ @Vinodgoswami

@@ -1,0 +1,41 @@
+{
+  "name": "salescrm",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SalesCRM — project-oriented sales CRM: clients, projects, milestones, billing and CEO revenue dashboard",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "preinstall": "node scripts/scan-obfuscation.mjs --quiet",
+    "postinstall": "node scripts/scan-obfuscation.mjs --quiet",
+    "prepare": "husky",
+    "dev": "turbo run dev --parallel --filter=./apps/*",
+    "prebuild": "pnpm scan:quality",
+    "build": "turbo run build",
+    "postbuild": "pnpm check:obscure",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:obscure": "node scripts/scan-obfuscation.mjs",
+    "check:obscure:selftest": "node scripts/selftest-scanners.mjs",
+    "security:check": "node scripts/check-security-baseline.mjs",
+    "guard:integrity": "node scripts/guard-integrity.mjs",
+    "docs:check": "node scripts/check-documentation.mjs",
+    "scan:quality": "pnpm check:obscure && pnpm check:obscure:selftest && pnpm security:check",
+    "verify": "pnpm format:check && pnpm scan:quality && pnpm guard:integrity && pnpm typecheck && pnpm lint && pnpm test"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
+    "@types/node": "^24.19.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.6.2",
+    "turbo": "^2.11.5",
+    "typescript": "~5.9.3"
+  }
+}

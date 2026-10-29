@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: salescrm
+          POSTGRES_PASSWORD: salescrm
+          POSTGRES_DB: salescrm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U salescrm" --health-interval 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://salescrm:salescrm@localhost:5432/salescrm_test
+      TEST_DATABASE_URL: postgresql://salescrm:salescrm@localhost:5432/salescrm_test
+      # CI-only throwaway secrets (not used anywhere else).
+      JWT_ACCESS_SECRET: ci-only-jwt-secret-000000000000000000000000
+      ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # documentation policy diffs the push / PR range
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Same gates as the git hooks (hooks can be bypassed locally; CI cannot).
+      - run: pnpm scan:quality
+      - name: Documentation policy
+        run: node scripts/check-documentation.mjs
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+      - run: pnpm format:check
+      # Enabled once apps/ and packages/ exist (see docs/13-roadmap.md).
+      - if: hashFiles('packages/database/prisma/schema.prisma') != ''
+        run: pnpm db:generate && pnpm db:migrate
+      - if: hashFiles('apps/*/package.json') != ''
+        run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
