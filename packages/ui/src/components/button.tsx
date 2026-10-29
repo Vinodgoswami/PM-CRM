@@ -4,11 +4,11 @@ import { type ComponentProps } from 'react';
 import { cn } from '../lib/cn';
 
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors duration-[var(--duration-fast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors duration-[var(--duration-fast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-contrast hover:opacity-90',
+        default: 'bg-primary text-primary-contrast shadow-sm hover:bg-primary-strong',
         outline: 'border border-border bg-surface hover:bg-accent',
         ghost: 'hover:bg-accent',
         danger: 'bg-danger text-white hover:opacity-90',

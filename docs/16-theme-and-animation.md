@@ -1,6 +1,8 @@
 # 16 · Theme & animation
 
-**Status: waiting for the owner's theme and animation references (Q-09).** Until then the app uses the neutral
+**Status: applied (D-013).** White surfaces on a soft grey canvas, green accent (`--primary` oklch(0.52 0.11 156)),
+Manrope font, rounded cards (`--radius-lg` 1.25rem) with a soft shadow, top pill navigation with a sliding active pill,
+striped (`.hatch`) bars with one highlighted bar in charts — after the owner's "Quixotic" reference.
 shadcn theme, and features must still use tokens only, so the theme can be swapped in one place.
 
 ## Where it lives
@@ -21,7 +23,7 @@ shadcn theme, and features must still use tokens only, so the theme can be swapp
 | Spacing    | 4-px scale                                                                                                                                        |
 | Motion     | duration-fast/base/slow, easing-standard/emphasised/exit, spring presets                                                                          |
 
-Both **light and dark** variants are required.
+Light only (D-014): the app does not follow the OS dark mode.
 
 ## Motion inventory (where animation is used)
 

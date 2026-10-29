@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema } from '@salescrm/schemas';
 import { Button } from '@salescrm/ui';
+import { Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Link, useParams } from 'react-router';
 import { type z } from 'zod';
@@ -31,6 +32,7 @@ export function ResetPasswordPage() {
       <form className="space-y-4" onSubmit={form.handleSubmit((v) => reset.mutate({ ...v, token }))} noValidate>
         <Field
           label="New password"
+          icon={Lock}
           type="password"
           autoComplete="new-password"
           error={errors.password?.message}
@@ -41,7 +43,7 @@ export function ResetPasswordPage() {
             {reset.error.message}
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={reset.isPending}>
+        <Button type="submit" size="lg" className="h-11 w-full" disabled={reset.isPending}>
           Update password
         </Button>
       </form>

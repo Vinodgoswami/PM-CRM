@@ -1,0 +1,175 @@
+import { Injectable } from '@nestjs/common';
+import { scopeFor } from '@salescrm/auth/permissions';
+import { agingBuckets, cashInForecast, comparableRange, type MetricProject, monthlySeries, periodRange, summarise } from '@salescrm/core';
+import { type Dashboard, type DashboardQuery } from '@salescrm/schemas';
+import { minorToJson } from '@salescrm/types';
+import { type SessionUser } from '../../common/current-user';
+import { PrismaService } from '../prisma/prisma.module';
+import { isoDate } from '../projects/project-money';
+import { SettingsService } from '../settings/settings.service';
+
+const j = minorToJson;
+const EVER = { from: '0000-01-01', to: '9999-12-31' };
+
+/** docs/09: one call for KPIs, charts, team performance and the two tables. */
+@Injectable()
+export class DashboardService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
+  ) {}
+
+  async get(user: SessionUser, q: DashboardQuery): Promise<Dashboard> {
+    const [settings, today] = await Promise.all([this.settings.get(), this.settings.today()]);
+    // Company view (CEO / Admin) may narrow to one owner; everyone else is limited to their own projects.
+    const company = scopeFor(user.role, 'dashboard.company') === 'all';
+    const ownerId = company ? q.ownerId : user.id;
+
+    const all = await this.prisma.project.findMany({
+      where: { archivedAt: null, ...(ownerId ? { ownerId } : {}) },
+      include: {
+        client: { select: { id: true, name: true } },
+        owner: { select: { id: true, name: true } },
+        upsellEntries: { select: { amountMinor: true, date: true } },
+        milestones: {
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            amountMinor: true,
+            dueDate: true,
+            payments: { select: { id: true, amountMinor: true, paymentDate: true, invoiceId: true, createdAt: true } },
+          },
+        },
+      },
+    });
+    // M-4: totals are in the base currency; other-currency projects are counted for a note, not summed.
+    const rows = all.filter((p) => p.currency === settings.baseCurrency);
+    const metric: MetricProject[] = rows.map((p) => ({
+      id: p.id,
+      ownerId: p.ownerId,
+      clientId: p.clientId,
+      status: p.status,
+      wonAt: isoDate(p.wonAt),
+      expectedAmountMinor: p.expectedAmountMinor,
+      isUpsell: p.parentProjectId !== null,
+      upsellEntries: p.upsellEntries.map((u) => ({ amountMinor: u.amountMinor, date: isoDate(u.date)! })),
+      milestones: p.milestones.map((m) => ({
+        amountMinor: m.amountMinor,
+        dueDate: isoDate(m.dueDate),
+        payments: m.payments.map((x) => ({ amountMinor: x.amountMinor, paymentDate: isoDate(x.paymentDate)! })),
+      })),
+    }));
+
+    const range = periodRange(q.period, today, settings.fyStartMonth);
+    const r = range.from && range.to ? { from: range.from, to: range.to } : EVER;
+    const s = summarise(metric, r, today);
+    const prevRange = comparableRange(q.period, today, settings.fyStartMonth);
+    const prev = prevRange.from && prevRange.to ? summarise(metric, { from: prevRange.from, to: prevRange.to }, today) : null;
+
+    const [y, m] = today.split('-').map(Number) as [number, number];
+    const months = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(y, m - 12 + i, 1)).toISOString().slice(0, 7));
+
+    // Top clients by collected in the period.
+    const byClient = new Map<string, { id: string; name: string; booked: bigint; collected: bigint }>();
+    for (const [i, p] of rows.entries()) {
+      const one = summarise([metric[i]!], r, today);
+      const c = byClient.get(p.client.id) ?? { id: p.client.id, name: p.client.name, booked: 0n, collected: 0n };
+      c.booked += one.bookedMinor;
+      c.collected += one.collectedMinor;
+      byClient.set(p.client.id, c);
+    }
+
+    const team = company
+      ? [...new Map(rows.map((p) => [p.owner.id, p.owner])).values()]
+          .map((owner) => {
+            const mine = metric.filter((p) => p.ownerId === owner.id);
+            const t = summarise(mine, r, today);
+            return {
+              user: owner,
+              bookedMinor: j(t.bookedMinor),
+              collectedMinor: j(t.collectedMinor),
+              outstandingMinor: j(t.outstandingMinor),
+              overdueMinor: j(t.overdueMinor),
+              upsellMinor: j(t.upsellMinor),
+              activeProjects: mine.filter((p) => p.status === 'ACTIVE').length,
+            };
+          })
+          .sort((a, b) => b.bookedMinor - a.bookedMinor)
+      : null;
+
+    const in30 = new Date(Date.UTC(y, m - 1, Number(today.slice(8)) + 30)).toISOString().slice(0, 10);
+    const upcoming = rows
+      .flatMap((p) =>
+        p.milestones.map((ms) => ({
+          p,
+          ms,
+          balance: ms.amountMinor - ms.payments.reduce((a, x) => a + x.amountMinor, 0n),
+          due: isoDate(ms.dueDate),
+        })),
+      )
+      .filter((x) => x.balance > 0n && x.due !== null && x.due >= today && x.due <= in30)
+      .sort((a, b) => a.due!.localeCompare(b.due!))
+      .slice(0, 8)
+      .map(({ p, ms, balance, due }) => ({
+        milestoneId: ms.id,
+        number: ms.number,
+        title: ms.title,
+        balanceMinor: j(balance),
+        dueDate: due!,
+        project: { id: p.id, code: p.code, name: p.name },
+        client: p.client,
+      }));
+
+    const recentPayments = rows
+      .flatMap((p) => p.milestones.flatMap((ms) => ms.payments.map((pay) => ({ p, pay }))))
+      .sort((a, b) => b.pay.paymentDate.getTime() - a.pay.paymentDate.getTime() || b.pay.createdAt.getTime() - a.pay.createdAt.getTime())
+      .slice(0, 6)
+      .map(({ p, pay }) => ({
+        id: pay.id,
+        amountMinor: j(pay.amountMinor),
+        paymentDate: isoDate(pay.paymentDate)!,
+        invoiceId: pay.invoiceId,
+        project: { id: p.id, code: p.code, name: p.name },
+        client: p.client,
+      }));
+
+    const aging = agingBuckets(metric, today);
+    return {
+      currency: settings.baseCurrency,
+      otherCurrencyProjects: all.length - rows.length,
+      period: { key: q.period, from: range.from ?? null, to: range.to ?? null },
+      kpis: {
+        bookedMinor: j(s.bookedMinor),
+        upsellMinor: j(s.upsellMinor),
+        collectedMinor: j(s.collectedMinor),
+        expectedMinor: j(s.expectedMinor),
+        collectionRate: s.collectionRate,
+        outstandingMinor: j(s.outstandingMinor),
+        overdueMinor: j(s.overdueMinor),
+        overdueCount: s.overdueCount,
+        dueNext30Minor: j(s.dueNext30Minor),
+        pipelineMinor: j(s.pipelineMinor),
+        wonCount: s.wonCount,
+        avgDealMinor: s.wonCount > 0 ? j(s.wonExpectedMinor / BigInt(s.wonCount)) : null,
+      },
+      previous: prev ? { bookedMinor: j(prev.bookedMinor), collectedMinor: j(prev.collectedMinor) } : null,
+      monthly: monthlySeries(metric, months, today).map((x) => ({
+        month: x.month,
+        bookedMinor: j(x.bookedMinor),
+        collectedMinor: j(x.collectedMinor),
+        expectedMinor: j(x.expectedMinor),
+      })),
+      forecast: cashInForecast(metric, today, 6).map((x) => ({ month: x.month, scheduledMinor: j(x.scheduledMinor) })),
+      aging: { d1_30: j(aging.d1_30), d31_60: j(aging.d31_60), d61_90: j(aging.d61_90), d90plus: j(aging.d90plus) },
+      topClients: [...byClient.values()]
+        .filter((c) => c.collected > 0n || c.booked > 0n)
+        .sort((a, b) => (b.collected > a.collected ? 1 : b.collected < a.collected ? -1 : 0))
+        .slice(0, 5)
+        .map((c) => ({ id: c.id, name: c.name, bookedMinor: j(c.booked), collectedMinor: j(c.collected) })),
+      team,
+      upcoming,
+      recentPayments,
+    };
+  }
+}

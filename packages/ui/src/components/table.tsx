@@ -3,12 +3,12 @@ import { cn } from '../lib/cn';
 
 export function Table({ className, ...props }: ComponentProps<'table'>) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-border bg-surface">
+    <div className="w-full overflow-x-auto rounded-lg bg-surface shadow-card">
       <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
     </div>
   );
 }
-export const THead = ({ className, ...p }: ComponentProps<'thead'>) => <thead className={cn('bg-accent/50 text-left', className)} {...p} />;
+export const THead = ({ className, ...p }: ComponentProps<'thead'>) => <thead className={cn('text-left', className)} {...p} />;
 export const TBody = ({ className, ...p }: ComponentProps<'tbody'>) => (
   <tbody className={cn('[&_tr:last-child]:border-0', className)} {...p} />
 );

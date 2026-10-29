@@ -16,9 +16,12 @@ export class ApiError extends Error {
 
 const BASE = '/api/v1'; // same-origin; dev proxy / host rewrite forwards to the API (D-011)
 
-export async function apiFetch<T>(path: string, opts: { method?: string; body?: unknown; schema: ZodType<T> }): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  opts: { method?: string; body?: unknown; schema: ZodType<T>; headers?: Record<string, string> },
+): Promise<T> {
   const method = opts.method ?? 'GET';
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  const headers: Record<string, string> = { Accept: 'application/json', ...opts.headers };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET') {
     const csrf = getQueryClient().getQueryData<SessionResponse | null>(['session'])?.csrfToken;

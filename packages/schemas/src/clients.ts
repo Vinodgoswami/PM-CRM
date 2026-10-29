@@ -83,6 +83,9 @@ export const clientListItemSchema = z.object({
   projects: z.number(),
   archived: z.boolean(),
   currency: z.string(),
+  bookedMinor: z.number(),
+  collectedMinor: z.number(),
+  outstandingMinor: z.number(),
 });
 export type ClientListItem = z.infer<typeof clientListItemSchema>;
 
@@ -103,8 +106,5 @@ export const clientDetailSchema = clientListItemSchema.extend({
   projects: z.array(
     z.object({ id: z.string(), code: z.string(), name: z.string(), status: z.string(), parentProjectId: z.string().nullable() }),
   ),
-  bookedMinor: z.number(),
-  collectedMinor: z.number(),
-  outstandingMinor: z.number(),
 });
 export type ClientDetail = z.infer<typeof clientDetailSchema>;

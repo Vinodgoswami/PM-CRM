@@ -137,18 +137,20 @@ Status is **derived**, never stored (rules in [06](06-business-rules.md#mileston
 
 ### Payment (Completed Billing row)
 
-| Field             | Type        | Editable after save | Notes                                  |
-| ----------------- | ----------- | ------------------- | -------------------------------------- |
-| milestoneId       | FK          | no                  |                                        |
-| milestoneLabel    | string      | **yes**             | Snapshot, defaults to `M{number}` (R5) |
-| invoiceId         | string?     | **yes**             | From your invoicing tool               |
-| paymentDate       | date        | **yes**             | Defaults to today                      |
-| amountMinor       | bigint      | **no**              | Positive; negative only for a reversal |
-| reversesPaymentId | FK Payment? | no                  | Set on reversal rows                   |
-| note              | text?       | yes                 |                                        |
-| createdById       | FK User     | no                  |                                        |
+| Field             | Type            | Editable after save | Notes                                                                           |
+| ----------------- | --------------- | ------------------- | ------------------------------------------------------------------------------- |
+| milestoneId       | FK              | no                  |                                                                                 |
+| milestoneLabel    | string          | **yes**             | Snapshot, defaults to `M{number}` (R5)                                          |
+| invoiceId         | string?         | **yes**             | From your invoicing tool                                                        |
+| paymentDate       | date            | **yes**             | Defaults to today                                                               |
+| amountMinor       | bigint          | **no**              | Positive; negative only for a reversal                                          |
+| reversesPaymentId | FK Payment?     | no                  | Set on reversal rows                                                            |
+| idempotencyKey    | string?, unique | no                  | Key sent by the Mark-as-paid dialog; a retried request returns the same payment |
+| note              | text?           | yes                 |                                                                                 |
+| createdById       | FK User         | no                  |                                                                                 |
 
-A database trigger rejects `UPDATE` of `amountMinor`, `milestoneId`, `reversesPaymentId` and any `DELETE`.
+A database trigger rejects `UPDATE` of `amountMinor`, `milestoneId`, `reversesPaymentId` and any `DELETE`. Check
+constraints: `amountMinor <> 0`, and a row is negative exactly when it is a reversal (`reversesPaymentId` set).
 
 ### Document
 

@@ -8,6 +8,14 @@ import { ForbiddenPage } from '../pages/ForbiddenPage';
 export function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession();
   const location = useLocation();
+  // A network or server error is not "signed out": keep the user where they are and retry.
+  if (session.data === undefined && (session.isError || session.failureCount > 0)) {
+    return (
+      <div className="p-6 text-sm text-text-muted" role="status">
+        Can't reach the server. Reconnecting…
+      </div>
+    );
+  }
   if (session.isPending) {
     return (
       <div className="p-6" aria-busy="true">

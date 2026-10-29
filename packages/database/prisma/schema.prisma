@@ -225,6 +225,8 @@ model Payment {
   invoiceId         String?
   paymentDate       DateTime  @db.Date
   amountMinor       BigInt
+  /// Client-generated key from the Mark-as-paid dialog: a retried request returns the same payment.
+  idempotencyKey    String?   @unique
   reversesPaymentId String?   @unique
   reversesPayment   Payment?  @relation("Reversal", fields: [reversesPaymentId], references: [id])
   reversedBy        Payment?  @relation("Reversal")

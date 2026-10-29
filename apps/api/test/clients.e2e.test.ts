@@ -167,3 +167,32 @@ test('client list items carry the client currency', async () => {
   await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Tokyo Co', currency: 'JPY' });
   expect((await agent.get('/api/v1/clients')).body.items[0]).toMatchObject({ currency: 'JPY' });
 });
+
+test('client list items carry booking, paid and outstanding totals', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const p = await agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', csrf)
+    .send({
+      name: 'Website',
+      expectedAmountMinor: 100000,
+      status: 'WON',
+      newClient: { name: 'Acme' },
+      milestones: [
+        { title: 'A', amountMinor: 60000, dueDate: '2020-01-01' },
+        { title: 'B', amountMinor: 40000, dueDate: '2099-01-01' },
+      ],
+    });
+  await agent
+    .post(`/api/v1/milestones/${p.body.milestones[0].id}/payments`)
+    .set('X-CSRF-Token', csrf)
+    .set('Idempotency-Key', 'clients-list-totals-1')
+    .send({ paymentDate: '2026-01-05', amountMinor: 20000 })
+    .expect(201);
+  await agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', csrf)
+    .send({ name: 'Lead', expectedAmountMinor: 999, clientId: p.body.client.id });
+  const [row] = (await agent.get('/api/v1/clients')).body.items;
+  expect(row).toMatchObject({ name: 'Acme', projects: 2, bookedMinor: 100000, collectedMinor: 20000, outstandingMinor: 40000 });
+});

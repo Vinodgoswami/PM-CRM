@@ -6,46 +6,60 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Summary
 
-| Phase                  | Status                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| 0 Security & docs      | ✅ Done                                                                       |
-| 1 Foundation           | ✅ Done (reviewed, fixes applied)                                             |
-| 2 Clients & projects   | ✅ Done (pending review)                                                      |
-| 3 Milestones & billing | ⏸ Paused by owner — plan ready in [20](20-plan-phase-3-milestones-billing.md) |
-| 4 Dashboard            | Not started                                                                   |
-| 5 Theme & animation    | Waiting for references (Q-09)                                                 |
-| 6 Launch               | Not started                                                                   |
+| Phase                  | Status                            |
+| ---------------------- | --------------------------------- |
+| 0 Security & docs      | ✅ Done                           |
+| 1 Foundation           | ✅ Done (reviewed, fixes applied) |
+| 2 Clients & projects   | ✅ Done (pending review)          |
+| 3 Milestones & billing | ✅ Done (reviewed, fixes applied) |
+| 4 Dashboard            | Not started                       |
+| 5 Theme & animation    | Waiting for references (Q-09)     |
+| 6 Launch               | Not started                       |
 
 ## Tasks
 
-| ID    | Status | Branch / PR                   | Notes                                                                                                                     |
-| ----- | ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| P0-1  | Done   | —                             | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified                                                         |
-| P0-2  | Done   | —                             | Docs 01–17                                                                                                                |
-| P1-1  | Done   | feat/phase-1-foundation       | Monorepo apps/packages scaffolded; health endpoint; dev proxy                                                             |
-| P1-3  | Done   | feat/phase-1-foundation       | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers                                             |
-| P1-4  | Done   | feat/phase-1-foundation       | loadConfig (refuses missing/weak secrets), error contract, bigint JSON, pino redaction                                    |
-| P1-2  | Done   | feat/phase-1-foundation       | Prisma schema (docs/05), init migration with payment/audit guard triggers, local + test Postgres                          |
-| P1-5  | Done   | feat/phase-1-foundation       | Login/logout/session, argon2id, hashed session tokens, CSRF + origin check, 5-per-15-min limit                            |
-| P1-6  | Done   | feat/phase-1-foundation       | Permission matrix (shared web/API), default-deny guard, ownership helpers, audit log + GET /audit, settings               |
-| P1-5b | Done   | feat/phase-1-foundation       | Users: invite links, accept, role/active changes (sessions ended), last-admin guard, reset links                          |
-| P1-8  | Done   | feat/phase-1-foundation       | `pnpm db:seed`: 4 users, 15 clients, 40 projects, overdue/partial/reversal cases, deterministic                           |
-| P1-7  | Done   | feat/phase-1-foundation       | Web shell: login / invite / reset pages, role-based sidebar, route guards, theme tokens, motion                           |
-| P2-0  | Done   | feat/phase-2-clients-projects | Core rules: PS-1/2/4/6 transitions, D-1 end dates, project totals, U-2 cycle check                                        |
-| P2-1  | Done   | feat/phase-2-clients-projects | Clients API: CRUD, search, archive (frees name), contacts, totals; C-2 race-safe via nameKey                              |
-| P2-2  | Done   | feat/phase-2-clients-projects | Projects API: create with new client + milestones (C-1), PRJ codes, status rules, owner, filters/sort, optimistic locking |
-| P2-3  | Done   | feat/phase-2-clients-projects | Upsell entries (U-1) and upsell project links (U-2: same client, no cycles), also on create                               |
-| P2-4  | Done   | feat/phase-2-clients-projects | Documents: local + S3/R2 drivers, signed PUT/GET, confirm checks size/type, allow-list, 25 MB                             |
-| P2-5  | Done   | feat/phase-2-clients-projects | Web: projects list (views, search, sort, paging) and detail (totals, status menu, upsells, documents, activity)           |
-| P2-6  | Done   | feat/phase-2-clients-projects | Web: project form (client combobox + "Add new client", milestone rows, duplicate-client recovery), edit form              |
-| P2-7  | Done   | feat/phase-2-clients-projects | Web: clients list (search, archived), detail (contacts, primary, totals, upsell tree), create/edit/archive                |
-| P2-8  | Done   | feat/phase-2-clients-projects | Web: settings (company, users, invite/reset links), audit log page                                                        |
+| ID    | Status | Branch / PR                     | Notes                                                                                                                                                                              |
+| ----- | ------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-1  | Done   | —                               | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified                                                                                                                  |
+| P0-2  | Done   | —                               | Docs 01–17                                                                                                                                                                         |
+| P1-1  | Done   | feat/phase-1-foundation         | Monorepo apps/packages scaffolded; health endpoint; dev proxy                                                                                                                      |
+| P1-3  | Done   | feat/phase-1-foundation         | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers                                                                                                      |
+| P1-4  | Done   | feat/phase-1-foundation         | loadConfig (refuses missing/weak secrets), error contract, bigint JSON, pino redaction                                                                                             |
+| P1-2  | Done   | feat/phase-1-foundation         | Prisma schema (docs/05), init migration with payment/audit guard triggers, local + test Postgres                                                                                   |
+| P1-5  | Done   | feat/phase-1-foundation         | Login/logout/session, argon2id, hashed session tokens, CSRF + origin check, 5-per-15-min limit                                                                                     |
+| P1-6  | Done   | feat/phase-1-foundation         | Permission matrix (shared web/API), default-deny guard, ownership helpers, audit log + GET /audit, settings                                                                        |
+| P1-5b | Done   | feat/phase-1-foundation         | Users: invite links, accept, role/active changes (sessions ended), last-admin guard, reset links                                                                                   |
+| P1-8  | Done   | feat/phase-1-foundation         | `pnpm db:seed`: 4 users, 15 clients, 40 projects, overdue/partial/reversal cases, deterministic                                                                                    |
+| P1-7  | Done   | feat/phase-1-foundation         | Web shell: login / invite / reset pages, role-based sidebar, route guards, theme tokens, motion                                                                                    |
+| P2-0  | Done   | feat/phase-2-clients-projects   | Core rules: PS-1/2/4/6 transitions, D-1 end dates, project totals, U-2 cycle check                                                                                                 |
+| P2-1  | Done   | feat/phase-2-clients-projects   | Clients API: CRUD, search, archive (frees name), contacts, totals; C-2 race-safe via nameKey                                                                                       |
+| P2-2  | Done   | feat/phase-2-clients-projects   | Projects API: create with new client + milestones (C-1), PRJ codes, status rules, owner, filters/sort, optimistic locking                                                          |
+| P2-3  | Done   | feat/phase-2-clients-projects   | Upsell entries (U-1) and upsell project links (U-2: same client, no cycles), also on create                                                                                        |
+| P2-4  | Done   | feat/phase-2-clients-projects   | Documents: local + S3/R2 drivers, signed PUT/GET, confirm checks size/type, allow-list, 25 MB                                                                                      |
+| P2-5  | Done   | feat/phase-2-clients-projects   | Web: projects list (views, search, sort, paging) and detail (totals, status menu, upsells, documents, activity)                                                                    |
+| P2-6  | Done   | feat/phase-2-clients-projects   | Web: project form (client combobox + "Add new client", milestone rows, duplicate-client recovery), edit form                                                                       |
+| P2-7  | Done   | feat/phase-2-clients-projects   | Web: clients list (search, archived), detail (contacts, primary, totals, upsell tree), create/edit/archive                                                                         |
+| P2-8  | Done   | feat/phase-2-clients-projects   | Web: settings (company, users, invite/reset links), audit log page                                                                                                                 |
+| P3-1  | Done   | feat/phase-3-milestones-billing | Core: milestone status (MS-3), payment checks (P-2, P-6), invoice groups                                                                                                           |
+| P3-2  | Done   | feat/phase-3-milestones-billing | Milestones API: add, edit (MS-2), delete with renumbering (MS-1), reorder, PS-4 guards; detail has status + balance                                                                |
+| P3-3  | Done   | feat/phase-3-milestones-billing | Payments API: mark as paid (P-2/P-3/P-6, row lock, Idempotency-Key), edit details (P-4), Admin reversal (P-5), DB sign checks                                                      |
+| P3-6a | Done   | feat/phase-3-milestones-billing | Billing API: GET /payments (period/client/owner/project filters, total, own scope) + CSV export                                                                                    |
+| P3-4  | Done   | feat/phase-3-milestones-billing | Web: Milestones tab (add/edit/delete/reorder, status, balance), Mark-as-paid dialog (idempotent), Payments tab (edit details, Admin reverse)                                       |
+| P3-5  | Done   | feat/phase-3-milestones-billing | Upcoming Invoices: API (grouped, balances, own scope) + page with Mark as paid                                                                                                     |
+| P3-6  | Done   | feat/phase-3-milestones-billing | Completed Billing page: FY/quarter/month presets, total, reversals, CSV export                                                                                                     |
+| P2-7b | Done   | feat/phase-3-milestones-billing | Clients list: total booking, paid and outstanding per client (owner request)                                                                                                       |
+| P4-1  | Done   | feat/phase-3-milestones-billing | Core dashboard metrics: K1–K9 summary, monthly series (C1), aging (C5), cash-in forecast (C4)                                                                                      |
+| P4-2  | Done   | feat/phase-3-milestones-billing | Dashboard API: KPIs + previous period, 12-month series, forecast, aging, top clients, team (CEO/Admin), upcoming, recent payments                                                  |
+| P4-3  | Done   | feat/phase-3-milestones-billing | Dashboard page (Quixotic style): collected hero card, hatched monthly bars, outstanding + forecast wave, KPI strip, upcoming dues, aging, recent payments, top clients, team table |
 
 ## Blockers
 
 - None. Open questions have provisional defaults ([15](15-decisions-and-open-questions.md)).
 
 ## Known gaps
+
+- Billing page: client / owner / custom-period filters and inline detail edit; Invoices page: client filter (APIs support them).
+- Dashboard: PDF export, bar drill-down, due-date calendar, win rate (K11).
 
 - Abandoned uploads leave PENDING document rows (hidden from lists); no cleanup job yet.
 

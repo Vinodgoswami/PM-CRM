@@ -131,6 +131,8 @@ export const projectDetailSchema = projectListItemSchema.extend({
       amountMinor: z.number(),
       dueDate: isoDateSchema.nullable(),
       paidMinor: z.number(),
+      balanceMinor: z.number(),
+      status: z.enum(['PAID', 'OVERDUE', 'PARTIALLY_PAID', 'DUE_SOON', 'SCHEDULED', 'UNSCHEDULED']),
     }),
   ),
   scheduledMinor: z.number(),
@@ -149,3 +151,15 @@ export type UpsellEntryInput = z.infer<typeof upsellEntrySchema>;
 
 export const setParentSchema = z.object({ parentProjectId: z.string().min(1).nullable() });
 export type SetParentInput = z.infer<typeof setParentSchema>;
+
+export const updateMilestoneSchema = z
+  .object({
+    title: text(200).min(1).optional(),
+    description: text(2000).nullable().optional(),
+    amountMinor: positiveMinorSchema.optional(),
+    dueDate: isoDateSchema.nullable().optional(),
+  })
+  .strict();
+export type UpdateMilestoneInput = z.infer<typeof updateMilestoneSchema>;
+
+export const reorderMilestonesSchema = z.object({ ids: z.array(z.string().min(1)).min(1).max(50) });

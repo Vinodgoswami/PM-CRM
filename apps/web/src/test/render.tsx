@@ -6,9 +6,10 @@ import { setQueryClient } from '../lib/query-client';
 import { routes } from '../app/router';
 
 /** Renders the real route tree at `path` with the session cache pre-filled (null = signed out). */
-export function renderApp(path: string, session: SessionResponse | null) {
+export function renderApp(path: string, session: SessionResponse | null | undefined) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClient.setQueryData(['session'], session);
+  // undefined = let the app ask the (stubbed) API itself.
+  if (session !== undefined) queryClient.setQueryData(['session'], session);
   setQueryClient(queryClient);
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
@@ -35,13 +36,13 @@ export function stubFetch(status: number, body: unknown) {
 type Reply = { status?: number; body?: unknown };
 /** Fake API keyed by "METHOD /path" (path without /api/v1 and query). Unmatched calls fail the test loudly. */
 export function stubApi(routes: Record<string, Reply | ((req: { url: URL; body: unknown }) => Reply)>) {
-  const calls: { method: string; path: string; url: URL; body: unknown }[] = [];
+  const calls: { method: string; path: string; url: URL; body: unknown; headers: Headers }[] = [];
   const fn = async (input: string, init?: RequestInit) => {
     const url = new URL(input, 'http://localhost');
     const method = init?.method ?? 'GET';
     const path = url.pathname.replace(/^\/api\/v1/, '');
     const body = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body;
-    calls.push({ method, path, url, body });
+    calls.push({ method, path, url, body, headers: new Headers(init?.headers) });
     const route = routes[`${method} ${path}`];
     if (!route) throw new Error(`Unexpected request ${method} ${path}`);
     const reply = typeof route === 'function' ? route({ url, body }) : route;

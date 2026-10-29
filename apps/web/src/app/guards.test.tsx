@@ -30,3 +30,10 @@ test('the sidebar shows the role-specific sections', async () => {
   expect(nav).toHaveTextContent('Audit log');
   expect(nav).not.toHaveTextContent('Settings');
 });
+
+test('a server error while checking the session does not sign the user out', async () => {
+  vi.stubGlobal('fetch', stubApi({ 'GET /auth/session': { status: 500, body: { error: { code: 'INTERNAL', message: 'down' } } } }).fn);
+  const { router } = renderApp('/projects', undefined);
+  expect(await screen.findByText(/reconnecting/i)).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe('/projects');
+});

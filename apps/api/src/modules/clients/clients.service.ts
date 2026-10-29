@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { changedFields } from '@salescrm/core';
+import { changedFields, type IsoDate } from '@salescrm/core';
 import { Prisma } from '@salescrm/database';
 import {
   type ClientDetail,
@@ -25,12 +25,31 @@ export const nameKeyOf = (name: string) => name.trim().toLowerCase();
 const LIST_INCLUDE = {
   contacts: { where: { isPrimary: true }, select: { email: true } },
   _count: { select: { projects: true } },
+  projects: { where: { archivedAt: null }, include: PROJECT_MONEY_INCLUDE },
 } satisfies Prisma.ClientInclude;
 
 type ClientRow = Prisma.ClientGetPayload<{ include: typeof LIST_INCLUDE }>;
 
-function toListItem(c: ClientRow): ClientListItem {
+type MoneyProject = ClientRow['projects'][number];
+
+/** Booked = contract value of won work; collected and outstanding over all the client's projects (docs/05). */
+function clientTotals(projects: MoneyProject[], today: IsoDate, currency: string) {
+  let booked = 0n;
+  let collected = 0n;
+  let outstanding = 0n;
+  // M-4: only projects in the client's currency are summed (the page shows the totals in that currency).
+  for (const p of projects.filter((x) => x.currency === currency)) {
+    const t = totalsFor(p, today);
+    if (p.wonAt) booked += t.contractValueMinor;
+    collected += t.collectedMinor;
+    outstanding += t.outstandingMinor;
+  }
+  return { bookedMinor: minorToJson(booked), collectedMinor: minorToJson(collected), outstandingMinor: minorToJson(outstanding) };
+}
+
+function toListItem(c: ClientRow, today: IsoDate): ClientListItem {
   return {
+    ...clientTotals(c.projects, today, c.currency),
     id: c.id,
     name: c.name,
     company: c.company,
@@ -107,7 +126,8 @@ export class ClientsService {
 
   async create(actor: SessionUser, input: CreateClientInput): Promise<ClientListItem> {
     try {
-      return toListItem(await this.prisma.$transaction((tx) => this.createIn(tx, actor, input)));
+      const created = await this.prisma.$transaction((tx) => this.createIn(tx, actor, input));
+      return toListItem(created, await this.settings.today());
     } catch (e) {
       return this.rethrowDuplicate(e, input.name);
     }
@@ -132,7 +152,8 @@ export class ClientsService {
       }),
       this.prisma.client.count({ where }),
     ]);
-    return { items: rows.map(toListItem), page: query.page, pageSize: query.pageSize, total };
+    const today = await this.settings.today();
+    return { items: rows.map((r) => toListItem(r, today)), page: query.page, pageSize: query.pageSize, total };
   }
 
   async get(id: string): Promise<ClientDetail> {
@@ -141,21 +162,13 @@ export class ClientsService {
       include: {
         ...LIST_INCLUDE,
         contacts: { orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }] },
-        projects: { include: PROJECT_MONEY_INCLUDE, orderBy: { code: 'asc' } },
+        projects: { where: { archivedAt: null }, include: PROJECT_MONEY_INCLUDE, orderBy: { code: 'asc' } },
       },
     });
     if (!client) throw notFound();
     const today = await this.settings.today();
-    let booked = 0n;
-    let collected = 0n;
-    let outstanding = 0n;
-    for (const p of client.projects) {
-      const t = totalsFor(p, today);
-      if (p.wonAt) booked += t.contractValueMinor;
-      collected += t.collectedMinor;
-      outstanding += t.outstandingMinor;
-    }
     return {
+      ...clientTotals(client.projects, today, client.currency),
       id: client.id,
       name: client.name,
       company: client.company,
@@ -172,31 +185,30 @@ export class ClientsService {
       currency: client.currency,
       notes: client.notes,
       contacts: client.contacts.map(toContact),
-      bookedMinor: minorToJson(booked),
-      collectedMinor: minorToJson(collected),
-      outstandingMinor: minorToJson(outstanding),
     } as ClientDetail;
   }
 
   async update(actor: SessionUser, id: string, input: UpdateClientInput): Promise<ClientListItem> {
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const before = await tx.client.findUnique({ where: { id } });
-        if (!before) throw notFound();
-        if (input.name !== undefined && before.archivedAt === null) await this.findOrConflict(tx, input.name, id);
-        const after = await tx.client.update({
-          where: { id },
-          data: { ...input, ...(input.name !== undefined && before.archivedAt === null ? { nameKey: nameKeyOf(input.name) } : {}) },
-          include: LIST_INCLUDE,
-        });
-        const fields = Object.keys(input) as (keyof UpdateClientInput)[];
-        const diff = changedFields(
-          Object.fromEntries(fields.map((k) => [k, before[k]])),
-          Object.fromEntries(fields.map((k) => [k, after[k]])),
-        );
-        if (diff) await this.audit.record(tx, { actorId: actor.id, action: 'client.update', entity: 'Client', entityId: id, ...diff });
-        return toListItem(after);
-      });
+      return await this.prisma
+        .$transaction(async (tx) => {
+          const before = await tx.client.findUnique({ where: { id } });
+          if (!before) throw notFound();
+          if (input.name !== undefined && before.archivedAt === null) await this.findOrConflict(tx, input.name, id);
+          const after = await tx.client.update({
+            where: { id },
+            data: { ...input, ...(input.name !== undefined && before.archivedAt === null ? { nameKey: nameKeyOf(input.name) } : {}) },
+            include: LIST_INCLUDE,
+          });
+          const fields = Object.keys(input) as (keyof UpdateClientInput)[];
+          const diff = changedFields(
+            Object.fromEntries(fields.map((k) => [k, before[k]])),
+            Object.fromEntries(fields.map((k) => [k, after[k]])),
+          );
+          if (diff) await this.audit.record(tx, { actorId: actor.id, action: 'client.update', entity: 'Client', entityId: id, ...diff });
+          return after;
+        })
+        .then(async (after) => toListItem(after, await this.settings.today()));
     } catch (e) {
       return this.rethrowDuplicate(e, input.name ?? '');
     }
@@ -204,13 +216,15 @@ export class ClientsService {
 
   /** C-3: clients are archived, never deleted; archiving frees the name for reuse. */
   async archive(actor: SessionUser, id: string): Promise<ClientListItem> {
-    return this.prisma.$transaction(async (tx) => {
-      const client = await tx.client.findUnique({ where: { id } });
-      if (!client) throw notFound();
-      const after = await tx.client.update({ where: { id }, data: { archivedAt: new Date(), nameKey: null }, include: LIST_INCLUDE });
-      await this.audit.record(tx, { actorId: actor.id, action: 'client.archive', entity: 'Client', entityId: id });
-      return toListItem(after);
-    });
+    return this.prisma
+      .$transaction(async (tx) => {
+        const client = await tx.client.findUnique({ where: { id } });
+        if (!client) throw notFound();
+        const after = await tx.client.update({ where: { id }, data: { archivedAt: new Date(), nameKey: null }, include: LIST_INCLUDE });
+        await this.audit.record(tx, { actorId: actor.id, action: 'client.archive', entity: 'Client', entityId: id });
+        return after;
+      })
+      .then(async (after) => toListItem(after, await this.settings.today()));
   }
 
   async addContact(actor: SessionUser, clientId: string, input: ContactInput): Promise<ContactDto> {
