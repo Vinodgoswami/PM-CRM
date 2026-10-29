@@ -8,6 +8,7 @@ import { SessionGuard } from './common/session.guard';
 import { ConfigModule } from './config.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ClientsModule } from './modules/clients/clients.module';
 import { HealthController } from './modules/health/health.controller';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -25,6 +26,7 @@ export class AppModule {
         AuditModule,
         SettingsModule,
         UsersModule,
+        ClientsModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.logLevel,

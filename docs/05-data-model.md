@@ -69,15 +69,16 @@ erDiagram
 
 ### Client
 
-| Field      | Type         | Notes                                                          |
-| ---------- | ------------ | -------------------------------------------------------------- |
-| id         | string       |                                                                |
-| name       | string       | Required. Unique (case-insensitive) among non-archived clients |
-| company    | string?      |                                                                |
-| country    | string?      | ISO country code                                               |
-| currency   | string       | Default currency for new projects; defaults to base currency   |
-| notes      | text?        |                                                                |
-| archivedAt | timestamptz? |                                                                |
+| Field      | Type            | Notes                                                                                         |
+| ---------- | --------------- | --------------------------------------------------------------------------------------------- |
+| id         | string          |                                                                                               |
+| name       | string          | Required. Unique (case-insensitive) among non-archived clients                                |
+| nameKey    | string?, unique | `lower(trim(name))` while active, NULL when archived — enforces C-2 with a plain unique index |
+| company    | string?         |                                                                                               |
+| country    | string?         | ISO country code                                                                              |
+| currency   | string          | Default currency for new projects; defaults to base currency                                  |
+| notes      | text?           |                                                                                               |
+| archivedAt | timestamptz?    |                                                                                               |
 
 ### ClientContact
 

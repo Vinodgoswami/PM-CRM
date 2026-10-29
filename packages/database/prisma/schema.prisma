@@ -111,6 +111,8 @@ model LoginAttempt {
 model Client {
   id          String    @id @default(cuid(2))
   name        String
+  /// lower(trim(name)) while active, NULL once archived: enforces C-2 (unique active names) with a plain index.
+  nameKey     String?   @unique
   company     String?
   country     String?
   currency    String    @default("INR")

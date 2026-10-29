@@ -32,6 +32,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P1-8  | Done   | feat/phase-1-foundation       | `pnpm db:seed`: 4 users, 15 clients, 40 projects, overdue/partial/reversal cases, deterministic             |
 | P1-7  | Done   | feat/phase-1-foundation       | Web shell: login / invite / reset pages, role-based sidebar, route guards, theme tokens, motion             |
 | P2-0  | Done   | feat/phase-2-clients-projects | Core rules: PS-1/2/4/6 transitions, D-1 end dates, project totals, U-2 cycle check                          |
+| P2-1  | Done   | feat/phase-2-clients-projects | Clients API: CRUD, search, archive (frees name), contacts, totals; C-2 race-safe via nameKey                |
 
 ## Blockers
 
