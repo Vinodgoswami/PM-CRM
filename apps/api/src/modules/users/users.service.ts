@@ -49,6 +49,9 @@ export class UsersService {
 
   async update(actor: SessionUser, id: string, input: UpdateUserInput): Promise<UserListItem> {
     return this.prisma.$transaction(async (tx) => {
+      // Lock every active admin row first (fixed order, no deadlock). Two admins demoting each other at once
+      // would otherwise both count "one other admin left" and commit, leaving none (write skew).
+      await tx.$queryRaw`SELECT id FROM "User" WHERE role = 'ADMIN' AND active = true ORDER BY id FOR UPDATE`;
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw notFound();
       const role = input.role ?? user.role;
@@ -65,6 +68,8 @@ export class UsersService {
         await this.audit.record(tx, { actorId: actor.id, action: 'user.update', entity: 'User', entityId: id, ...diff });
         // A changed role or a deactivation takes effect immediately: end every session of that user.
         await tx.session.deleteMany({ where: { userId: id } });
+        // Links an admin issued die with their admin rights.
+        if (losesAdmin) await this.tokens.revokeIssuedBy(tx, id);
       }
       return {
         id: updated.id,

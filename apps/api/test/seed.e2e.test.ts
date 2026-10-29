@@ -1,7 +1,7 @@
 import { createPrismaClient } from '@salescrm/database';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { buildSeed, mulberry32, SEED } from '../scripts/seed-data';
-import { runSeed } from '../scripts/seed';
+import { assertSafeToSeed, runSeed } from '../scripts/seed';
 
 const TODAY = '2026-10-29';
 const prisma = createPrismaClient(process.env.DATABASE_URL);
@@ -77,4 +77,12 @@ test('buildSeed is deterministic', () => {
   const a = buildSeed(TODAY, mulberry32(SEED));
   const b = buildSeed(TODAY, mulberry32(SEED));
   expect(a.projects.map((p) => [p.name, p.expectedAmountMinor])).toEqual(b.projects.map((p) => [p.name, p.expectedAmountMinor]));
+});
+
+test('seeding refuses non-local databases unless explicitly confirmed', () => {
+  expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@db.prod.example.com:5432/crm' }, [])).toThrow(/refusing/i);
+  expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@localhost:5432/crm', NODE_ENV: 'production' }, [])).toThrow(/refusing/i);
+  expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@localhost:5432/crm' }, [])).not.toThrow();
+  expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@127.0.0.1:5432/crm' }, [])).not.toThrow();
+  expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@db.staging.example.com/crm' }, ['--yes-wipe'])).not.toThrow();
 });

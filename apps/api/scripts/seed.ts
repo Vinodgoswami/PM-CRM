@@ -122,9 +122,30 @@ export async function runSeed(prisma: PrismaClient, opts: { today: IsoDate; pass
   return { users: data.users.map((u) => u.email), clients: data.clients.length, projects: data.projects.length, milestones, payments };
 }
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+/**
+ * The seed TRUNCATEs every table. Only run it against a local database, or when the operator passes --yes-wipe;
+ * NODE_ENV alone is not trusted (an unset NODE_ENV defaults to development).
+ */
+export function assertSafeToSeed(env: NodeJS.ProcessEnv, argv: readonly string[]): void {
+  if (env.NODE_ENV === 'production') throw new Error('Refusing to seed: NODE_ENV is production.');
+  let host: string;
+  try {
+    host = new URL(env.DATABASE_URL ?? '').hostname;
+  } catch {
+    throw new Error('Refusing to seed: DATABASE_URL is missing or invalid.');
+  }
+  if (!LOCAL_HOSTS.has(host) && !argv.includes('--yes-wipe')) {
+    throw new Error(`Refusing to seed: ${host} is not a local database. This wipes every table; pass --yes-wipe to confirm.`);
+  }
+}
+
 async function main(): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('Refusing to seed demo data into a production environment.');
+  try {
+    assertSafeToSeed(process.env, process.argv);
+  } catch (e) {
+    console.error((e as Error).message);
     process.exit(1);
   }
   const prisma = createPrismaClient(process.env.DATABASE_URL);

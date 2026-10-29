@@ -27,17 +27,27 @@ export class AuthService {
   ) {}
 
   async login(input: LoginInput, ip: string, userAgent: string | undefined): Promise<SessionResponse & { token: string }> {
-    const since = new Date(Date.now() - FAILURE_WINDOW_MS);
-    const failures = await this.prisma.loginAttempt.count({ where: { email: input.email, ip, success: false, at: { gte: since } } });
-    if (failures >= MAX_FAILURES) throw rateLimited('Too many attempts. Try again in 15 minutes.');
+    // Serialise attempts per (email, IP): without the lock a parallel burst reads a stale failure count and
+    // every request gets a guess (check-then-act race).
+    const outcome = await this.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`login:${input.email}|${ip}`}))`;
+        const since = new Date(Date.now() - FAILURE_WINDOW_MS);
+        const failures = await tx.loginAttempt.count({ where: { email: input.email, ip, success: false, at: { gte: since } } });
+        if (failures >= MAX_FAILURES) return { limited: true as const };
 
-    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
-    // Always run argon2 so unknown emails take as long as wrong passwords.
-    const hash = user?.passwordHash ?? (await (this.dummyHash ??= hashPassword('timing-equaliser-not-a-password')));
-    const ok = (await verifyPassword(hash, input.password)) && !!user?.passwordHash && user.active;
-
-    await this.prisma.loginAttempt.create({ data: { email: input.email, ip, success: ok } });
-    if (!ok || !user) throw unauthenticated(INVALID);
+        const user = await tx.user.findUnique({ where: { email: input.email } });
+        // Always run argon2 so unknown emails take as long as wrong passwords.
+        const hash = user?.passwordHash ?? (await (this.dummyHash ??= hashPassword('timing-equaliser-not-a-password')));
+        const ok = (await verifyPassword(hash, input.password)) && !!user?.passwordHash && user.active;
+        await tx.loginAttempt.create({ data: { email: input.email, ip, success: ok } });
+        return { limited: false as const, user: ok ? user : null };
+      },
+      { timeout: 30_000 },
+    );
+    if (outcome.limited) throw rateLimited('Too many attempts. Try again in 15 minutes.');
+    const { user } = outcome;
+    if (!user) throw unauthenticated(INVALID);
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     const { token } = await this.sessions.create(user.id, ip, userAgent);
@@ -56,6 +66,8 @@ export class AuthService {
   }
 
   async acceptInvite(input: AcceptInviteInput, ip: string, userAgent: string | undefined): Promise<SessionResponse & { token: string }> {
+    // Reject bad tokens before the ~64 MiB argon2 hash, so junk requests to this public route stay cheap.
+    await this.tokens.assertUsable(this.prisma, 'INVITE', input.token);
     const passwordHash = await hashPassword(input.password);
     const user = await this.prisma.$transaction(async (tx) => {
       const invite = await this.tokens.consume(tx, 'INVITE', input.token);
@@ -84,6 +96,7 @@ export class AuthService {
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {
+    await this.tokens.assertUsable(this.prisma, 'RESET', input.token);
     const passwordHash = await hashPassword(input.password);
     await this.prisma.$transaction(async (tx) => {
       const reset = await this.tokens.consume(tx, 'RESET', input.token);

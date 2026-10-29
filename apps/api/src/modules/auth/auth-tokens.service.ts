@@ -35,13 +35,45 @@ export class AuthTokensService {
     return { id: row.id, url: `${this.config.webOrigin}/${PATH[kind]}/${token}`, expiresAt };
   }
 
+  /**
+   * Unused, unexpired, and its issuer is still an active Admin — a link must not outlive the authority that
+   * granted it (a deactivated admin cannot come back through an invite they minted).
+   */
+  private async findUsable(tx: Prisma.TransactionClient, kind: AuthTokenKind, token: string): Promise<AuthToken> {
+    const row = await tx.authToken.findUnique({
+      where: { tokenHash: hashToken(token, this.config.sessionSecret) },
+      include: { createdBy: { select: { active: true, role: true } } },
+    });
+    const usable =
+      row &&
+      row.kind === kind &&
+      !row.usedAt &&
+      row.expiresAt.getTime() > Date.now() &&
+      row.createdBy.active &&
+      row.createdBy.role === 'ADMIN';
+    if (!usable) throw this.invalid();
+    return row;
+  }
+
+  private invalid(): AppError {
+    return new AppError(400, 'VALIDATION_FAILED', 'This link is invalid or has expired. Ask your admin for a new one.');
+  }
+
+  /** Cheap pre-check for public routes, run before any expensive work. Not a reservation: `consume` decides. */
+  async assertUsable(tx: Prisma.TransactionClient, kind: AuthTokenKind, token: string): Promise<void> {
+    await this.findUsable(tx, kind, token);
+  }
+
   /** Marks the token used in the caller's transaction; a concurrent second use finds nothing to update. */
   async consume(tx: Prisma.TransactionClient, kind: AuthTokenKind, token: string): Promise<AuthToken> {
-    const invalid = new AppError(400, 'VALIDATION_FAILED', 'This link is invalid or has expired. Ask your admin for a new one.');
-    const row = await tx.authToken.findUnique({ where: { tokenHash: hashToken(token, this.config.sessionSecret) } });
-    if (!row || row.kind !== kind || row.usedAt || row.expiresAt.getTime() <= Date.now()) throw invalid;
+    const row = await this.findUsable(tx, kind, token);
     const { count } = await tx.authToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
-    if (count !== 1) throw invalid;
+    if (count !== 1) throw this.invalid();
     return row;
+  }
+
+  /** When an admin is deactivated or demoted, every link they issued stops working. */
+  async revokeIssuedBy(tx: Prisma.TransactionClient, userId: string): Promise<void> {
+    await tx.authToken.updateMany({ where: { createdById: userId, usedAt: null }, data: { usedAt: new Date() } });
   }
 }

@@ -20,8 +20,9 @@ export function currencyDigits(currency: string): number {
   return digits;
 }
 
-// Plain digits, or Indian / western comma grouping, with an optional fraction.
-const AMOUNT = /^(?:\d+|\d{1,3}(?:,\d{2,3})+)(?:\.(\d+))?$/;
+// Plain digits, western grouping (1,250,000) or Indian grouping (12,50,000), with an optional fraction.
+// Mixed groups like "1,500,00" are rejected: a misplaced comma must not silently become a 100x amount.
+const AMOUNT = /^(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.(\d+))?$/;
 
 export function toMinor(input: string, currency: string): bigint {
   const text = input.trim();
