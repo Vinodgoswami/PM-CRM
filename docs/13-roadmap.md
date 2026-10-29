@@ -30,15 +30,16 @@ commits and [17-implementation-status.md](17-implementation-status.md).
 
 ## Phase 2 — Clients & projects
 
-| ID   | Task                               | Deps             | Acceptance criteria                                                                          |
-| ---- | ---------------------------------- | ---------------- | -------------------------------------------------------------------------------------------- |
-| P2-1 | Clients API                        | P1-6             | Endpoints in 10 § Clients; C-2, C-3; role tests                                              |
-| P2-2 | Projects API (CRUD, status, owner) | P1-6, P1-3       | PS-1..PS-6, D-1; `POST /projects` with `newClient` + `milestones[]` in one transaction (C-1) |
-| P2-3 | Upsells API                        | P2-2             | Entries + parent link; U-1, U-2 (no cycles, same client)                                     |
-| P2-4 | Documents API + storage driver     | P2-2             | Local + S3 drivers; signed URLs; mime/size checks; 11 § Files                                |
-| P2-5 | Projects list & detail UI          | P1-7, P2-2       | S3, S4 (Overview, Upsells, Documents, Activity tabs)                                         |
-| P2-6 | Project form with client combobox  | P1-7, P2-1, P2-2 | S5, flow F1 incl. "+ Add new client"; validation messages per rule id                        |
-| P2-7 | Clients UI                         | P2-1, P1-7       | S8 list + basic detail                                                                       |
+| ID   | Task                               | Deps             | Acceptance criteria                                                                                                             |
+| ---- | ---------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| P2-1 | Clients API                        | P1-6             | Endpoints in 10 § Clients; C-2, C-3; role tests                                                                                 |
+| P2-2 | Projects API (CRUD, status, owner) | P1-6, P1-3       | PS-1..PS-6, D-1; `POST /projects` with `newClient` + `milestones[]` in one transaction (C-1)                                    |
+| P2-3 | Upsells API                        | P2-2             | Entries + parent link; U-1, U-2 (no cycles, same client)                                                                        |
+| P2-4 | Documents API + storage driver     | P2-2             | Local + S3 drivers; signed URLs; mime/size checks; 11 § Files                                                                   |
+| P2-5 | Projects list & detail UI          | P1-7, P2-2       | S3, S4 (Overview, Upsells, Documents, Activity tabs)                                                                            |
+| P2-6 | Project form with client combobox  | P1-7, P2-1, P2-2 | S5, flow F1 incl. "+ Add new client"; validation messages per rule id                                                           |
+| P2-7 | Clients UI                         | P2-1, P1-7       | S8 list + basic detail                                                                                                          |
+| P2-8 | Settings, users & audit log UI     | P1-6, P1-7       | S9: company settings (changed fields only), invite / reset links with copy, role & active changes, audit log with entity filter |
 
 ## Phase 3 — Milestones & billing
 

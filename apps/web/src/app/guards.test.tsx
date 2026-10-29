@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
-import { expect, test } from 'vitest';
-import { renderApp, sessionFor } from '../test/render';
+import { expect, test, vi } from 'vitest';
+import { renderApp, sessionFor, stubApi } from '../test/render';
 
 test('signed-out visit to a protected page redirects to login with next', async () => {
   const { router } = renderApp('/projects', null);
@@ -14,6 +14,12 @@ test('SALES opening settings sees the no-access page', async () => {
 });
 
 test('ADMIN can open settings', async () => {
+  vi.stubGlobal(
+    'fetch',
+    stubApi({
+      'GET /settings': { body: { companyName: '', baseCurrency: 'INR', fyStartMonth: 4, timezone: 'Asia/Kolkata', dueSoonDays: 7 } },
+    }).fn,
+  );
   renderApp('/settings', sessionFor('ADMIN'));
   expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
 });

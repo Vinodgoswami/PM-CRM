@@ -6,15 +6,15 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Summary
 
-| Phase                  | Status                                                 |
-| ---------------------- | ------------------------------------------------------ |
-| 0 Security & docs      | ✅ Done                                                |
-| 1 Foundation           | ✅ Done (reviewed, fixes applied)                      |
-| 2 Clients & projects   | In progress: [19](19-plan-phase-2-clients-projects.md) |
-| 3 Milestones & billing | Not started                                            |
-| 4 Dashboard            | Not started                                            |
-| 5 Theme & animation    | Waiting for references (Q-09)                          |
-| 6 Launch               | Not started                                            |
+| Phase                  | Status                            |
+| ---------------------- | --------------------------------- |
+| 0 Security & docs      | ✅ Done                           |
+| 1 Foundation           | ✅ Done (reviewed, fixes applied) |
+| 2 Clients & projects   | ✅ Done (pending review)          |
+| 3 Milestones & billing | Not started                       |
+| 4 Dashboard            | Not started                       |
+| 5 Theme & animation    | Waiting for references (Q-09)     |
+| 6 Launch               | Not started                       |
 
 ## Tasks
 
@@ -39,6 +39,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P2-5  | Done   | feat/phase-2-clients-projects | Web: projects list (views, search, sort, paging) and detail (totals, status menu, upsells, documents, activity)           |
 | P2-6  | Done   | feat/phase-2-clients-projects | Web: project form (client combobox + "Add new client", milestone rows, duplicate-client recovery), edit form              |
 | P2-7  | Done   | feat/phase-2-clients-projects | Web: clients list (search, archived), detail (contacts, primary, totals, upsell tree), create/edit/archive                |
+| P2-8  | Done   | feat/phase-2-clients-projects | Web: settings (company, users, invite/reset links), audit log page                                                        |
 
 ## Blockers
 
