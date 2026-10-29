@@ -93,6 +93,10 @@ flowchart LR
 2. Browser uploads directly to the bucket. 3. Web confirms → API stores metadata (name, size, mime, key).
 3. Download = API returns a signed GET URL (60 s). The bucket is never public.
 
+Drivers: `STORAGE_DRIVER=local` (development) stores files under `STORAGE_LOCAL_DIR` and serves HMAC-signed
+`/api/v1/storage/local/:token` URLs with the same TTLs; `STORAGE_DRIVER=s3` (required in production) uses S3 / R2
+presigned URLs. The bucket's CORS must allow `PUT` from the web origin with the `Content-Type` header.
+
 ## Environments
 
 | Env        | Web             | API + DB                      | Files               |

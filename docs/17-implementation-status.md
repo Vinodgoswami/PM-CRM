@@ -35,6 +35,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P2-1  | Done   | feat/phase-2-clients-projects | Clients API: CRUD, search, archive (frees name), contacts, totals; C-2 race-safe via nameKey                              |
 | P2-2  | Done   | feat/phase-2-clients-projects | Projects API: create with new client + milestones (C-1), PRJ codes, status rules, owner, filters/sort, optimistic locking |
 | P2-3  | Done   | feat/phase-2-clients-projects | Upsell entries (U-1) and upsell project links (U-2: same client, no cycles), also on create                               |
+| P2-4  | Done   | feat/phase-2-clients-projects | Documents: local + S3/R2 drivers, signed PUT/GET, confirm checks size/type, allow-list, 25 MB                             |
 
 ## Blockers
 

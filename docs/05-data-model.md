@@ -152,15 +152,16 @@ A database trigger rejects `UPDATE` of `amountMinor`, `milestoneId`, `reversesPa
 
 ### Document
 
-| Field        | Type    | Notes                                     |
-| ------------ | ------- | ----------------------------------------- |
-| projectId    | FK      |                                           |
-| name         | string  | Original file name                        |
-| type         | enum    | `PROPOSAL, SOW, CONTRACT, INVOICE, OTHER` |
-| storageKey   | string  | Bucket key; never exposed                 |
-| mimeType     | string  | Allow-list (see 11)                       |
-| sizeBytes    | int     | ≤ 25 MB                                   |
-| uploadedById | FK User |                                           |
+| Field        | Type    | Notes                                                                         |
+| ------------ | ------- | ----------------------------------------------------------------------------- |
+| projectId    | FK      |                                                                               |
+| name         | string  | Original file name                                                            |
+| type         | enum    | `PROPOSAL, SOW, CONTRACT, INVOICE, OTHER`                                     |
+| storageKey   | string  | Bucket key; never exposed                                                     |
+| mimeType     | string  | Allow-list (see 11)                                                           |
+| sizeBytes    | int     | ≤ 25 MB                                                                       |
+| status       | enum    | `PENDING` until the upload is confirmed, then `READY` (lists show READY only) |
+| uploadedById | FK User |                                                                               |
 
 ### AuditLog
 
