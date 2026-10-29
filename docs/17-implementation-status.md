@@ -29,6 +29,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P1-5  | Done   | feat/phase-1-foundation | Login/logout/session, argon2id, hashed session tokens, CSRF + origin check, 5-per-15-min limit              |
 | P1-6  | Done   | feat/phase-1-foundation | Permission matrix (shared web/API), default-deny guard, ownership helpers, audit log + GET /audit, settings |
 | P1-5b | Done   | feat/phase-1-foundation | Users: invite links, accept, role/active changes (sessions ended), last-admin guard, reset links            |
+| P1-8  | Done   | feat/phase-1-foundation | `pnpm db:seed`: 4 users, 15 clients, 40 projects, overdue/partial/reversal cases, deterministic             |
 
 ## Blockers
 

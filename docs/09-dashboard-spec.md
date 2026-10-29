@@ -86,5 +86,5 @@ Sorted by Booked; row expands to a 12-month booked/collected mini chart. Target 
 ## Acceptance
 
 - Unit tests in `packages/core` for every K and C formula with fixed fixtures and a fixed "today".
-- A seeded dataset (`pnpm db:seed`) with 3 users, 15 clients, 40 projects, 2 FYs of milestones/payments, upsells,
+- A seeded dataset (`pnpm db:seed`) with 4 users (1 Admin, 2 Sales, 1 CEO), 15 clients, 40 projects, 2 FYs of milestones/payments, upsells,
   overdue items — the dashboard must look meaningful on it.

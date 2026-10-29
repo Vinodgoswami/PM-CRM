@@ -1,0 +1,232 @@
+/**
+ * Deterministic demo dataset (docs/09 § Acceptance). Pure: same `today` + same random stream → same data.
+ * Every payment respects P-2 (never above the milestone), P-6 (never in the future) and PS-6 (none on LOST).
+ */
+import { fyOf, type IsoDate } from '@salescrm/core';
+import { toMinor } from '@salescrm/types';
+
+export const SEED = 20261029;
+
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+type Status = 'LEAD' | 'PROPOSAL' | 'WON' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'LOST';
+type UserKey = 'admin' | 'sales1' | 'sales2' | 'ceo';
+
+export interface SeedPayment {
+  paymentDate: IsoDate;
+  amountMinor: bigint;
+  invoiceId: string;
+  reversesIndex?: number; // index into the same milestone's payments
+}
+export interface SeedMilestone {
+  number: number;
+  title: string;
+  amountMinor: bigint;
+  dueDate: IsoDate;
+  payments: SeedPayment[];
+}
+export interface SeedProject {
+  code: string;
+  name: string;
+  description: string;
+  clientIndex: number;
+  owner: UserKey;
+  status: Status;
+  startDate: IsoDate | null;
+  durationMonths: number;
+  endDate: IsoDate | null;
+  expectedAmountMinor: bigint;
+  wonAt: IsoDate | null;
+  closedAt: IsoDate | null;
+  parentIndex: number | null;
+  milestones: SeedMilestone[];
+  upsellEntries: { amountMinor: bigint; date: IsoDate; note: string }[];
+}
+export interface SeedData {
+  users: { key: UserKey; name: string; email: string; role: 'ADMIN' | 'SALES' | 'CEO' }[];
+  clients: { name: string; company: string; contactName: string; contactEmail: string; country: string }[];
+  projects: SeedProject[];
+}
+
+const CLIENTS = [
+  'Northwind Traders',
+  'Bluepeak Logistics',
+  'Saffron Foods',
+  'Kestrel Health',
+  'Orbit Fintech',
+  'Lotus Retail',
+  'Granite Infra',
+  'Monsoon Media',
+  'Pinecrest Schools',
+  'Aurora Travels',
+  'Vertex Motors',
+  'Coral Hotels',
+  'Zenith Pharma',
+  'Indigo Textiles',
+  'Harbor Insurance',
+];
+const PROJECT_KINDS = [
+  'Website Redesign',
+  'Mobile App',
+  'CRM Integration',
+  'Data Dashboard',
+  'E-commerce Platform',
+  'Booking System',
+  'Payment Gateway',
+  'Inventory Portal',
+  'Learning Portal',
+  'Analytics Revamp',
+];
+const MILESTONE_TITLES = ['Discovery & design', 'Core build', 'Integrations', 'Testing & QA', 'Launch & handover'];
+const STATUSES: Status[] = [
+  ...Array<Status>(4).fill('LEAD'),
+  ...Array<Status>(4).fill('PROPOSAL'),
+  ...Array<Status>(4).fill('WON'),
+  ...Array<Status>(14).fill('ACTIVE'),
+  ...Array<Status>(2).fill('ON_HOLD'),
+  ...Array<Status>(9).fill('COMPLETED'),
+  ...Array<Status>(3).fill('LOST'),
+];
+
+const DAY = 86_400_000;
+const ms = (d: IsoDate) => Date.parse(`${d}T00:00:00Z`);
+const iso = (t: number): IsoDate => new Date(t).toISOString().slice(0, 10);
+const addDays = (d: IsoDate, n: number) => iso(ms(d) + n * DAY);
+const minDate = (a: IsoDate, b: IsoDate) => (a < b ? a : b);
+function addMonths(d: IsoDate, n: number): IsoDate {
+  const date = new Date(ms(d));
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + n);
+  const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, last));
+  return iso(date.getTime());
+}
+const rupees = (n: number) => toMinor(String(n), 'INR');
+
+export function buildSeed(today: IsoDate, random: () => number): SeedData {
+  const int = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
+  const pick = <T>(xs: readonly T[]): T => xs[Math.floor(random() * xs.length)]!;
+  const between = (from: IsoDate, to: IsoDate) => addDays(from, int(0, Math.max(0, Math.round((ms(to) - ms(from)) / DAY))));
+
+  const windowStart = addMonths(fyOf(today, 4).start, -12); // start of the previous FY
+  const clients = CLIENTS.map((name, i) => {
+    const slug = name.toLowerCase().replace(/[^a-z]+/g, '');
+    return { name, company: `${name} Pvt Ltd`, contactName: `Contact ${i + 1}`, contactEmail: `accounts@${slug}.test`, country: 'IN' };
+  });
+
+  let invoiceNo = 1000;
+  const projects: SeedProject[] = STATUSES.map((status, i) => {
+    const booked = status !== 'LEAD' && status !== 'PROPOSAL' && status !== 'LOST';
+    const expected = int(10, 500) * 5000; // ₹50,000 – ₹25,00,000
+    const durationMonths = int(1, 6);
+    const wonAt = booked
+      ? status === 'COMPLETED'
+        ? between(windowStart, addDays(today, -120))
+        : status === 'WON'
+          ? between(addDays(today, -40), addDays(today, -5))
+          : between(windowStart, addDays(today, -30))
+      : null;
+    const project: SeedProject = {
+      code: `PRJ-${String(i + 1).padStart(4, '0')}`,
+      name: `${pick(PROJECT_KINDS)} ${i + 1}`,
+      description: 'Demo project generated by the seed script.',
+      clientIndex: i % clients.length,
+      owner: i % 5 === 4 ? 'admin' : i % 2 === 0 ? 'sales1' : 'sales2',
+      status,
+      startDate: wonAt,
+      durationMonths,
+      endDate: wonAt ? addMonths(wonAt, durationMonths) : null,
+      expectedAmountMinor: rupees(expected),
+      wonAt,
+      closedAt: status === 'LOST' ? between(windowStart, today) : null,
+      parentIndex: null,
+      milestones: [],
+      upsellEntries: [],
+    };
+    if (!booked) return project;
+
+    // Split the expected amount into 2–5 milestones (whole rupees; last takes the remainder).
+    const count = int(2, 5);
+    const shares = Array.from({ length: count }, () => int(1, 4));
+    const totalShares = shares.reduce((a, b) => a + b, 0);
+    let allocated = 0;
+    const lastDue = status === 'COMPLETED' ? addDays(today, -10) : null;
+    let due = addDays(wonAt!, int(10, 25));
+    for (let n = 0; n < count; n++) {
+      const amount = n === count - 1 ? expected - allocated : Math.floor((expected * shares[n]!) / totalShares / 1000) * 1000;
+      allocated += amount;
+      const dueDate = lastDue ? minDate(due, lastDue) : due;
+      project.milestones.push({ number: n + 1, title: MILESTONE_TITLES[n]!, amountMinor: rupees(amount), dueDate, payments: [] });
+      due = addDays(due, int(25, 50));
+    }
+
+    for (const m of project.milestones) {
+      if (m.dueDate > today) continue; // future milestones are unpaid
+      const roll = random();
+      const fullyPaid = status === 'COMPLETED' || roll < 0.6;
+      const partial = !fullyPaid && roll < 0.75;
+      const paymentDate = minDate(addDays(m.dueDate, int(0, 20)), today);
+      if (fullyPaid) {
+        m.payments.push({ paymentDate, amountMinor: m.amountMinor, invoiceId: `INV-${invoiceNo++}` });
+      } else if (partial) {
+        m.payments.push({ paymentDate, amountMinor: (m.amountMinor * BigInt(int(40, 60))) / 100n, invoiceId: `INV-${invoiceNo++}` });
+      }
+    }
+    if (status === 'COMPLETED') project.closedAt = project.milestones.at(-1)!.dueDate;
+    return project;
+  });
+
+  // Guarantee the edge cases the dashboard must show.
+  const active = projects.filter((p) => p.status === 'ACTIVE');
+  const veryOverdue = active[0]!.milestones[0]!;
+  veryOverdue.dueDate = addDays(today, -120);
+  veryOverdue.payments = [];
+  const partialM = active[1]!.milestones[0]!;
+  partialM.dueDate = minDate(partialM.dueDate, addDays(today, -15));
+  partialM.payments = [
+    { paymentDate: addDays(partialM.dueDate, 3), amountMinor: partialM.amountMinor / 2n, invoiceId: `INV-${invoiceNo++}` },
+  ];
+  const reversed = projects.find((p) => p.status === 'COMPLETED')!.milestones[0]!;
+  const original = reversed.payments[0]!;
+  reversed.payments.push(
+    { paymentDate: original.paymentDate, amountMinor: -original.amountMinor, invoiceId: original.invoiceId, reversesIndex: 0 },
+    { paymentDate: original.paymentDate, amountMinor: original.amountMinor, invoiceId: `INV-${invoiceNo++}` },
+  );
+
+  // Four upsell projects: later booked projects linked to an earlier booked project of the same client.
+  const booked = projects.filter((p) => p.wonAt).sort((a, b) => a.wonAt!.localeCompare(b.wonAt!));
+  for (let k = 0; k < 4; k++) {
+    const parent = booked[k]!;
+    const child = booked[booked.length - 1 - k]!;
+    child.parentIndex = projects.indexOf(parent);
+    child.clientIndex = parent.clientIndex;
+    child.name = `${child.name} (upsell)`;
+  }
+
+  // Six upsell entries on active / completed projects, dated after the win.
+  const upsellTargets = projects.filter((p) => p.status === 'ACTIVE' || p.status === 'COMPLETED').slice(2, 8);
+  for (const p of upsellTargets) {
+    p.upsellEntries.push({ amountMinor: rupees(int(2, 30) * 5000), date: between(p.wonAt!, today), note: 'Additional scope' });
+  }
+
+  return {
+    users: [
+      { key: 'admin', name: 'Asha Admin', email: 'admin@salescrm.test', role: 'ADMIN' },
+      { key: 'sales1', name: 'Rohan Sales', email: 'sales1@salescrm.test', role: 'SALES' },
+      { key: 'sales2', name: 'Meera Sales', email: 'sales2@salescrm.test', role: 'SALES' },
+      { key: 'ceo', name: 'Vikram CEO', email: 'ceo@salescrm.test', role: 'CEO' },
+    ],
+    clients,
+    projects,
+  };
+}

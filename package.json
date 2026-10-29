@@ -26,6 +26,7 @@
     "db:generate": "pnpm --filter @salescrm/database generate",
     "db:migrate": "pnpm --filter @salescrm/database migrate:deploy",
     "db:migrate:dev": "pnpm --filter @salescrm/database migrate:dev",
+    "db:seed": "pnpm --filter @salescrm/api seed",
     "db:reset": "pnpm --filter @salescrm/database reset",
     "check:obscure": "node scripts/scan-obfuscation.mjs",
     "check:obscure:selftest": "node scripts/selftest-scanners.mjs",
