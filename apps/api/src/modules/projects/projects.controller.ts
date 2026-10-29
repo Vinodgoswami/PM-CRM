@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import {
   changeOwnerSchema,
   changeStatusSchema,
@@ -7,8 +7,12 @@ import {
   type ProjectDetail,
   type ProjectListQuery,
   projectListQuerySchema,
+  type SetParentInput,
+  setParentSchema,
   type UpdateProjectInput,
   updateProjectSchema,
+  type UpsellEntryInput,
+  upsellEntrySchema,
 } from '@salescrm/schemas';
 import { type z } from 'zod';
 import { CurrentUser, type SessionUser } from '../../common/current-user';
@@ -70,5 +74,32 @@ export class ProjectsController {
     @Body(new ZodValidationPipe(changeOwnerSchema)) body: z.infer<typeof changeOwnerSchema>,
   ): Promise<ProjectDetail> {
     return this.projects.changeOwner(user, id, body.ownerId);
+  }
+
+  @Post(':id/upsells')
+  @RequirePermission('projects.write')
+  addUpsell(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(upsellEntrySchema)) body: UpsellEntryInput,
+  ): Promise<ProjectDetail> {
+    return this.projects.addUpsell(user, id, body);
+  }
+
+  @Delete(':id/upsells/:entryId')
+  @HttpCode(204)
+  @RequirePermission('projects.write')
+  removeUpsell(@CurrentUser() user: SessionUser, @Param('id') id: string, @Param('entryId') entryId: string): Promise<void> {
+    return this.projects.removeUpsell(user, id, entryId);
+  }
+
+  @Put(':id/parent')
+  @RequirePermission('projects.write')
+  setParent(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(setParentSchema)) body: SetParentInput,
+  ): Promise<ProjectDetail> {
+    return this.projects.setParent(user, id, body.parentProjectId);
   }
 }

@@ -139,3 +139,13 @@ export const projectDetailSchema = projectListItemSchema.extend({
   canEdit: z.boolean(),
 });
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
+
+export const upsellEntrySchema = z.object({
+  amountMinor: positiveMinorSchema,
+  date: isoDateSchema,
+  note: text(500).optional(),
+});
+export type UpsellEntryInput = z.infer<typeof upsellEntrySchema>;
+
+export const setParentSchema = z.object({ parentProjectId: z.string().min(1).nullable() });
+export type SetParentInput = z.infer<typeof setParentSchema>;

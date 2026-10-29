@@ -34,6 +34,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P2-0  | Done   | feat/phase-2-clients-projects | Core rules: PS-1/2/4/6 transitions, D-1 end dates, project totals, U-2 cycle check                                        |
 | P2-1  | Done   | feat/phase-2-clients-projects | Clients API: CRUD, search, archive (frees name), contacts, totals; C-2 race-safe via nameKey                              |
 | P2-2  | Done   | feat/phase-2-clients-projects | Projects API: create with new client + milestones (C-1), PRJ codes, status rules, owner, filters/sort, optimistic locking |
+| P2-3  | Done   | feat/phase-2-clients-projects | Upsell entries (U-1) and upsell project links (U-2: same client, no cycles), also on create                               |
 
 ## Blockers
 

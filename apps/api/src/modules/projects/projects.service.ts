@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { can } from '@salescrm/auth/permissions';
-import { changedFields, checkTransition, endDateFor, type IsoDate, type ProjectStatus, statusDates } from '@salescrm/core';
+import {
+  changedFields,
+  checkTransition,
+  endDateFor,
+  type IsoDate,
+  type ProjectStatus,
+  statusDates,
+  wouldCreateCycle,
+} from '@salescrm/core';
 import { type Prisma } from '@salescrm/database';
 import {
   type CreateProjectInput,
@@ -8,6 +16,7 @@ import {
   type ProjectListItem,
   type ProjectListQuery,
   type UpdateProjectInput,
+  type UpsellEntryInput,
 } from '@salescrm/schemas';
 import { minorFromJson, minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
@@ -182,6 +191,7 @@ export class ProjectsService {
           });
           if (!check.ok) throw new RuleViolation(check.rule, check.message);
         }
+        if (input.parentProjectId) await this.assertParent(tx, user, null, client.id, input.parentProjectId);
         const dates = statusDates('LEAD', input.status, { wonAt: null, closedAt: null }, today);
         const [seq] = await tx.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('project_code_seq')`;
         const nextval = seq!.nextval;
@@ -202,6 +212,7 @@ export class ProjectsService {
             currency: input.currency ?? client.currency,
             wonAt: toDate(dates.wonAt),
             tags: input.tags,
+            parentProjectId: input.parentProjectId ?? null,
             createdById: user.id,
             milestones: {
               create: milestones.map((m) => ({
@@ -327,5 +338,90 @@ export class ProjectsService {
       });
     });
     return this.get(id, user);
+  }
+
+  /** U-2: the parent must be a visible project of the same client, and the link must not create a loop. */
+  private async assertParent(
+    tx: Prisma.TransactionClient,
+    user: SessionUser,
+    childId: string | null,
+    clientId: string,
+    parentId: string,
+  ): Promise<void> {
+    const parent = await tx.project.findUnique({
+      where: { id: parentId },
+      select: { id: true, clientId: true, ownerId: true, archivedAt: true },
+    });
+    if (!parent || parent.archivedAt || !can(user, 'projects.read', { ownerId: parent.ownerId })) {
+      throw new RuleViolation('U-2', 'Choose an existing project as the original project.');
+    }
+    if (parent.clientId !== clientId) throw new RuleViolation('U-2', 'An upsell must belong to the same client as the original project.');
+    if (childId) {
+      const links = await tx.project.findMany({ where: { clientId }, select: { id: true, parentProjectId: true } });
+      const parentOf = new Map(links.map((l) => [l.id, l.parentProjectId]));
+      if (wouldCreateCycle(childId, parentId, (id) => parentOf.get(id) ?? null)) {
+        throw new RuleViolation('U-2', 'A project cannot be an upsell of itself or of one of its own upsells.');
+      }
+    }
+  }
+
+  async setParent(user: SessionUser, id: string, parentId: string | null): Promise<ProjectDetail> {
+    await this.prisma.$transaction(async (tx) => {
+      const p = await this.loadForWrite(id, user, tx);
+      if (parentId) await this.assertParent(tx, user, id, p.clientId, parentId);
+      if (p.parentProjectId === parentId) return;
+      await tx.project.update({ where: { id }, data: { parentProjectId: parentId } });
+      await this.audit.record(tx, {
+        actorId: user.id,
+        action: 'project.parent.set',
+        entity: 'Project',
+        entityId: id,
+        before: { parentProjectId: p.parentProjectId },
+        after: { parentProjectId: parentId },
+      });
+    });
+    return this.get(id, user);
+  }
+
+  async addUpsell(user: SessionUser, id: string, input: UpsellEntryInput): Promise<ProjectDetail> {
+    const today = await this.settings.today();
+    await this.prisma.$transaction(async (tx) => {
+      const p = await this.loadForWrite(id, user, tx);
+      if (!p.wonAt) throw new RuleViolation('U-1', 'Upsell amounts can only be added to a won project.');
+      if (input.date > today) throw new RuleViolation('U-1', 'The upsell date cannot be in the future.');
+      const entry = await tx.upsellEntry.create({
+        data: {
+          projectId: id,
+          amountMinor: minorFromJson(input.amountMinor),
+          date: toDate(input.date)!,
+          note: input.note ?? null,
+          createdById: user.id,
+        },
+      });
+      await this.audit.record(tx, {
+        actorId: user.id,
+        action: 'project.upsell.add',
+        entity: 'Project',
+        entityId: id,
+        after: { upsellEntryId: entry.id, amountMinor: entry.amountMinor.toString(), date: input.date },
+      });
+    });
+    return this.get(id, user);
+  }
+
+  async removeUpsell(user: SessionUser, id: string, entryId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.loadForWrite(id, user, tx);
+      const entry = await tx.upsellEntry.findFirst({ where: { id: entryId, projectId: id } });
+      if (!entry) throw notFound();
+      await tx.upsellEntry.delete({ where: { id: entryId } });
+      await this.audit.record(tx, {
+        actorId: user.id,
+        action: 'project.upsell.remove',
+        entity: 'Project',
+        entityId: id,
+        before: { upsellEntryId: entry.id, amountMinor: entry.amountMinor.toString(), date: isoDate(entry.date) },
+      });
+    });
   }
 }
