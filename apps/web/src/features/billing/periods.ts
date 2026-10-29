@@ -1,0 +1,36 @@
+import { fyOf, type IsoDate, quarterOf } from '@salescrm/core';
+
+export const PERIODS = [
+  { key: 'THIS_MONTH', label: 'This month' },
+  { key: 'THIS_QUARTER', label: 'This quarter' },
+  { key: 'THIS_FY', label: 'This financial year' },
+  { key: 'LAST_FY', label: 'Last financial year' },
+  { key: 'ALL', label: 'All time' },
+] as const;
+export type PeriodKey = (typeof PERIODS)[number]['key'];
+
+const monthEnd = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+
+/** Date range for a preset, using the company's financial year start (PR-1, PR-2). */
+export function periodRange(key: PeriodKey, today: IsoDate, fyStartMonth: number): { from?: IsoDate; to?: IsoDate } {
+  const [y, m] = today.split('-').map(Number) as [number, number];
+  switch (key) {
+    case 'THIS_MONTH':
+      return { from: `${today.slice(0, 7)}-01`, to: monthEnd(y, m) };
+    case 'THIS_QUARTER': {
+      const q = quarterOf(today, fyStartMonth, 'fy');
+      return { from: q.start, to: q.end };
+    }
+    case 'THIS_FY': {
+      const fy = fyOf(today, fyStartMonth);
+      return { from: fy.start, to: fy.end };
+    }
+    case 'LAST_FY': {
+      const prev = fyOf(fyOf(today, fyStartMonth).start, fyStartMonth);
+      const before = fyOf(new Date(Date.parse(`${prev.start}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10), fyStartMonth);
+      return { from: before.start, to: before.end };
+    }
+    case 'ALL':
+      return {};
+  }
+}

@@ -45,6 +45,8 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P3-3  | Done   | feat/phase-3-milestones-billing | Payments API: mark as paid (P-2/P-3/P-6, row lock, Idempotency-Key), edit details (P-4), Admin reversal (P-5), DB sign checks                |
 | P3-6a | Done   | feat/phase-3-milestones-billing | Billing API: GET /payments (period/client/owner/project filters, total, own scope) + CSV export                                              |
 | P3-4  | Done   | feat/phase-3-milestones-billing | Web: Milestones tab (add/edit/delete/reorder, status, balance), Mark-as-paid dialog (idempotent), Payments tab (edit details, Admin reverse) |
+| P3-5  | Done   | feat/phase-3-milestones-billing | Upcoming Invoices: API (grouped, balances, own scope) + page with Mark as paid                                                               |
+| P3-6  | Done   | feat/phase-3-milestones-billing | Completed Billing page: FY/quarter/month presets, total, reversals, CSV export                                                               |
 
 ## Blockers
 
