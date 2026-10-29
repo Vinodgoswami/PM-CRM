@@ -18,11 +18,12 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Tasks
 
-| ID   | Status | Branch / PR             | Notes                                                             |
-| ---- | ------ | ----------------------- | ----------------------------------------------------------------- |
-| P0-1 | Done   | —                       | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified |
-| P0-2 | Done   | —                       | Docs 01–17                                                        |
-| P1-1 | Done   | feat/phase-1-foundation | Monorepo apps/packages scaffolded; health endpoint; dev proxy     |
+| ID   | Status | Branch / PR             | Notes                                                                         |
+| ---- | ------ | ----------------------- | ----------------------------------------------------------------------------- |
+| P0-1 | Done   | —                       | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified             |
+| P0-2 | Done   | —                       | Docs 01–17                                                                    |
+| P1-1 | Done   | feat/phase-1-foundation | Monorepo apps/packages scaffolded; health endpoint; dev proxy                 |
+| P1-3 | Done   | feat/phase-1-foundation | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers |
 
 ## Blockers
 
