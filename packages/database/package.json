@@ -12,6 +12,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
     }
   },
   "scripts": {
@@ -19,7 +25,13 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "generate": "prisma generate",
+    "migrate:dev": "node ../../scripts/with-env.mjs prisma migrate dev",
+    "migrate:deploy": "node ../../scripts/with-env.mjs prisma migrate deploy",
+    "migrate:create": "node ../../scripts/with-env.mjs prisma migrate dev --create-only",
+    "reset": "node ../../scripts/with-env.mjs prisma migrate reset --force --skip-seed",
+    "studio": "node ../../scripts/with-env.mjs prisma studio"
   },
   "devDependencies": {
     "@salescrm/eslint-config": "workspace:*",
@@ -27,6 +39,11 @@
     "eslint": "^9.39.5",
     "tsup": "^8.5.1",
     "typescript": "~5.9.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "prisma": "6.19.3",
+    "@types/node": "^24.19.0"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
   }
 }

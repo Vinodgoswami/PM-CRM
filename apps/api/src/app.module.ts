@@ -3,6 +3,7 @@ import { type AppConfig } from '@salescrm/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ConfigModule } from './config.module';
 import { HealthController } from './modules/health/health.controller';
+import { PrismaModule } from './modules/prisma/prisma.module';
 
 @Module({})
 export class AppModule {
@@ -11,6 +12,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         ConfigModule.register(config),
+        PrismaModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.logLevel,

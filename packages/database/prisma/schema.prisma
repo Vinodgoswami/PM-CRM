@@ -1,0 +1,274 @@
+// SalesCRM schema — keep in sync with docs/05-data-model.md (gate-enforced).
+// Money is BigInt minor units (`…Minor`); calendar dates are @db.Date; instants are timestamptz.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  CEO
+}
+
+enum ProjectStatus {
+  LEAD
+  PROPOSAL
+  WON
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  LOST
+}
+
+enum DurationUnit {
+  WEEKS
+  MONTHS
+}
+
+enum DocumentType {
+  PROPOSAL
+  SOW
+  CONTRACT
+  INVOICE
+  OTHER
+}
+
+enum AuthTokenKind {
+  INVITE
+  RESET
+}
+
+model User {
+  id           String    @id @default(cuid(2))
+  name         String
+  email        String    @unique
+  passwordHash String?
+  role         Role
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+
+  sessions        Session[]
+  ownedProjects   Project[]     @relation("ProjectOwner")
+  createdProjects Project[]     @relation("ProjectCreator")
+  createdClients  Client[]
+  payments        Payment[]
+  documents       Document[]
+  auditLogs       AuditLog[]
+  authTokens      AuthToken[]   @relation("AuthTokenUser")
+  issuedTokens    AuthToken[]   @relation("AuthTokenIssuer")
+  upsellEntries   UpsellEntry[]
+  milestones      Milestone[]
+}
+
+model Session {
+  id         String   @id @default(cuid(2))
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  lastSeenAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt  DateTime @db.Timestamptz(3)
+  ip         String?
+  userAgent  String?
+
+  @@index([userId])
+}
+
+model AuthToken {
+  id          String        @id @default(cuid(2))
+  kind        AuthTokenKind
+  tokenHash   String        @unique
+  email       String
+  name        String?
+  role        Role?
+  userId      String?
+  user        User?         @relation("AuthTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime      @db.Timestamptz(3)
+  usedAt      DateTime?     @db.Timestamptz(3)
+  createdById String
+  createdBy   User          @relation("AuthTokenIssuer", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+}
+
+model LoginAttempt {
+  id      String   @id @default(cuid(2))
+  email   String
+  ip      String
+  success Boolean
+  at      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([email, ip, at])
+}
+
+model Client {
+  id          String    @id @default(cuid(2))
+  name        String
+  company     String?
+  country     String?
+  currency    String    @default("INR")
+  notes       String?
+  archivedAt  DateTime? @db.Timestamptz(3)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  contacts ClientContact[]
+  projects Project[]
+}
+
+model ClientContact {
+  id        String   @id @default(cuid(2))
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String?
+  email     String
+  phone     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([clientId])
+}
+
+model Project {
+  id                  String        @id @default(cuid(2))
+  code                String        @unique
+  name                String
+  description         String
+  clientId            String
+  client              Client        @relation(fields: [clientId], references: [id])
+  ownerId             String
+  owner               User          @relation("ProjectOwner", fields: [ownerId], references: [id])
+  status              ProjectStatus
+  startDate           DateTime?     @db.Date
+  durationValue       Int?
+  durationUnit        DurationUnit?
+  endDate             DateTime?     @db.Date
+  expectedAmountMinor BigInt
+  currency            String
+  parentProjectId     String?
+  parentProject       Project?      @relation("Upsell", fields: [parentProjectId], references: [id])
+  upsellProjects      Project[]     @relation("Upsell")
+  wonAt               DateTime?     @db.Date
+  closedAt            DateTime?     @db.Date
+  tags                String[]      @default([])
+  archivedAt          DateTime?     @db.Timestamptz(3)
+  createdById         String
+  createdBy           User          @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdAt           DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
+
+  upsellEntries UpsellEntry[]
+  milestones    Milestone[]
+  documents     Document[]
+
+  @@index([status, ownerId])
+  @@index([wonAt])
+  @@index([clientId])
+}
+
+model UpsellEntry {
+  id          String   @id @default(cuid(2))
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amountMinor BigInt
+  date        DateTime @db.Date
+  note        String?
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([projectId])
+}
+
+model Milestone {
+  id          String    @id @default(cuid(2))
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number      Int
+  title       String
+  description String?
+  amountMinor BigInt
+  dueDate     DateTime? @db.Date
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  payments Payment[]
+
+  @@unique([projectId, number])
+  @@index([dueDate])
+}
+
+model Payment {
+  id                String    @id @default(cuid(2))
+  milestoneId       String
+  milestone         Milestone @relation(fields: [milestoneId], references: [id])
+  milestoneLabel    String
+  invoiceId         String?
+  paymentDate       DateTime  @db.Date
+  amountMinor       BigInt
+  reversesPaymentId String?   @unique
+  reversesPayment   Payment?  @relation("Reversal", fields: [reversesPaymentId], references: [id])
+  reversedBy        Payment?  @relation("Reversal")
+  note              String?
+  createdById       String
+  createdBy         User      @relation(fields: [createdById], references: [id])
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([paymentDate])
+  @@index([milestoneId])
+}
+
+model Document {
+  id           String       @id @default(cuid(2))
+  projectId    String
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  type         DocumentType
+  storageKey   String       @unique
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([projectId])
+}
+
+model AuditLog {
+  id       String   @id @default(cuid(2))
+  actorId  String
+  actor    User     @relation(fields: [actorId], references: [id])
+  action   String
+  entity   String
+  entityId String
+  before   Json?
+  after    Json?
+  at       DateTime @default(now()) @db.Timestamptz(3)
+  ip       String?
+
+  @@index([entity, entityId])
+  @@index([at])
+}
+
+model Setting {
+  id           Int      @id @default(1)
+  companyName  String   @default("")
+  baseCurrency String   @default("INR")
+  fyStartMonth Int      @default(4)
+  timezone     String   @default("Asia/Kolkata")
+  dueSoonDays  Int      @default(7)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+}

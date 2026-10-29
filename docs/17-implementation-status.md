@@ -18,13 +18,14 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Tasks
 
-| ID   | Status | Branch / PR             | Notes                                                                                  |
-| ---- | ------ | ----------------------- | -------------------------------------------------------------------------------------- |
-| P0-1 | Done   | —                       | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified                      |
-| P0-2 | Done   | —                       | Docs 01–17                                                                             |
-| P1-1 | Done   | feat/phase-1-foundation | Monorepo apps/packages scaffolded; health endpoint; dev proxy                          |
-| P1-3 | Done   | feat/phase-1-foundation | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers          |
-| P1-4 | Done   | feat/phase-1-foundation | loadConfig (refuses missing/weak secrets), error contract, bigint JSON, pino redaction |
+| ID   | Status | Branch / PR             | Notes                                                                                            |
+| ---- | ------ | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| P0-1 | Done   | —                       | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified                                |
+| P0-2 | Done   | —                       | Docs 01–17                                                                                       |
+| P1-1 | Done   | feat/phase-1-foundation | Monorepo apps/packages scaffolded; health endpoint; dev proxy                                    |
+| P1-3 | Done   | feat/phase-1-foundation | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers                    |
+| P1-4 | Done   | feat/phase-1-foundation | loadConfig (refuses missing/weak secrets), error contract, bigint JSON, pino redaction           |
+| P1-2 | Done   | feat/phase-1-foundation | Prisma schema (docs/05), init migration with payment/audit guard triggers, local + test Postgres |
 
 ## Blockers
 
