@@ -3,13 +3,15 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/bootstrap';
+import { testConfig } from './test-config';
 
 let app: INestApplication;
 
 beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  app = moduleRef.createNestApplication();
-  app.setGlobalPrefix('api/v1');
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule.register(testConfig())] }).compile();
+  app = moduleRef.createNestApplication({ logger: false });
+  configureApp(app, testConfig());
   await app.init();
 });
 

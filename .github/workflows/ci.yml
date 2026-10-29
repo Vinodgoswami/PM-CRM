@@ -28,8 +28,7 @@ jobs:
       DATABASE_URL: postgresql://salescrm:salescrm@localhost:5432/salescrm_test
       TEST_DATABASE_URL: postgresql://salescrm:salescrm@localhost:5432/salescrm_test
       # CI-only throwaway secrets (not used anywhere else).
-      JWT_ACCESS_SECRET: ci-only-jwt-secret-000000000000000000000000
-      ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      SESSION_SECRET: ci-only-session-secret-0000000000000000000000
     steps:
       - uses: actions/checkout@v4
         with:
