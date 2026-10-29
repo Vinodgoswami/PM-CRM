@@ -4,7 +4,7 @@ import { type LoginInput, loginSchema, type SessionResponse } from '@salescrm/sc
 import { type CookieOptions, type Request, type Response } from 'express';
 import { APP_CONFIG } from '../../config.module';
 import { CurrentUser, type SessionUser } from '../../common/current-user';
-import { Public } from '../../common/decorators';
+import { Authenticated, Public } from '../../common/decorators';
 import { ZodValidationPipe } from '../../common/zod.pipe';
 import { AuthService } from './auth.service';
 import { ABSOLUTE_TIMEOUT_MS, SESSION_COOKIE, SessionService } from './session.service';
@@ -34,6 +34,7 @@ export class AuthController {
     return session;
   }
 
+  @Authenticated()
   @Post('logout')
   @HttpCode(204)
   async logout(@CurrentUser() user: SessionUser, @Res({ passthrough: true }) res: Response): Promise<void> {
@@ -41,6 +42,7 @@ export class AuthController {
     res.clearCookie(SESSION_COOKIE, this.cookieOptions());
   }
 
+  @Authenticated()
   @Get('session')
   session(@CurrentUser() user: SessionUser, @Req() req: Request): SessionResponse {
     return this.auth.sessionResponse(user, req.sessionToken!);

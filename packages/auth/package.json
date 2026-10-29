@@ -12,6 +12,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./permissions": {
+      "source": "./src/permissions.ts",
+      "types": "./dist/permissions.d.ts",
+      "import": "./dist/permissions.js",
+      "require": "./dist/permissions.cjs"
     }
   },
   "scripts": {
@@ -33,5 +39,12 @@
   "dependencies": {
     "@salescrm/types": "workspace:*",
     "argon2": "^0.45.1"
+  },
+  "typesVersions": {
+    "*": {
+      "permissions": [
+        "./dist/permissions.d.ts"
+      ]
+    }
   }
 }

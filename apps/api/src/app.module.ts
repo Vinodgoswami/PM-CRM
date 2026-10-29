@@ -3,11 +3,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { type AppConfig } from '@salescrm/config';
 import { LoggerModule } from 'nestjs-pino';
 import { CsrfGuard } from './common/csrf.guard';
+import { PermissionGuard } from './common/permission.guard';
 import { SessionGuard } from './common/session.guard';
 import { ConfigModule } from './config.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthController } from './modules/health/health.controller';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({})
 export class AppModule {
@@ -18,6 +21,8 @@ export class AppModule {
         ConfigModule.register(config),
         PrismaModule,
         AuthModule,
+        AuditModule,
+        SettingsModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.logLevel,
@@ -28,10 +33,11 @@ export class AppModule {
         }),
       ],
       controllers: [HealthController],
-      // Order matters: session first (sets req.user), then CSRF.
+      // Order matters: session (sets req.user) → CSRF → permission (default-deny).
       providers: [
         { provide: APP_GUARD, useClass: SessionGuard },
         { provide: APP_GUARD, useClass: CsrfGuard },
+        { provide: APP_GUARD, useClass: PermissionGuard },
       ],
     };
   }

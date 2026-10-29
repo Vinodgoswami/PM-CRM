@@ -51,8 +51,10 @@ auth → api
 | audit      | Audit log read (Admin)                                        |
 | settings   | Company settings: base currency, FY start month, timezone     |
 
-Cross-cutting (`apps/api/src/common`): session guard, `@Permission()` guard, audit interceptor, Zod pipe, error filter,
-request id, rate limiter.
+Cross-cutting (`apps/api/src/common`): session guard, CSRF guard, default-deny `@RequirePermission()` / `@Authenticated()`
+guard, ownership helpers (`assertCanAccess`, `ownerWhere`), Zod pipe, error filter. Audit rows are written by an
+explicit `AuditService.record(tx, …)` inside each business transaction (D-012), not an interceptor. Login rate
+limiting lives in the auth service.
 
 ## Request flow
 

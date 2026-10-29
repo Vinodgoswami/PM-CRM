@@ -53,6 +53,9 @@ importers:
       '@salescrm/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@salescrm/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@salescrm/database':
         specifier: workspace:*
         version: link:../../packages/database

@@ -1,4 +1,4 @@
-import { type INestApplication } from '@nestjs/common';
+import { type INestApplication, type Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { hashPassword } from '@salescrm/auth';
 import { type AppConfig } from '@salescrm/config';
@@ -13,9 +13,12 @@ import { testConfig } from './test-config';
 
 export const TEST_PASSWORD = 'correct-horse-battery';
 
-export async function createTestApp(overrides: Partial<AppConfig> = {}): Promise<{ app: INestApplication; prisma: PrismaClient }> {
+export async function createTestApp(
+  overrides: Partial<AppConfig> = {},
+  extraControllers: Type[] = [],
+): Promise<{ app: INestApplication; prisma: PrismaClient }> {
   const config = testConfig(overrides);
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule.register(config)] }).compile();
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule.register(config)], controllers: extraControllers }).compile();
   const app = moduleRef.createNestApplication({ logger: false });
   configureApp(app, config);
   await app.init();

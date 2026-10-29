@@ -16,6 +16,7 @@
     "@nestjs/platform-express": "^11.2.6",
     "@salescrm/auth": "workspace:*",
     "@salescrm/config": "workspace:*",
+    "@salescrm/core": "workspace:*",
     "@salescrm/database": "workspace:*",
     "@salescrm/schemas": "workspace:*",
     "@salescrm/types": "workspace:*",

@@ -18,15 +18,16 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Tasks
 
-| ID   | Status | Branch / PR             | Notes                                                                                            |
-| ---- | ------ | ----------------------- | ------------------------------------------------------------------------------------------------ |
-| P0-1 | Done   | —                       | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified                                |
-| P0-2 | Done   | —                       | Docs 01–17                                                                                       |
-| P1-1 | Done   | feat/phase-1-foundation | Monorepo apps/packages scaffolded; health endpoint; dev proxy                                    |
-| P1-3 | Done   | feat/phase-1-foundation | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers                    |
-| P1-4 | Done   | feat/phase-1-foundation | loadConfig (refuses missing/weak secrets), error contract, bigint JSON, pino redaction           |
-| P1-2 | Done   | feat/phase-1-foundation | Prisma schema (docs/05), init migration with payment/audit guard triggers, local + test Postgres |
-| P1-5 | Done   | feat/phase-1-foundation | Login/logout/session, argon2id, hashed session tokens, CSRF + origin check, 5-per-15-min limit   |
+| ID   | Status | Branch / PR             | Notes                                                                                                       |
+| ---- | ------ | ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| P0-1 | Done   | —                       | Hooks, scanners, CI, CODEOWNERS ported from PayOS; gates verified                                           |
+| P0-2 | Done   | —                       | Docs 01–17                                                                                                  |
+| P1-1 | Done   | feat/phase-1-foundation | Monorepo apps/packages scaffolded; health endpoint; dev proxy                                               |
+| P1-3 | Done   | feat/phase-1-foundation | Money (toMinor/formatMoney/sumMinor/JSON guards) and FY/quarter/today helpers                               |
+| P1-4 | Done   | feat/phase-1-foundation | loadConfig (refuses missing/weak secrets), error contract, bigint JSON, pino redaction                      |
+| P1-2 | Done   | feat/phase-1-foundation | Prisma schema (docs/05), init migration with payment/audit guard triggers, local + test Postgres            |
+| P1-5 | Done   | feat/phase-1-foundation | Login/logout/session, argon2id, hashed session tokens, CSRF + origin check, 5-per-15-min limit              |
+| P1-6 | Done   | feat/phase-1-foundation | Permission matrix (shared web/API), default-deny guard, ownership helpers, audit log + GET /audit, settings |
 
 ## Blockers
 
