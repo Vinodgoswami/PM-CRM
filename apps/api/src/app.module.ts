@@ -9,6 +9,7 @@ import { ConfigModule } from './config.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { HealthController } from './modules/health/health.controller';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -35,6 +36,7 @@ export class AppModule {
         StorageModule,
         DocumentsModule,
         PaymentsModule,
+        DashboardModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.logLevel,

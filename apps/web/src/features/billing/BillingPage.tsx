@@ -1,4 +1,4 @@
-import { todayIn } from '@salescrm/core';
+import { type PeriodKey, PERIODS, periodRange, todayIn } from '@salescrm/core';
 import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
@@ -7,7 +7,6 @@ import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
 import { usePayments } from '../payments/api';
 import { useSettings } from '../settings/api';
-import { type PeriodKey, PERIODS, periodRange } from './periods';
 
 const PAGE_SIZE = 50;
 

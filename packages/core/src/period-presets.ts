@@ -1,4 +1,4 @@
-import { fyOf, type IsoDate, quarterOf } from '@salescrm/core';
+import { fyOf, type IsoDate, quarterOf } from './period';
 
 export const PERIODS = [
   { key: 'THIS_MONTH', label: 'This month' },
@@ -33,4 +33,13 @@ export function periodRange(key: PeriodKey, today: IsoDate, fyStartMonth: number
     case 'ALL':
       return {};
   }
+}
+
+/** The equally long period just before `key` (previous month / quarter / financial year), for comparisons. */
+export function previousRange(key: PeriodKey, today: IsoDate, fyStartMonth: number): { from?: IsoDate; to?: IsoDate } {
+  const current = periodRange(key, today, fyStartMonth);
+  if (!current.from) return {};
+  const dayBefore = new Date(Date.parse(`${current.from}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+  // The same kind of period, evaluated on the day before this one starts ("last FY" is then the FY containing it).
+  return periodRange(key === 'LAST_FY' ? 'THIS_FY' : key, dayBefore, fyStartMonth);
 }

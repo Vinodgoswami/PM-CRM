@@ -5,6 +5,7 @@ export * from './metrics';
 export * from './milestone-status';
 export * from './payments';
 export * from './period';
+export * from './period-presets';
 export * from './project-status';
 export * from './project-totals';
 export * from './upsell';

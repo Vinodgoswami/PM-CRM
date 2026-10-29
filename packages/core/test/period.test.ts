@@ -22,3 +22,12 @@ test('todayIn uses the company timezone', () => {
   expect(todayIn('Asia/Kolkata', new Date('2026-10-29T20:00:00Z'))).toBe('2026-10-30');
   expect(todayIn('UTC', new Date('2026-10-29T20:00:00Z'))).toBe('2026-10-29');
 });
+
+test('previousRange is the equally long period just before', async () => {
+  const { previousRange } = await import('../src/period-presets');
+  expect(previousRange('THIS_MONTH', '2026-03-15', 4)).toEqual({ from: '2026-02-01', to: '2026-02-28' });
+  expect(previousRange('THIS_QUARTER', '2026-10-29', 4)).toEqual({ from: '2026-07-01', to: '2026-09-30' });
+  expect(previousRange('THIS_FY', '2026-10-29', 4)).toEqual({ from: '2025-04-01', to: '2026-03-31' });
+  expect(previousRange('LAST_FY', '2026-10-29', 4)).toEqual({ from: '2024-04-01', to: '2025-03-31' });
+  expect(previousRange('ALL', '2026-10-29', 4)).toEqual({});
+});

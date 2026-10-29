@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
-import { periodRange } from './periods';
+import { periodRange } from '@salescrm/core';
 
 const payment = (over: object) => ({
   id: 'pay1',
