@@ -36,6 +36,7 @@ Everything about SalesCRM lives in this folder. Humans and AI agents read the sa
 | 15  | [15-decisions-and-open-questions.md](15-decisions-and-open-questions.md) | Decision log and questions still open                            |
 | 16  | [16-theme-and-animation.md](16-theme-and-animation.md)                   | Design tokens and motion rules (filled when the theme arrives)   |
 | 17  | [17-implementation-status.md](17-implementation-status.md)               | What is done, in progress, next                                  |
+| 18  | [18-plan-phase-1-foundation.md](18-plan-phase-1-foundation.md)           | Step-by-step implementation plan for Phase 1                     |
 
 ## Rules for these docs
 

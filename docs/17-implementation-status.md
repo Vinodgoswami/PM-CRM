@@ -6,15 +6,15 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Summary
 
-| Phase                  | Status                                |
-| ---------------------- | ------------------------------------- |
-| 0 Security & docs      | ✅ Done                               |
-| 1 Foundation           | Ready to start (docs approved, D-009) |
-| 2 Clients & projects   | Not started                           |
-| 3 Milestones & billing | Not started                           |
-| 4 Dashboard            | Not started                           |
-| 5 Theme & animation    | Waiting for references (Q-09)         |
-| 6 Launch               | Not started                           |
+| Phase                  | Status                                          |
+| ---------------------- | ----------------------------------------------- |
+| 0 Security & docs      | ✅ Done                                         |
+| 1 Foundation           | Plan ready: [18](18-plan-phase-1-foundation.md) |
+| 2 Clients & projects   | Not started                                     |
+| 3 Milestones & billing | Not started                                     |
+| 4 Dashboard            | Not started                                     |
+| 5 Theme & animation    | Waiting for references (Q-09)                   |
+| 6 Launch               | Not started                                     |
 
 ## Tasks
 
