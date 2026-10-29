@@ -3,6 +3,8 @@
  * green accent, after the owner's "Quixotic" reference. Features use these tokens only.
  */
 :root {
+  /* Light only (owner decision): the app keeps the Quixotic look even when the OS is in dark mode. */
+  color-scheme: light;
   --background: oklch(0.955 0.004 160);
   --surface: oklch(1 0 0);
   --surface-raised: oklch(1 0 0);
@@ -44,23 +46,6 @@
   --easing-standard: cubic-bezier(0.2, 0, 0, 1);
   --easing-emphasised: cubic-bezier(0.3, 0, 0, 1.2);
   --easing-exit: cubic-bezier(0.3, 0, 1, 1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.17 0.008 160);
-    --surface: oklch(0.21 0.01 160);
-    --surface-raised: oklch(0.25 0.01 160);
-    --border: oklch(0.3 0.01 160);
-    --text: oklch(0.96 0.005 160);
-    --text-muted: oklch(0.7 0.01 160);
-    --primary: oklch(0.66 0.13 156);
-    --primary-strong: oklch(0.74 0.12 156);
-    --primary-contrast: oklch(0.15 0.01 160);
-    --accent: oklch(0.29 0.04 156);
-    --chart-3: oklch(0.4 0.06 156);
-    --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3);
-  }
 }
 
 @theme inline {

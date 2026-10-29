@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { acceptInviteSchema } from '@salescrm/schemas';
 import { Button } from '@salescrm/ui';
+import { Lock, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router';
 import { type z } from 'zod';
@@ -24,9 +25,10 @@ export function AcceptInvitePage() {
   return (
     <AuthCard title="Set up your account" description="Choose your display name and a password.">
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
-        <Field label="Your name" autoComplete="name" error={errors.name?.message} {...form.register('name')} />
+        <Field label="Your name" icon={User} autoComplete="name" error={errors.name?.message} {...form.register('name')} />
         <Field
           label="Password"
+          icon={Lock}
           type="password"
           autoComplete="new-password"
           error={errors.password?.message}
@@ -37,7 +39,7 @@ export function AcceptInvitePage() {
             {accept.error.message}
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={accept.isPending}>
+        <Button type="submit" size="lg" className="h-11 w-full" disabled={accept.isPending}>
           Create account
         </Button>
       </form>

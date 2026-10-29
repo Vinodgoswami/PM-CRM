@@ -72,4 +72,4 @@ A task is done when **all** are true:
 2. `pnpm verify` passes locally; CI green.
 3. Tests added at the required layers.
 4. Docs updated (05/06/07/09/10 as relevant) and [17-implementation-status.md](17-implementation-status.md) updated.
-5. UI tasks: checked in the browser at desktop and 375 px width, light and dark.
+5. UI tasks: checked in the browser at desktop and 375 px width (light theme only, D-014).

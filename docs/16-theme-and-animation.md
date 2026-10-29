@@ -23,7 +23,7 @@ shadcn theme, and features must still use tokens only, so the theme can be swapp
 | Spacing    | 4-px scale                                                                                                                                        |
 | Motion     | duration-fast/base/slow, easing-standard/emphasised/exit, spring presets                                                                          |
 
-Both **light and dark** variants are required.
+Light only (D-014): the app does not follow the OS dark mode.
 
 ## Motion inventory (where animation is used)
 
