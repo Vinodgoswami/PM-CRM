@@ -1,3 +1,4 @@
+import '@fontsource-variable/manrope';
 import './index.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';

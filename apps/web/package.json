@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@fontsource-variable/manrope": "^5.3.0",
     "@hookform/resolvers": "^5.9.2",
     "@salescrm/auth": "workspace:*",
     "@salescrm/core": "workspace:*",

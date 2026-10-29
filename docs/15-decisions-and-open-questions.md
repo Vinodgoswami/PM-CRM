@@ -2,20 +2,21 @@
 
 ## Decisions
 
-| ID    | Date       | Decision                                                                                     | Why / source                                                     |
-| ----- | ---------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| D-001 | 2026-10-29 | Build custom, not buy (Productive/Scoro/Twenty/Odoo checked)                                 | [02](02-market-research.md)                                      |
-| D-002 | 2026-10-29 | Stack: React 19 + Vite, NestJS + Prisma + Postgres, pnpm + Turborepo (PayOS family)          | [03](03-tech-stack.md)                                           |
-| D-003 | 2026-10-29 | Repo gates ported from PayOS                                                                 | Owner request                                                    |
-| D-004 | 2026-10-29 | Roles ADMIN / SALES / CEO; CEO sees performance dashboard + all upcoming invoices, read-only | Owner request                                                    |
-| D-005 | 2026-10-29 | Milestones may not sum to contract value; show "unscheduled" warning                         | Flexibility for unplanned work                                   |
-| D-006 | 2026-10-29 | Payment amount immutable; corrections by reversal; other payment fields editable             | Owner: "except amount everything is temporary" (confirm in Q-02) |
-| D-007 | 2026-10-29 | Partial payments allowed per milestone                                                       | Common in practice                                               |
-| D-008 | 2026-10-29 | All docs in `docs/`, numbered files                                                          | Owner request                                                    |
-| D-009 | 2026-10-29 | Documentation set approved; Phase 1 may start                                                | Owner approval (was Q-00)                                        |
-| D-010 | 2026-10-29 | No outbound email in v1: invite and reset links are returned to the Admin to share           | Phase 1 plan; avoids an email provider until needed              |
-| D-011 | 2026-10-29 | Same-origin API: web calls relative `/api/v1`; dev proxy / host rewrite to the API; no CORS  | First-party session cookies                                      |
-| D-012 | 2026-10-29 | Audit rows written by explicit `AuditService.record(tx, …)` inside the business transaction  | An interceptor cannot share the transaction                      |
+| ID    | Date       | Decision                                                                                                             | Why / source                                                     |
+| ----- | ---------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| D-001 | 2026-10-29 | Build custom, not buy (Productive/Scoro/Twenty/Odoo checked)                                                         | [02](02-market-research.md)                                      |
+| D-002 | 2026-10-29 | Stack: React 19 + Vite, NestJS + Prisma + Postgres, pnpm + Turborepo (PayOS family)                                  | [03](03-tech-stack.md)                                           |
+| D-003 | 2026-10-29 | Repo gates ported from PayOS                                                                                         | Owner request                                                    |
+| D-004 | 2026-10-29 | Roles ADMIN / SALES / CEO; CEO sees performance dashboard + all upcoming invoices, read-only                         | Owner request                                                    |
+| D-005 | 2026-10-29 | Milestones may not sum to contract value; show "unscheduled" warning                                                 | Flexibility for unplanned work                                   |
+| D-006 | 2026-10-29 | Payment amount immutable; corrections by reversal; other payment fields editable                                     | Owner: "except amount everything is temporary" (confirm in Q-02) |
+| D-007 | 2026-10-29 | Partial payments allowed per milestone                                                                               | Common in practice                                               |
+| D-008 | 2026-10-29 | All docs in `docs/`, numbered files                                                                                  | Owner request                                                    |
+| D-009 | 2026-10-29 | Documentation set approved; Phase 1 may start                                                                        | Owner approval (was Q-00)                                        |
+| D-010 | 2026-10-29 | No outbound email in v1: invite and reset links are returned to the Admin to share                                   | Phase 1 plan; avoids an email provider until needed              |
+| D-011 | 2026-10-29 | Same-origin API: web calls relative `/api/v1`; dev proxy / host rewrite to the API; no CORS                          | First-party session cookies                                      |
+| D-012 | 2026-10-29 | Audit rows written by explicit `AuditService.record(tx, …)` inside the business transaction                          | An interceptor cannot share the transaction                      |
+| D-013 | 2026-10-29 | Theme: white surfaces + green accent, Quixotic-style layout (top pill navigation, rounded cards, striped bar charts) | Owner choice between two references                              |
 
 ## Open questions
 
