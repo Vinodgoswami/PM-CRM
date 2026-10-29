@@ -51,6 +51,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-1  | Done   | feat/phase-3-milestones-billing | Core dashboard metrics: K1–K9 summary, monthly series (C1), aging (C5), cash-in forecast (C4)                                                                                      |
 | P4-2  | Done   | feat/phase-3-milestones-billing | Dashboard API: KPIs + previous period, 12-month series, forecast, aging, top clients, team (CEO/Admin), upcoming, recent payments                                                  |
 | P4-3  | Done   | feat/phase-3-milestones-billing | Dashboard page (Quixotic style): collected hero card, hatched monthly bars, outstanding + forecast wave, KPI strip, upcoming dues, aging, recent payments, top clients, team table |
+| P3-7  | Done   | feat/billing-invoices-filters   | API: GET /owners for salesperson filters; payments carry `canEdit`                                                                                                                 |
 
 ## Blockers
 

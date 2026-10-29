@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { can } from '@salescrm/auth/permissions';
 import { changedFields, checkPayment } from '@salescrm/core';
 import { Prisma } from '@salescrm/database';
 import { type CreatePaymentInput, type PaymentDto, type UpdatePaymentMetaInput } from '@salescrm/schemas';
@@ -27,7 +28,7 @@ export const PAYMENT_INCLUDE = {
 
 type PaymentRow = Prisma.PaymentGetPayload<{ include: typeof PAYMENT_INCLUDE }>;
 
-export function toPaymentDto(p: PaymentRow): PaymentDto {
+export function toPaymentDto(p: PaymentRow, viewer: SessionUser): PaymentDto {
   const { project } = p.milestone;
   return {
     id: p.id,
@@ -41,6 +42,7 @@ export function toPaymentDto(p: PaymentRow): PaymentDto {
     note: p.note,
     createdBy: p.createdBy,
     createdAt: p.createdAt.toISOString(),
+    canEdit: p.reversesPaymentId === null && can(viewer, 'payments.editMeta', { ownerId: project.ownerId }),
     project: { id: project.id, code: project.code, name: project.name, currency: project.currency },
     client: project.client,
   };
@@ -58,11 +60,11 @@ export class PaymentsService {
     private readonly settings: SettingsService,
   ) {}
 
-  private async byKey(key: string, milestoneId: string): Promise<PaymentDto | null> {
+  private async byKey(user: SessionUser, key: string, milestoneId: string): Promise<PaymentDto | null> {
     const existing = await this.prisma.payment.findUnique({ where: { idempotencyKey: key }, include: PAYMENT_INCLUDE });
     if (!existing) return null;
     if (existing.milestoneId !== milestoneId) throw conflict('CONFLICT', 'This request key was already used for another milestone.');
-    return toPaymentDto(existing);
+    return toPaymentDto(existing, user);
   }
 
   /** F2 "Mark as paid". Returns `created: false` when the same Idempotency-Key was already processed. */
@@ -70,7 +72,7 @@ export class PaymentsService {
     if (!key || key.length < 8 || key.length > 100) {
       throw new AppError(400, 'VALIDATION_FAILED', 'An Idempotency-Key header (8–100 characters) is required.');
     }
-    const replay = await this.byKey(key, milestoneId);
+    const replay = await this.byKey(user, key, milestoneId);
     if (replay) return { payment: replay, created: false };
 
     const today = await this.settings.today();
@@ -129,11 +131,11 @@ export class PaymentsService {
         });
         return created;
       });
-      if (payment) return { payment: toPaymentDto(payment), created: true };
+      if (payment) return { payment: toPaymentDto(payment, user), created: true };
     } catch (e) {
       if (!isUnique(e)) throw e;
     }
-    const raced = await this.byKey(key, milestoneId);
+    const raced = await this.byKey(user, key, milestoneId);
     if (!raced) throw conflict('CONFLICT', 'Please try again.');
     return { payment: raced, created: false };
   }
@@ -178,7 +180,7 @@ export class PaymentsService {
           after: { paymentId: id, ...diff.after },
         });
       }
-      return toPaymentDto(after);
+      return toPaymentDto(after, user);
     });
   }
 
@@ -210,7 +212,7 @@ export class PaymentsService {
           entityId: original.milestone.projectId,
           after: { paymentId: original.id, reversalId: reversal.id, amountMinor: reversal.amountMinor.toString(), reason },
         });
-        return toPaymentDto(reversal);
+        return toPaymentDto(reversal, user);
       });
     } catch (e) {
       if (isUnique(e)) throw conflict('CONFLICT', 'This payment has already been reversed.');

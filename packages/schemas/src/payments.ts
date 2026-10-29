@@ -35,6 +35,8 @@ export const paymentDtoSchema = z.object({
   note: z.string().nullable(),
   createdBy: z.object({ id: z.string(), name: z.string() }),
   createdAt: z.string(),
+  /** The viewer may correct label / invoice ID / date / note (P-4); never true for reversal rows. */
+  canEdit: z.boolean(),
   project: z.object({ id: z.string(), code: z.string(), name: z.string(), currency: z.string() }),
   client: z.object({ id: z.string(), name: z.string() }),
 });

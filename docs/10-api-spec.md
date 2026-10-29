@@ -41,15 +41,16 @@ Permission keys from [07](07-roles-and-permissions.md).
 
 ### Users & settings
 
-| Method | Path                  | Permission      |
-| ------ | --------------------- | --------------- |
-| GET    | /users                | users.manage    |
-| POST   | /users/invite         | users.manage    |
-| POST   | /users/:id/reset-link | users.manage    |
-| PATCH  | /users/:id            | users.manage    |
-| GET    | /settings             | session         |
-| PATCH  | /settings             | settings.manage |
-| GET    | /audit                | audit.read      |
+| Method | Path                  | Permission        |
+| ------ | --------------------- | ----------------- |
+| GET    | /users                | users.manage      |
+| GET    | /owners               | dashboard.company | active Admin / Sales users `{ id, name }` for salesperson filters |
+| POST   | /users/invite         | users.manage      |
+| POST   | /users/:id/reset-link | users.manage      |
+| PATCH  | /users/:id            | users.manage      |
+| GET    | /settings             | session           |
+| PATCH  | /settings             | settings.manage   |
+| GET    | /audit                | audit.read        |
 
 ### Clients
 
