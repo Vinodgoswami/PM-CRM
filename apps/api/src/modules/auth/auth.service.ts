@@ -1,11 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { csrfTokenFor, hashPassword, verifyPassword } from '@salescrm/auth';
 import { type AppConfig } from '@salescrm/config';
-import { type LoginInput, type SessionResponse } from '@salescrm/schemas';
+import { type AcceptInviteInput, type LoginInput, type ResetPasswordInput, type SessionResponse } from '@salescrm/schemas';
 import { APP_CONFIG } from '../../config.module';
 import { type SessionUser } from '../../common/current-user';
-import { rateLimited, unauthenticated } from '../../common/errors';
+import { AppError, rateLimited, unauthenticated } from '../../common/errors';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { AuthTokensService } from './auth-tokens.service';
 import { SessionService } from './session.service';
 
 const MAX_FAILURES = 5;
@@ -19,6 +21,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sessions: SessionService,
+    private readonly tokens: AuthTokensService,
+    private readonly audit: AuditService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -49,5 +53,45 @@ export class AuthService {
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
+  }
+
+  async acceptInvite(input: AcceptInviteInput, ip: string, userAgent: string | undefined): Promise<SessionResponse & { token: string }> {
+    const passwordHash = await hashPassword(input.password);
+    const user = await this.prisma.$transaction(async (tx) => {
+      const invite = await this.tokens.consume(tx, 'INVITE', input.token);
+      if (!invite.role) throw new AppError(400, 'VALIDATION_FAILED', 'This invite has no role');
+      if (await tx.user.findUnique({ where: { email: invite.email } })) {
+        throw new AppError(400, 'VALIDATION_FAILED', 'An account with this email already exists. Sign in instead.');
+      }
+      const created = await tx.user.create({
+        data: { email: invite.email, name: input.name, role: invite.role, passwordHash, lastLoginAt: new Date() },
+      });
+      await this.audit.record(tx, {
+        actorId: created.id,
+        action: 'user.accept_invite',
+        entity: 'User',
+        entityId: created.id,
+        after: { email: created.email, role: created.role },
+      });
+      return created;
+    });
+    const { token } = await this.sessions.create(user.id, ip, userAgent);
+    return {
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      csrfToken: csrfTokenFor(token, this.config.sessionSecret),
+    };
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<void> {
+    const passwordHash = await hashPassword(input.password);
+    await this.prisma.$transaction(async (tx) => {
+      const reset = await this.tokens.consume(tx, 'RESET', input.token);
+      if (!reset.userId) throw new AppError(400, 'VALIDATION_FAILED', 'This link is invalid or has expired.');
+      await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
+      // Anyone holding an old session (or the old password) is locked out.
+      await tx.session.deleteMany({ where: { userId: reset.userId } });
+      await this.audit.record(tx, { actorId: reset.userId, action: 'user.reset_password', entity: 'User', entityId: reset.userId });
+    });
   }
 }

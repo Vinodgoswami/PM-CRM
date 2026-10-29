@@ -18,35 +18,38 @@ surface. An OpenAPI file is generated from the schemas in Phase 1 (`pnpm openapi
 | 403  | `FORBIDDEN`         | Role lacks permission                                     |
 | 404  | `NOT_FOUND`         | Missing or not visible to this user                       |
 | 409  | `CONFLICT`          | Duplicate client name, stale update                       |
+| 409  | `LAST_ADMIN`        | Would leave no active Admin                               |
 | 429  | `RATE_LIMITED`      | Login throttling                                          |
 
 - Optimistic concurrency: updates send `updatedAt`; mismatch → 409.
 
 ## Endpoints
 
+Invite and reset-link endpoints return `{ "url", "expiresAt" }`; the Admin shares the URL (D-010).
+
 Permission keys from [07](07-roles-and-permissions.md).
 
 ### Auth
 
-| Method | Path                  | Permission | Notes                         |
-| ------ | --------------------- | ---------- | ----------------------------- |
-| POST   | /auth/login           | public     | email, password               |
-| POST   | /auth/logout          | session    |                               |
-| GET    | /auth/session         | session    | user, role, permissions, csrf |
-| POST   | /auth/invite/accept   | public     | token, name, password         |
-| POST   | /auth/password/forgot | public     | always 204                    |
-| POST   | /auth/password/reset  | public     | token, password               |
+| Method | Path                 | Permission | Notes                         |
+| ------ | -------------------- | ---------- | ----------------------------- |
+| POST   | /auth/login          | public     | email, password               |
+| POST   | /auth/logout         | session    |                               |
+| GET    | /auth/session        | session    | user, role, permissions, csrf |
+| POST   | /auth/invite/accept  | public     | token, name, password         |
+| POST   | /auth/password/reset | public     | token, password               |
 
 ### Users & settings
 
-| Method | Path          | Permission      |
-| ------ | ------------- | --------------- |
-| GET    | /users        | users.manage    |
-| POST   | /users/invite | users.manage    |
-| PATCH  | /users/:id    | users.manage    |
-| GET    | /settings     | session         |
-| PATCH  | /settings     | settings.manage |
-| GET    | /audit        | audit.read      |
+| Method | Path                  | Permission      |
+| ------ | --------------------- | --------------- |
+| GET    | /users                | users.manage    |
+| POST   | /users/invite         | users.manage    |
+| POST   | /users/:id/reset-link | users.manage    |
+| PATCH  | /users/:id            | users.manage    |
+| GET    | /settings             | session         |
+| PATCH  | /settings             | settings.manage |
+| GET    | /audit                | audit.read      |
 
 ### Clients
 

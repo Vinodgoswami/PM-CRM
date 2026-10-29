@@ -46,7 +46,9 @@ change `projects.read` for SALES to `own` and filter lists, search and the clien
 
 ## Accounts
 
-- No public sign-up. Admin invites by email + role; the invite link (single use, 72 h) sets the password.
+- No public sign-up. Admin invites by email + role; the invite link (single use, 72 h) is shown to the Admin to share
+  (no email in v1, D-010) and sets the password. Forgotten password: Admin generates a reset link (single use, 24 h);
+  using it ends all of that user's sessions.
 - At least one active ADMIN must always exist (cannot demote/deactivate the last one).
 - Sessions: httpOnly, Secure, SameSite=Lax cookie; 12 h idle timeout, 7-day absolute. Changing role or deactivating
   a user ends their sessions.

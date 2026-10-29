@@ -1,6 +1,14 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
 import { type AppConfig } from '@salescrm/config';
-import { type LoginInput, loginSchema, type SessionResponse } from '@salescrm/schemas';
+import {
+  type AcceptInviteInput,
+  acceptInviteSchema,
+  type LoginInput,
+  loginSchema,
+  type ResetPasswordInput,
+  resetPasswordSchema,
+  type SessionResponse,
+} from '@salescrm/schemas';
 import { type CookieOptions, type Request, type Response } from 'express';
 import { APP_CONFIG } from '../../config.module';
 import { CurrentUser, type SessionUser } from '../../common/current-user';
@@ -32,6 +40,26 @@ export class AuthController {
     const { token, ...session } = await this.auth.login(body, req.ip ?? 'unknown', req.headers['user-agent']);
     res.cookie(SESSION_COOKIE, token, { ...this.cookieOptions(), maxAge: ABSOLUTE_TIMEOUT_MS });
     return session;
+  }
+
+  @Public()
+  @Post('invite/accept')
+  @HttpCode(200)
+  async acceptInvite(
+    @Body(new ZodValidationPipe(acceptInviteSchema)) body: AcceptInviteInput,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionResponse> {
+    const { token, ...session } = await this.auth.acceptInvite(body, req.ip ?? 'unknown', req.headers['user-agent']);
+    res.cookie(SESSION_COOKIE, token, { ...this.cookieOptions(), maxAge: ABSOLUTE_TIMEOUT_MS });
+    return session;
+  }
+
+  @Public()
+  @Post('password/reset')
+  @HttpCode(204)
+  async resetPassword(@Body(new ZodValidationPipe(resetPasswordSchema)) body: ResetPasswordInput): Promise<void> {
+    await this.auth.resetPassword(body);
   }
 
   @Authenticated()

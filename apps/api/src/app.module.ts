@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthController } from './modules/health/health.controller';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({})
 export class AppModule {
@@ -23,6 +24,7 @@ export class AppModule {
         AuthModule,
         AuditModule,
         SettingsModule,
+        UsersModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.logLevel,
