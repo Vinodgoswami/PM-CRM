@@ -11,11 +11,14 @@ export function HatchedBars({
   currency,
   highlightIndex,
   label,
+  onSelect,
 }: {
   data: { key: string; label: string; value: number }[];
   currency: string;
   highlightIndex: number;
   label: string;
+  /** Click / Enter on a bar: open its drill-down. */
+  onSelect?: (key: string) => void;
 }) {
   const [active, setActive] = useState(highlightIndex);
   const max = Math.max(1, ...data.map((d) => d.value));
@@ -30,6 +33,7 @@ export function HatchedBars({
             type="button"
             onMouseEnter={() => setActive(i)}
             onFocus={() => setActive(i)}
+            onClick={() => onSelect?.(d.key)}
             aria-label={`${d.label}: ${formatApiMoney(d.value, currency)}`}
             className="group relative flex h-full flex-1 flex-col items-center justify-end gap-2"
           >

@@ -2,7 +2,7 @@ import { can } from '@salescrm/auth/permissions';
 import { type Dashboard, dashboardSchema } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarClock, Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, FileDown, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router';
@@ -13,6 +13,8 @@ import { useSession } from '../auth/api';
 import { useOwners } from '../filters/api';
 import { HatchedBars, monthLabel, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
+import { DrillDownDialog } from './DrillDownDialog';
+import { DueCalendar } from './DueCalendar';
 import { useCountUp } from './useCountUp';
 
 const PERIODS = [
@@ -104,11 +106,15 @@ export function DashboardPage() {
 
   return (
     <section className="space-y-6">
+      <p data-testid="print-header" className="hidden text-sm text-text-muted print:block">
+        SalesCRM dashboard · {PERIODS.find((p) => p.key === period)?.label}
+        {ownerId ? ` · ${owners.find((o) => o.id === ownerId)?.name ?? ''}` : ''} · generated {new Date().toLocaleString('en-IN')}
+      </p>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           Welcome back, <span className="font-medium text-text-muted">{firstName}</span>
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div role="radiogroup" aria-label="Period" className="flex rounded-full bg-surface p-1 shadow-card">
             {PERIODS.map((p) => (
               <button
@@ -138,6 +144,9 @@ export function DashboardPage() {
               ))}
             </select>
           )}
+          <Button variant="outline" onClick={() => window.print()} disabled={!data}>
+            <FileDown className="size-4" /> Export PDF
+          </Button>
           {canCreate && (
             <Button asChild variant="outline">
               <Link to="/projects/new">
@@ -164,18 +173,19 @@ export function DashboardPage() {
           }
         />
       ) : (
-        <DashboardBody data={data} />
+        <DashboardBody data={data} ownerId={ownerId} />
       )}
     </section>
   );
 }
 
-function DashboardBody({ data }: { data: Dashboard }) {
+function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) {
   const k = data.kpis;
   const money = (m: number) => formatApiMoney(m, data.currency);
   const collected = useCountUp(k.collectedMinor);
   const outstanding = useCountUp(k.outstandingMinor);
   const [series, setSeries] = useState<'collected' | 'booked'>('collected');
+  const [drill, setDrill] = useState<string | null>(null);
   const bars = data.monthly.map((m) => ({
     key: m.month,
     label: monthLabel(m.month),
@@ -229,7 +239,7 @@ function DashboardBody({ data }: { data: Dashboard }) {
           subtitle="Last 12 months"
           className="lg:col-span-5"
           action={
-            <div role="radiogroup" aria-label="Series" className="flex rounded-full bg-background p-1 text-xs">
+            <div role="radiogroup" aria-label="Series" className="flex rounded-full bg-background p-1 text-xs print:hidden">
               {(['collected', 'booked'] as const).map((s) => (
                 <button
                   key={s}
@@ -245,7 +255,15 @@ function DashboardBody({ data }: { data: Dashboard }) {
             </div>
           }
         >
-          <HatchedBars key={series} data={bars} currency={data.currency} highlightIndex={bars.length - 1} label={`Monthly ${series}`} />
+          <HatchedBars
+            key={series}
+            data={bars}
+            currency={data.currency}
+            highlightIndex={bars.length - 1}
+            label={`Monthly ${series}`}
+            onSelect={setDrill}
+          />
+          {drill && <DrillDownDialog month={drill} series={series} ownerId={ownerId} onClose={() => setDrill(null)} />}
         </Panel>
 
         <Panel
@@ -317,25 +335,8 @@ function DashboardBody({ data }: { data: Dashboard }) {
           )}
         </Panel>
 
-        <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-5">
-          <ul className="space-y-3">
-            {agingRows.map((r, i) => (
-              <li key={r.label} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">{r.label}</span>
-                  <span className="font-semibold tabular-nums">{money(r.value)}</span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-background">
-                  <motion.div
-                    className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(r.value / agingMax) * 100}%` }}
-                    transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+        <Panel title="Due-date calendar" subtitle="Unpaid balances by due day" className="lg:col-span-5">
+          <DueCalendar ownerId={ownerId} currency={data.currency} />
         </Panel>
       </div>
 
@@ -343,7 +344,7 @@ function DashboardBody({ data }: { data: Dashboard }) {
         <Panel
           title="Recent payments"
           subtitle="Latest money in"
-          className="lg:col-span-7"
+          className="lg:col-span-12 xl:col-span-6"
           action={<CornerLink to="/billing" label="Completed billing" />}
         >
           {data.recentPayments.length === 0 ? (
@@ -382,7 +383,28 @@ function DashboardBody({ data }: { data: Dashboard }) {
           )}
         </Panel>
 
-        <Panel title="Top clients" subtitle="By money collected in the period" className="lg:col-span-5">
+        <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-6 xl:col-span-3">
+          <ul className="space-y-3">
+            {agingRows.map((r, i) => (
+              <li key={r.label} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">{r.label}</span>
+                  <span className="font-semibold tabular-nums">{money(r.value)}</span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-background">
+                  <motion.div
+                    className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(r.value / agingMax) * 100}%` }}
+                    transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel title="Top clients" subtitle="By money collected in the period" className="lg:col-span-6 xl:col-span-3">
           {data.topClients.length === 0 ? (
             <p className="text-sm text-text-muted">No client activity in this period.</p>
           ) : (

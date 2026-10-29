@@ -73,8 +73,9 @@ Sorted by Booked; row expands to a 12-month booked/collected mini chart. Target 
 
 ## Export
 
-- **PDF**: server renders the current dashboard URL (filters included) for the logged-in user, A4 landscape, with
-  generated-at timestamp and filter summary.
+- **PDF**: "Export PDF" prints the current dashboard (filters included) through the browser's print dialog ("Save as
+  PDF"), A4 landscape, with a generated-at timestamp and filter summary in a print-only header; navigation and controls
+  are hidden in print (D-015). Server-side rendering stays an option if scheduled/emailed PDFs are ever needed.
 - **CSV**: one file per table/KPI set, amounts in major units with currency column.
 
 ## Performance

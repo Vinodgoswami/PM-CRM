@@ -53,6 +53,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-3  | Done   | feat/phase-3-milestones-billing | Dashboard page (Quixotic style): collected hero card, hatched monthly bars, outstanding + forecast wave, KPI strip, upcoming dues, aging, recent payments, top clients, team table |
 | P3-7  | Done   | feat/billing-invoices-filters   | API: GET /owners for salesperson filters; payments carry `canEdit`                                                                                                                 |
 | P3-8  | Done   | feat/billing-invoices-filters   | Billing: client, salesperson and custom-date filters (list, total and CSV), inline detail edit; Invoices: client + salesperson filters; stable salesperson lists                   |
+| P4-4  | Done   | feat/dashboard-extras           | Dashboard extras: click a month bar → payments collected / projects won that month; due-date calendar (C9) with day list; Export PDF via print (D-015)                             |
 
 ## Blockers
 
@@ -60,7 +61,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
 ## Known gaps
 
-- Dashboard: PDF export, bar drill-down, due-date calendar, win rate (K11).
+- Dashboard: win rate (K11); drill-down lists cap at 100 rows.
 
 - Abandoned uploads leave PENDING document rows (hidden from lists); no cleanup job yet.
 
