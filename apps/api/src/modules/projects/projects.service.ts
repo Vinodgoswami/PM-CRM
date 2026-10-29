@@ -5,6 +5,7 @@ import {
   checkTransition,
   endDateFor,
   type IsoDate,
+  milestoneStatus,
   type ProjectStatus,
   statusDates,
   wouldCreateCycle,
@@ -89,7 +90,7 @@ export class ProjectsService {
     private readonly settings: SettingsService,
   ) {}
 
-  toDetail(p: DetailRow, user: SessionUser, today: IsoDate): ProjectDetail {
+  toDetail(p: DetailRow, user: SessionUser, today: IsoDate, dueSoonDays: number): ProjectDetail {
     const t = totalsFor(p, today);
     return {
       ...toListItem(p, today),
@@ -116,6 +117,8 @@ export class ProjectsService {
         amountMinor: minorToJson(m.amountMinor),
         dueDate: isoDate(m.dueDate),
         paidMinor: minorToJson(paidOf(m)),
+        balanceMinor: minorToJson(m.amountMinor - paidOf(m)),
+        status: milestoneStatus({ amountMinor: m.amountMinor, paidMinor: paidOf(m), dueDate: isoDate(m.dueDate) }, today, dueSoonDays),
       })),
       scheduledMinor: minorToJson(t.scheduledMinor),
       unscheduledMinor: minorToJson(t.unscheduledMinor),
@@ -139,7 +142,8 @@ export class ProjectsService {
   }
 
   async get(id: string, user: SessionUser): Promise<ProjectDetail> {
-    return this.toDetail(await this.load(id, user), user, await this.settings.today());
+    const [project, settings, today] = await Promise.all([this.load(id, user), this.settings.get(), this.settings.today()]);
+    return this.toDetail(project, user, today, settings.dueSoonDays);
   }
 
   async list(user: SessionUser, q: ProjectListQuery) {

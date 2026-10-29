@@ -41,6 +41,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P2-7  | Done   | feat/phase-2-clients-projects   | Web: clients list (search, archived), detail (contacts, primary, totals, upsell tree), create/edit/archive                |
 | P2-8  | Done   | feat/phase-2-clients-projects   | Web: settings (company, users, invite/reset links), audit log page                                                        |
 | P3-1  | Done   | feat/phase-3-milestones-billing | Core: milestone status (MS-3), payment checks (P-2, P-6), invoice groups                                                  |
+| P3-2  | Done   | feat/phase-3-milestones-billing | Milestones API: add, edit (MS-2), delete with renumbering (MS-1), reorder, PS-4 guards; detail has status + balance       |
 
 ## Blockers
 
