@@ -105,7 +105,7 @@ test('client and salesperson filters reach the API; the salesperson list does no
       body: {
         items: [
           { id: 'u1', name: 'Test User' },
-          { id: 'u2', name: 'Rohan Sales' },
+          { id: 'u2', name: 'Rohan Mehta' },
         ],
       },
     },
@@ -115,10 +115,10 @@ test('client and salesperson filters reach the API; the salesperson list does no
   const user = userEvent.setup();
   await screen.findByRole('region', { name: /Overdue/ });
   await user.selectOptions(screen.getByLabelText('Client'), 'c1');
-  await user.selectOptions(await screen.findByLabelText('Salesperson'), 'u2');
+  await user.selectOptions(await screen.findByLabelText('Project manager'), 'u2');
   await waitFor(() => {
     const q = api.calls.filter((c) => c.path === '/invoices').at(-1)!.url.searchParams;
     expect([q.get('clientId'), q.get('ownerId')]).toEqual(['c1', 'u2']);
   });
-  expect(within(screen.getByLabelText('Salesperson')).getAllByRole('option')).toHaveLength(3);
+  expect(within(screen.getByLabelText('Project manager')).getAllByRole('option')).toHaveLength(3);
 });

@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useLogout, useSession } from '../features/auth/api';
 import { APP_NAME } from '../lib/brand';
+import { ROLE_LABEL } from '../lib/labels';
 import { type NavItem, visibleNav } from './nav';
 
-const ROLE_LABEL = { ADMIN: 'Admin', SALES: 'Sales', CEO: 'CEO' } as const;
 /** Settings and the audit log live as icon buttons on the right, like the reference; the rest are pill tabs. */
 const UTILITY = new Set(['/settings', '/audit']);
 

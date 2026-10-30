@@ -21,6 +21,7 @@ import { Panel } from './Panel';
 import { TeamTable } from './TeamTable';
 import { APP_NAME } from '../../lib/brand';
 import { downloadCsv } from '../../lib/download';
+import { OWNER } from '../../lib/labels';
 import { useCountUp } from './useCountUp';
 
 const PERIODS = [
@@ -73,7 +74,8 @@ export function DashboardPage() {
   // Filters live in the address (?period=&ownerId=) so a view can be bookmarked or shared.
   const [params, setParams] = useSearchParams();
   const asked = params.get('period');
-  const period: Period = PERIODS.some((p) => p.key === asked) ? (asked as Period) : 'THIS_FY';
+  // Project managers report quarter by quarter, so the dashboard opens on this quarter.
+  const period: Period = PERIODS.some((p) => p.key === asked) ? (asked as Period) : 'THIS_QUARTER';
   const ownerId = params.get('ownerId') ?? '';
   const setFilter = (key: 'period' | 'ownerId', value: string, fallback: string) =>
     setParams(
@@ -85,7 +87,7 @@ export function DashboardPage() {
       },
       { replace: true },
     );
-  const setPeriod = (p: Period) => setFilter('period', p, 'THIS_FY');
+  const setPeriod = (p: Period) => setFilter('period', p, 'THIS_QUARTER');
   const setOwnerId = (id: string) => setFilter('ownerId', id, '');
   const { data, isPending, isError, refetch } = useDashboard(period, ownerId);
   const firstName = session?.user.name.split(' ')[0] ?? '';
@@ -119,7 +121,7 @@ export function DashboardPage() {
           </div>
           {showOwners && (
             <select
-              aria-label="Owner"
+              aria-label={OWNER}
               className="h-10 rounded-full border border-border bg-surface px-4 text-sm"
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
@@ -221,15 +223,15 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
             <p className="text-4xl font-extrabold tracking-tight tabular-nums">{money(collected)}</p>
             <div className="flex items-end justify-between text-sm">
               <div>
-                <p className="text-white/70">Booked</p>
+                <p className="text-white/70">Contracted</p>
                 <p className="font-bold">{money(k.bookedMinor)}</p>
               </div>
               <div className="text-center">
-                <p className="text-white/70">Projects won</p>
+                <p className="text-white/70">Projects confirmed</p>
                 <p className="font-bold">{k.wonCount}</p>
               </div>
-              <div className="text-right" title="Won ÷ (won + lost) in this period">
-                <p className="text-white/70">Win rate</p>
+              <div className="text-right" title="Confirmed ÷ (confirmed + cancelled) in this period">
+                <p className="text-white/70">Confirmation rate</p>
                 <p className="font-bold">{k.winRate === null ? '—' : `${Math.round(k.winRate * 100)}%`}</p>
               </div>
             </div>
@@ -251,7 +253,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
                   onClick={() => setSeries(s)}
                   className={`rounded-full px-3 py-1 capitalize ${series === s ? 'bg-primary font-semibold text-primary-contrast' : 'text-text-muted'}`}
                 >
-                  {s}
+                  {s === 'booked' ? 'contracted' : s}
                 </button>
               ))}
             </div>
@@ -288,16 +290,16 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
 
       <section aria-label="Key figures" className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Kpi
-          label="Booked"
+          label="Contracted"
           value={money(k.bookedMinor)}
           delta={pct(k.bookedMinor, data.previous?.bookedMinor)}
           spark={data.monthly.map((x) => x.bookedMinor)}
         />
         <Kpi label="Expected in period" value={money(k.expectedMinor)} spark={data.monthly.map((x) => x.expectedMinor)} />
         <Kpi label="Due next 30 days" value={money(k.dueNext30Minor)} />
-        <Kpi label="Pipeline" value={money(k.pipelineMinor)} />
+        <Kpi label="Not yet confirmed" value={money(k.pipelineMinor)} hint="Enquiries and quotes" />
         <Kpi
-          label="Upsell share"
+          label="Extra work share"
           value={k.bookedMinor > 0 ? `${Math.round((k.upsellMinor * 100) / k.bookedMinor)}%` : '—'}
           hint={money(k.upsellMinor)}
         />
@@ -377,7 +379,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
               <THead>
                 <TR>
                   <TH>Milestone</TH>
-                  <TH>Salesperson</TH>
+                  <TH>{OWNER}</TH>
                   <TH className="text-right">Overdue</TH>
                   <TH className="text-right">Balance</TH>
                 </TR>
@@ -468,16 +470,16 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
           )}
         </Panel>
 
-        <Panel title="Revenue by client" subtitle="Collected in the period (track = booked)" className="lg:col-span-5">
+        <Panel title="Revenue by client" subtitle="Collected in the period (track = contracted)" className="lg:col-span-5">
           <ClientBars data={data.clientRevenue} money={money} />
         </Panel>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <Panel title="Pipeline" subtitle="Projects by current status · count and value" className="lg:col-span-7">
+        <Panel title="Projects by stage" subtitle="Current stage · count and value" className="lg:col-span-7">
           <Funnel data={data.funnel} money={money} />
         </Panel>
-        <Panel title="New vs upsell" subtitle="Booked in the period" className="lg:col-span-5">
+        <Panel title="New vs extra work" subtitle="Contracted in the period" className="lg:col-span-5">
           <UpsellDonut bookedMinor={k.bookedMinor} upsellMinor={k.upsellMinor} money={money} />
         </Panel>
       </div>

@@ -11,6 +11,7 @@ import { useClientOptions, useOwners } from '../filters/api';
 import { FilterSelect } from '../filters/FilterSelect';
 import { usePayments } from '../payments/api';
 import { EditPaymentDialog } from '../payments/EditPaymentDialog';
+import { OWNER } from '../../lib/labels';
 import { useSettings } from '../settings/api';
 
 const PAGE_SIZE = 50;
@@ -108,7 +109,7 @@ export function BillingPage() {
           ))}
         </FilterSelect>
         {showOwners && (
-          <FilterSelect label="Salesperson" value={ownerId} onChange={reset(setOwnerId)}>
+          <FilterSelect label={OWNER} value={ownerId} onChange={reset(setOwnerId)}>
             <option value="">Everyone</option>
             {owners.map((o) => (
               <option key={o.id} value={o.id}>

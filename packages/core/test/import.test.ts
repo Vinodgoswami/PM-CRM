@@ -24,7 +24,7 @@ test('rows group into projects, milestones and payments with exact money and bot
         project: 'Website',
         status: 'ACTIVE',
         expected_amount: '1,25,000',
-        won_date: '2026-05-01',
+        confirmed_date: '2026-05-01',
         owner_email: 'rohan@x.test',
         milestone: 'Design',
         milestone_amount: '50,000',
@@ -78,7 +78,7 @@ test('each broken row is reported with its line number and rule', () => {
         project: 'Over',
         status: 'WON',
         expected_amount: '100',
-        won_date: '2026-01-01',
+        confirmed_date: '2026-01-01',
         milestone: 'M',
         milestone_amount: '100',
         paid_amount: '150',
@@ -89,7 +89,7 @@ test('each broken row is reported with its line number and rule', () => {
         project: 'Future',
         status: 'WON',
         expected_amount: '100',
-        won_date: '2026-01-01',
+        confirmed_date: '2026-01-01',
         milestone: 'M',
         milestone_amount: '100',
         paid_amount: '50',
@@ -110,7 +110,7 @@ test('each broken row is reported with its line number and rule', () => {
         project: 'Undated',
         status: 'ACTIVE',
         expected_amount: '100',
-        won_date: '2026-01-01',
+        confirmed_date: '2026-01-01',
         milestone: 'M',
         milestone_amount: '100',
       }),
@@ -121,7 +121,7 @@ test('each broken row is reported with its line number and rule', () => {
         project: 'Lost paid',
         status: 'LOST',
         expected_amount: '100',
-        won_date: '2026-01-01',
+        confirmed_date: '2026-01-01',
         closed_date: '2026-03-01',
         milestone: 'M',
         milestone_amount: '100',
@@ -136,11 +136,11 @@ test('each broken row is reported with its line number and rule', () => {
     { line: 3, message: 'expected_amount: "1,00,0" is not a valid amount (expected a positive number like 1,25,000.50).' },
     { line: 4, message: 'P-2: payments on milestone "M" add up to more than its amount.' },
     { line: 5, message: 'P-6: paid_date 2026-12-01 is in the future.' },
-    { line: 6, message: 'P-8: payments can only be recorded on Won, Active, On hold or Completed projects.' },
+    { line: 6, message: 'P-8: payments can only be recorded on Confirmed, Active, On hold or Completed projects.' },
     { line: 7, message: 'PS-4: an Active project needs at least one milestone, and every milestone needs a due date.' },
-    { line: 8, message: 'won_date is required for status WON.' },
-    { line: 9, message: 'status "MAYBE" is not one of LEAD, PROPOSAL, WON, ACTIVE, ON_HOLD, COMPLETED, LOST.' },
-    { line: 10, message: 'PS-6: a Lost project cannot have payments.' },
+    { line: 8, message: 'confirmed_date is required for status Confirmed.' },
+    { line: 9, message: 'status "MAYBE" is not one of Enquiry, Quoted, Confirmed, Active, On hold, Completed, Cancelled.' },
+    { line: 10, message: 'PS-6: a Cancelled project cannot have payments.' },
   ]);
 });
 
@@ -162,4 +162,28 @@ test('a missing required column is reported on line 1', () => {
 test('an unknown currency code is an error, not a crash', () => {
   const plan = parseImport(csv(row({ client: 'A', project: 'P', status: 'LEAD', expected_amount: '100', currency: 'XYZ1' })), OPTS);
   expect(plan.errors).toEqual([{ line: 2, message: 'currency "XYZ1" is not a three-letter currency code.' }]);
+});
+
+test('stages may be written as on screen (Enquiry, Quoted, Confirmed, On hold, Cancelled) or as codes', () => {
+  const plan = parseImport(
+    [
+      'client,project,status,expected_amount,won_date,confirmed_date,closed_date',
+      'A,P1,Enquiry,100,,,',
+      'A,P2,quoted,100,,,',
+      'A,P3,Confirmed,100,,2026-05-01,',
+      'A,P4,On hold,100,2026-05-01,,',
+      'A,P5,Cancelled,100,,,2026-06-01',
+      'A,P6,WON,100,2026-05-01,,',
+    ].join('\n'),
+    OPTS,
+  );
+  expect(plan.errors).toEqual([]);
+  expect(plan.projects.map((p) => [p.status, p.wonAt])).toEqual([
+    ['LEAD', null],
+    ['PROPOSAL', null],
+    ['WON', '2026-05-01'],
+    ['ON_HOLD', '2026-05-01'],
+    ['LOST', null],
+    ['WON', '2026-05-01'],
+  ]);
 });

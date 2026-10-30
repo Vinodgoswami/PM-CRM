@@ -4,7 +4,7 @@ import { signIn, uniq } from './helpers';
 // docs/08 key flows, run against the seeded demo data (fresh database per run).
 
 test('F1 add a project for a new client', async ({ page }) => {
-  await signIn(page, 'sales1');
+  await signIn(page, 'pm1');
   await page.goto('/projects/new');
   const client = uniq('E2E Client');
   await page.getByRole('combobox', { name: 'Client' }).click();
@@ -25,7 +25,7 @@ test('F1 add a project for a new client', async ({ page }) => {
 });
 
 test('F2 mark a milestone as paid', async ({ page }) => {
-  await signIn(page, 'sales1');
+  await signIn(page, 'pm1');
   await page.goto('/invoices');
   const pay = page.getByRole('button', { name: /^Mark M\d+ .+ as paid$/ }).first();
   await pay.click();
@@ -57,22 +57,22 @@ test('F3 an Admin reverses a wrong payment', async ({ page }) => {
   await expect(page.getByText('E2E: wrong amount')).toBeVisible();
 });
 
-test('F4 add an upsell amount to a won project', async ({ page }) => {
-  await signIn(page, 'sales1');
+test('F4 add an extra work amount to a confirmed project', async ({ page }) => {
+  await signIn(page, 'pm1');
   await page.goto('/invoices');
   await page.locator('a[href^="/projects/"]').first().click();
-  await page.getByRole('tab', { name: 'Upsells' }).click();
+  await page.getByRole('tab', { name: 'Extra work' }).click();
   await page.getByLabel('Amount').fill('25,000');
   const note = uniq('E2E extra pages');
   await page.getByLabel('Note').fill(note);
-  await page.getByRole('button', { name: 'Add upsell amount' }).click();
+  await page.getByRole('button', { name: 'Add extra work amount' }).click();
   await expect(page.getByText(note)).toBeVisible();
 });
 
 test('F5 CEO weekly check: quarter view, team, overdue invoices, PDF', async ({ page }) => {
   await signIn(page, 'ceo');
-  await page.getByRole('radio', { name: 'Quarter' }).click();
-  await expect(page).toHaveURL(/period=THIS_QUARTER/);
+  // Project managers report quarterly: the dashboard opens on this quarter.
+  await expect(page.getByRole('radio', { name: 'Quarter' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('region', { name: 'Team performance' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Upcoming Invoices' }).first().click();

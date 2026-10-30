@@ -62,7 +62,7 @@ const owners = {
   body: {
     items: [
       { id: 'u1', name: 'Test User' },
-      { id: 'u2', name: 'Rohan Sales' },
+      { id: 'u2', name: 'Rohan Mehta' },
     ],
   },
 };
@@ -98,7 +98,7 @@ test('client, owner and a custom period reach the API and the CSV link', async (
   const user = userEvent.setup();
   await screen.findByText('INV-9');
   await user.selectOptions(screen.getByLabelText('Client'), 'c1');
-  await user.selectOptions(await screen.findByLabelText('Salesperson'), 'u2');
+  await user.selectOptions(await screen.findByLabelText('Project manager'), 'u2');
   await user.selectOptions(screen.getByLabelText('Period'), 'CUSTOM');
   await user.type(screen.getByLabelText('From'), '2026-05-01');
   await user.type(screen.getByLabelText('To'), '2026-06-30');
@@ -126,7 +126,7 @@ test('SALES get no salesperson filter; edit appears only where allowed', async (
   );
   renderApp('/billing', sessionFor('SALES'));
   await screen.findByText('INV-A');
-  expect(screen.queryByLabelText('Salesperson')).toBeNull();
+  expect(screen.queryByLabelText('Project manager')).toBeNull();
   expect(screen.getByRole('button', { name: 'Edit payment INV-A' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Edit payment INV-B' })).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Edit payment INV-A' }));

@@ -21,7 +21,7 @@ test('the status filter is kept in the URL and refetches', async () => {
   vi.stubGlobal('fetch', api.fn);
   const { router } = renderApp('/projects', sessionFor('ADMIN'));
   await screen.findByText('Website Redesign');
-  await userEvent.click(screen.getByRole('link', { name: 'Pipeline' }));
+  await userEvent.click(screen.getByRole('link', { name: 'Not yet confirmed' }));
   await waitFor(() => expect(router.state.location.search).toContain('status=LEAD%2CPROPOSAL'));
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('status')).toBe('LEAD,PROPOSAL'));
 });

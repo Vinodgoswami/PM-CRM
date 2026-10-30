@@ -2,6 +2,7 @@ import { type Dashboard } from '@salescrm/schemas';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { formatApiMoney } from '../../lib/money';
+import { STATUS_LABEL } from '../../lib/labels';
 import { monthLabel } from './charts';
 
 type Money = (minor: number) => string;
@@ -30,7 +31,7 @@ export function SeriesToggle<T extends string>({
           onClick={() => onChange(s)}
           className={`rounded-full px-3 py-1 capitalize ${value === s ? 'bg-primary font-semibold text-primary-contrast' : 'text-text-muted'}`}
         >
-          {s}
+          {s === 'booked' ? 'contracted' : s}
         </button>
       ))}
     </div>
@@ -51,7 +52,7 @@ export function QuarterBars({ data, series, money }: { data: Dashboard['quarters
             <div
               key={q.label}
               role="img"
-              aria-label={`${q.label}: ${series} ${money(now)}, last year ${money(before)}`}
+              aria-label={`${q.label}: ${series === 'booked' ? 'contracted' : series} ${money(now)}, last year ${money(before)}`}
               className="flex h-full flex-1 flex-col items-center justify-end gap-2"
             >
               <div className="flex h-full w-full items-end justify-center gap-1.5">
@@ -221,14 +222,7 @@ export function UpsellDonut({ bookedMinor, upsellMinor, money }: { bookedMinor: 
   );
 }
 
-const STAGE: Record<string, string> = {
-  LEAD: 'Lead',
-  PROPOSAL: 'Proposal',
-  WON: 'Won',
-  ACTIVE: 'Active',
-  COMPLETED: 'Completed',
-  LOST: 'Lost',
-};
+const STAGE: Record<string, string> = STATUS_LABEL;
 
 /** C8: projects by current status, bar width by count. */
 export function Funnel({ data, money }: { data: Dashboard['funnel']; money: Money }) {
@@ -270,7 +264,7 @@ export function MiniBars({
   const d = active === null ? null : data[active];
   return (
     <div>
-      <div role="img" aria-label={`${name}, last 12 months: booked and collected`} className="flex h-20 items-end gap-1.5">
+      <div role="img" aria-label={`${name}, last 12 months: contracted and collected`} className="flex h-20 items-end gap-1.5">
         {data.map((m, i) => (
           <div
             key={m.month}
@@ -285,8 +279,8 @@ export function MiniBars({
       </div>
       <p className="mt-1 text-xs text-text-muted">
         {d
-          ? `${monthLabel(d.month)}: booked ${formatApiMoney(d.bookedMinor, currency)}, collected ${formatApiMoney(d.collectedMinor, currency)}`
-          : 'Hatched = booked, solid = collected. Hover a month for numbers.'}
+          ? `${monthLabel(d.month)}: contracted ${formatApiMoney(d.bookedMinor, currency)}, collected ${formatApiMoney(d.collectedMinor, currency)}`
+          : 'Hatched = contracted, solid = collected. Hover a month for numbers.'}
       </p>
     </div>
   );

@@ -20,9 +20,8 @@ import { useState } from 'react';
 import { useSession } from '../auth/api';
 import { useResetLink, useUpdateUser, useUsers } from './api';
 import { InviteUserDialog } from './InviteUserDialog';
+import { ROLE_LABEL } from '../../lib/labels';
 import { LinkPanel } from './LinkPanel';
-
-const ROLE_LABEL: Record<Role, string> = { ADMIN: 'Admin', SALES: 'Sales', CEO: 'CEO' };
 
 export function UsersPanel() {
   const { data, isPending, isError } = useUsers();

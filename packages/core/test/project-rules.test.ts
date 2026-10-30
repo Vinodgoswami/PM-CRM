@@ -120,3 +120,12 @@ test('U-2 wouldCreateCycle detects loops through ancestors', () => {
   expect(wouldCreateCycle('C', 'A', parentOf)).toBe(false);
   expect(wouldCreateCycle('D', 'C', parentOf)).toBe(false);
 });
+
+test('PS-1 / PS-6 messages use on-screen stage names, not stored codes', () => {
+  const ctx = { isAdmin: false, milestones: [], hasPayments: false };
+  expect(checkTransition('WON', 'WON', ctx)).toMatchObject({ message: 'The project is already Confirmed.' });
+  expect(checkTransition('LEAD', 'COMPLETED', ctx)).toMatchObject({ message: 'A project cannot move from Enquiry to Completed.' });
+  expect(checkTransition('WON', 'LOST', { ...ctx, hasPayments: true })).toMatchObject({
+    message: 'This project has payments. Reverse them before cancelling it.',
+  });
+});

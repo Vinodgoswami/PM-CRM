@@ -187,9 +187,9 @@ function CreateProject() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="status" label="Status">
               <select id="status" className={selectClass} value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
-                <option value="LEAD">Lead</option>
-                <option value="PROPOSAL">Proposal</option>
-                <option value="WON">Won</option>
+                <option value="LEAD">Enquiry</option>
+                <option value="PROPOSAL">Quoted</option>
+                <option value="WON">Confirmed</option>
                 <option value="ACTIVE">Active</option>
               </select>
             </Field>

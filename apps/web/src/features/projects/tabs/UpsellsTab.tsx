@@ -16,9 +16,9 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="font-medium">Upsell amounts</h2>
+        <h2 className="font-medium">Extra work amounts</h2>
         {project.upsellEntries.length === 0 ? (
-          <p className="text-sm text-text-muted">No upsell amounts yet.</p>
+          <p className="text-sm text-text-muted">No extra work added yet.</p>
         ) : (
           <Table>
             <THead>
@@ -37,7 +37,7 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
                   <TD className="text-right tabular-nums">{money(u.amountMinor)}</TD>
                   {project.canEdit && (
                     <TD>
-                      <Button variant="ghost" size="icon" aria-label="Remove upsell amount" onClick={() => remove.mutate(u.id)}>
+                      <Button variant="ghost" size="icon" aria-label="Remove extra work amount" onClick={() => remove.mutate(u.id)}>
                         <Trash2 className="size-4" />
                       </Button>
                     </TD>
@@ -51,7 +51,7 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Upsell of another project</h2>
+        <h2 className="font-medium">Extra work for another project</h2>
         {project.canEdit ? (
           <ParentPicker project={project} />
         ) : (
@@ -59,7 +59,7 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
         )}
         {project.canEdit && (
           <Button asChild variant="outline">
-            <Link to={`/projects/new?client=${project.client.id}&parent=${project.id}`}>Create upsell project</Link>
+            <Link to={`/projects/new?client=${project.client.id}&parent=${project.id}`}>Create extra-work project</Link>
           </Button>
         )}
       </section>
@@ -86,7 +86,7 @@ function AddUpsellForm({ project }: { project: ProjectDetail }) {
           { amountMinor: amount, date, ...(note ? { note } : {}) },
           {
             onSuccess: () => {
-              toast.success('Upsell amount added');
+              toast.success('Extra work amount added');
               setKey((k) => k + 1);
               setAmount(null);
               setNote('');
@@ -117,7 +117,7 @@ function AddUpsellForm({ project }: { project: ProjectDetail }) {
         <Input id="upsell-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="What was added" />
       </div>
       <Button type="submit" disabled={add.isPending}>
-        Add upsell amount
+        Add extra work amount
       </Button>
     </form>
   );
@@ -142,7 +142,7 @@ function ParentPicker({ project }: { project: ProjectDetail }) {
           })
         }
       >
-        <option value="">Not an upsell</option>
+        <option value="">Not extra work</option>
         {candidates.map((p) => (
           <option key={p.id} value={p.id}>
             {p.code} {p.name}

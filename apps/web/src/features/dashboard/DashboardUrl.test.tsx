@@ -5,7 +5,7 @@ import { renderApp, sessionFor, stubApi } from '../../test/render';
 import { dashboardCsv } from './csv';
 import { dashboard } from './fixture';
 
-const routes = { 'GET /dashboard': { body: dashboard() }, 'GET /owners': { body: { items: [{ id: 'u2', name: 'Rohan Sales' }] } } };
+const routes = { 'GET /dashboard': { body: dashboard() }, 'GET /owners': { body: { items: [{ id: 'u2', name: 'Rohan Mehta' }] } } };
 
 test('the period and salesperson come from the address, so a view can be bookmarked', async () => {
   const api = stubApi(routes);
@@ -29,7 +29,7 @@ test('number cards carry a 12-month trend line', async () => {
   vi.stubGlobal('fetch', stubApi(routes).fn);
   renderApp('/', sessionFor('CEO'));
   const kpis = await screen.findByRole('region', { name: 'Key figures' });
-  expect(within(kpis).getByRole('img', { name: 'Booked, last 12 months' })).toBeInTheDocument();
+  expect(within(kpis).getByRole('img', { name: 'Contracted, last 12 months' })).toBeInTheDocument();
 });
 
 test('Export CSV downloads the dashboard data', async () => {
@@ -51,8 +51,8 @@ test('the CSV has amounts in major units with currency, and neutralises formulas
     dashboard({ clientRevenue: [{ id: 'c1', name: '=HYPERLINK("x")', bookedMinor: 150050, collectedMinor: -2500 }] }),
   );
   expect(csv.charCodeAt(0)).toBe(0xfeff);
-  expect(csv).toContain('Booked,25000000.00,INR');
+  expect(csv).toContain('Contracted,25000000.00,INR');
   expect(csv).toContain(`"'=HYPERLINK(""x"")",1500.50,-25.00,INR`);
   expect(csv).toContain('Q1,1000000.00,800000.00,900000.00,700000.00,INR');
-  expect(csv).toContain('Rohan Sales,15000000.00,7000000.00');
+  expect(csv).toContain('Rohan Mehta,15000000.00,7000000.00');
 });

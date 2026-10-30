@@ -18,7 +18,7 @@ test('the dashboard greets the user and shows the headline numbers', async () =>
 test('the CEO sees team performance; SALES do not', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);
   renderApp('/', sessionFor('CEO'));
-  expect(await screen.findByRole('region', { name: 'Team performance' })).toHaveTextContent('Rohan Sales');
+  expect(await screen.findByRole('region', { name: 'Team performance' })).toHaveTextContent('Rohan Mehta');
 });
 
 test('SALES see their own dashboard without the team table', async () => {
@@ -28,13 +28,28 @@ test('SALES see their own dashboard without the team table', async () => {
   expect(screen.queryByRole('region', { name: 'Team performance' })).toBeNull();
 });
 
-test('switching the period asks the API for that period', async () => {
+test('the dashboard opens on this quarter; switching the period asks the API for that period', async () => {
   const api = stubApi({ 'GET /dashboard': { body: dashboard() } });
   vi.stubGlobal('fetch', api.fn);
   renderApp('/', sessionFor('ADMIN'));
   await screen.findByRole('heading', { name: /Welcome back/ });
-  await userEvent.click(screen.getByRole('radio', { name: 'Quarter' }));
-  await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('period')).toBe('THIS_QUARTER'));
+  await waitFor(() =>
+    expect(
+      api.calls
+        .filter((c) => c.path === '/dashboard')
+        .at(-1)!
+        .url.searchParams.get('period'),
+    ).toBe('THIS_QUARTER'),
+  );
+  await userEvent.click(screen.getByRole('radio', { name: 'Year' }));
+  await waitFor(() =>
+    expect(
+      api.calls
+        .filter((c) => c.path === '/dashboard')
+        .at(-1)!
+        .url.searchParams.get('period'),
+    ).toBe('THIS_FY'),
+  );
 });
 
 test('other-currency projects are called out, not silently mixed in', async () => {
@@ -47,7 +62,7 @@ test('K11 win rate shows in the headline card', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);
   renderApp('/', sessionFor('CEO'));
   const collected = await screen.findByRole('region', { name: 'Collected' });
-  expect(within(collected).getByText('Win rate').nextElementSibling).toHaveTextContent('60%');
+  expect(within(collected).getByText('Confirmation rate').nextElementSibling).toHaveTextContent('60%');
 });
 
 test('K11 win rate is a dash when nothing was won or lost', async () => {
@@ -55,5 +70,5 @@ test('K11 win rate is a dash when nothing was won or lost', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard({ kpis: { ...base.kpis, winRate: null } }) } }).fn);
   renderApp('/', sessionFor('CEO'));
   const collected = await screen.findByRole('region', { name: 'Collected' });
-  expect(within(collected).getByText('Win rate').nextElementSibling).toHaveTextContent('—');
+  expect(within(collected).getByText('Confirmation rate').nextElementSibling).toHaveTextContent('—');
 });

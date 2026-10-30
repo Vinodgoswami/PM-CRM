@@ -17,7 +17,7 @@ export function OverviewTab({ project }: { project: ProjectDetail }) {
         <Item label="Won on">{formatDate(project.wonAt)}</Item>
         <Item label="Expected amount">{formatApiMoney(project.expectedAmountMinor, project.currency)}</Item>
         {project.parent && (
-          <Item label="Upsell of">
+          <Item label="Extra work for">
             <Link className="text-primary hover:underline" to={`/projects/${project.parent.id}`}>
               {project.parent.code} {project.parent.name}
             </Link>
@@ -27,7 +27,7 @@ export function OverviewTab({ project }: { project: ProjectDetail }) {
 
       {project.upsellProjects.length > 0 && (
         <div className="space-y-2">
-          <h2 className="font-medium">Upsell projects</h2>
+          <h2 className="font-medium">Extra-work projects</h2>
           <ul className="space-y-1 text-sm">
             {project.upsellProjects.map((u) => (
               <li key={u.id} className="flex items-center gap-2">

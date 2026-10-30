@@ -1,6 +1,7 @@
 import { MoneyParseError, toMinor } from '@salescrm/types';
 import { checkPayment } from './payments';
 import { type IsoDate } from './period';
+import { STATUS_NAME } from './project-status';
 
 /**
  * CSV import of existing work (roadmap P6-4). One row per milestone: client and project columns repeat, the first row
@@ -14,7 +15,7 @@ export const IMPORT_COLUMNS = [
   'status',
   'expected_amount',
   'currency',
-  'won_date',
+  'confirmed_date',
   'closed_date',
   'owner_email',
   'milestone',
@@ -28,6 +29,17 @@ type Column = (typeof IMPORT_COLUMNS)[number];
 const REQUIRED: Column[] = ['client', 'project', 'expected_amount'];
 
 const STATUSES = ['LEAD', 'PROPOSAL', 'WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'LOST'] as const;
+/** Stages as people write them (the on-screen names) next to the stored codes. */
+const STATUS_ALIASES: Record<string, (typeof STATUSES)[number]> = {
+  ENQUIRY: 'LEAD',
+  QUOTED: 'PROPOSAL',
+  QUOTE: 'PROPOSAL',
+  CONFIRMED: 'WON',
+  IN_PROGRESS: 'ACTIVE',
+  CANCELLED: 'LOST',
+  CANCELED: 'LOST',
+};
+const statusNames = () => STATUSES.map((s) => STATUS_NAME[s]).join(', ');
 export type ImportStatus = (typeof STATUSES)[number];
 const BOOKED: ImportStatus[] = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'];
 const CLOSED: ImportStatus[] = ['COMPLETED', 'LOST'];
@@ -129,7 +141,9 @@ export function parseImport(
 
   body.forEach((cells, i) => {
     const line = i + 2;
-    const get = (c: Column) => (cells[cols.indexOf(c)] ?? '').trim();
+    const cell = (name: string) => (cols.includes(name) ? (cells[cols.indexOf(name)] ?? '').trim() : '');
+    // won_date is the older name of confirmed_date; files made before the rename keep working.
+    const get = (c: Column) => cell(c) || (c === 'confirmed_date' ? cell('won_date') : '');
     const fail = (message: string) => errors.push({ line, message });
     const client = get('client');
     const name = get('project');
@@ -156,10 +170,14 @@ export function parseImport(
 
     let project = projects.get(key);
     if (!project) {
-      const statusText = (get('status') || 'ACTIVE').toUpperCase().replace(' ', '_');
+      const raw = (get('status') || 'ACTIVE')
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, '_');
+      const statusText = STATUS_ALIASES[raw] ?? raw;
       if (!(STATUSES as readonly string[]).includes(statusText)) {
         broken.add(key);
-        return fail(`status "${get('status')}" is not one of ${STATUSES.join(', ')}.`);
+        return fail(`status "${get('status')}" is not one of ${statusNames()}.`);
       }
       const status = statusText as ImportStatus;
       const currency = (get('currency') || opts.baseCurrency).toUpperCase();
@@ -168,21 +186,21 @@ export function parseImport(
         return fail(`currency "${get('currency')}" is not a three-letter currency code.`);
       }
       const expected = money('expected_amount', currency);
-      const wonAt = date('won_date');
+      const wonAt = date('confirmed_date');
       const closedAt = date('closed_date');
       if (expected === null || wonAt === false || closedAt === false) return void broken.add(key);
       const needsWon = BOOKED.includes(status);
       if (needsWon && !wonAt) {
         broken.add(key);
-        return fail(`won_date is required for status ${status}.`);
+        return fail(`confirmed_date is required for status ${STATUS_NAME[status]}.`);
       }
       if (CLOSED.includes(status) && !closedAt) {
         broken.add(key);
-        return fail(`closed_date is required for status ${status}.`);
+        return fail(`closed_date is required for status ${STATUS_NAME[status]}.`);
       }
       if ((wonAt && wonAt > opts.today) || (closedAt && closedAt > opts.today)) {
         broken.add(key);
-        return fail('won_date and closed_date cannot be in the future.');
+        return fail('confirmed_date and closed_date cannot be in the future.');
       }
       project = {
         line,
@@ -200,7 +218,7 @@ export function parseImport(
       projects.set(key, project);
     } else {
       // Later rows of a project may leave project fields blank, but may not change them.
-      for (const c of ['status', 'expected_amount', 'currency', 'won_date', 'closed_date', 'owner_email'] as const) {
+      for (const c of ['status', 'expected_amount', 'currency', 'confirmed_date', 'closed_date', 'owner_email'] as const) {
         if (get(c) && get(c) !== project.firstRow[c]) {
           broken.add(key);
           return fail(`${c} differs from line ${project.line} for the same project.`);
@@ -228,11 +246,11 @@ export function parseImport(
     if (!get('paid_amount')) return;
     if (project.status === 'LOST') {
       broken.add(key);
-      return fail('PS-6: a Lost project cannot have payments.');
+      return fail('PS-6: a Cancelled project cannot have payments.');
     }
     if (!BOOKED.includes(project.status)) {
       broken.add(key);
-      return fail('P-8: payments can only be recorded on Won, Active, On hold or Completed projects.');
+      return fail('P-8: payments can only be recorded on Confirmed, Active, On hold or Completed projects.');
     }
     const paid = money('paid_amount', project.currency);
     const paidDate = date('paid_date');

@@ -2,6 +2,7 @@ import { Button, EmptyState, Label, Skeleton, Table, TBody, TD, TH, THead, TR } 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { z } from 'zod';
+import { ROLE_LABEL, STATUS_LABEL } from '../../lib/labels';
 import { apiFetch } from '../../lib/api';
 
 const PAGE_SIZE = 50;
@@ -25,14 +26,18 @@ const auditSchema = z.object({
   total: z.number(),
 });
 
-/** "status: LEAD → PROPOSAL; role: SALES → CEO" from the before/after field maps. */
+/** Stored codes shown with their on-screen names (D-017). */
+const VALUE_LABEL: Record<string, Record<string, string>> = { status: STATUS_LABEL, role: ROLE_LABEL };
+const show = (key: string, v: unknown) => VALUE_LABEL[key]?.[String(v)] ?? String(v);
+
+/** "status: Enquiry → Quoted; role: Project Manager → CEO" from the before/after field maps. */
 function summarise(before: unknown, after: unknown): string {
   const b = (before ?? {}) as Record<string, unknown>;
   const a = (after ?? {}) as Record<string, unknown>;
   const keys = [...new Set([...Object.keys(b), ...Object.keys(a)])];
   return keys
     .map((k) =>
-      k in b && k in a ? `${k}: ${String(b[k])} → ${String(a[k])}` : k in a ? `${k}: ${String(a[k])}` : `${k}: ${String(b[k])} removed`,
+      k in b && k in a ? `${k}: ${show(k, b[k])} → ${show(k, a[k])}` : k in a ? `${k}: ${show(k, a[k])}` : `${k}: ${show(k, b[k])} removed`,
     )
     .join('; ');
 }

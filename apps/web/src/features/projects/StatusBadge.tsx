@@ -1,15 +1,8 @@
 import { type ProjectStatusValue } from '@salescrm/schemas';
 import { Badge } from '@salescrm/ui';
+import { STATUS_LABEL } from '../../lib/labels';
 
-export const STATUS_LABEL: Record<ProjectStatusValue, string> = {
-  LEAD: 'Lead',
-  PROPOSAL: 'Proposal',
-  WON: 'Won',
-  ACTIVE: 'Active',
-  ON_HOLD: 'On hold',
-  COMPLETED: 'Completed',
-  LOST: 'Lost',
-};
+export { STATUS_LABEL };
 
 const TONE: Record<ProjectStatusValue, 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'> = {
   LEAD: 'neutral',
