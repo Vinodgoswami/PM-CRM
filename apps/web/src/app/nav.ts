@@ -1,6 +1,16 @@
 import { can, type Permission } from '@salescrm/auth/permissions';
 import { type Role } from '@salescrm/types';
-import { BadgeIndianRupee, Building2, FileClock, FolderKanban, LayoutDashboard, ScrollText, Settings, type LucideIcon } from 'lucide-react';
+import {
+  BadgeIndianRupee,
+  Building2,
+  FileClock,
+  FolderKanban,
+  Gauge,
+  LayoutDashboard,
+  ScrollText,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -11,6 +21,8 @@ export interface NavItem {
 
 // Order and visibility follow docs/08-screens-and-flows.md § Navigation by role.
 export const NAV_ITEMS: NavItem[] = [
+  // D-021: the Admin's home is a counts-only overview; everyone else lands on the dashboard.
+  { label: 'Overview', path: '/', permission: 'admin.overview', icon: Gauge },
   { label: 'Dashboard', path: '/', permission: 'dashboard.own', icon: LayoutDashboard },
   { label: 'Upcoming Invoices', path: '/invoices', permission: 'invoices.read', icon: FileClock },
   { label: 'Projects', path: '/projects', permission: 'projects.read', icon: FolderKanban },

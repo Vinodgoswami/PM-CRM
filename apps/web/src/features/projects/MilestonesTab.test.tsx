@@ -110,7 +110,7 @@ test('Admin reversal needs a reason', async () => {
     'POST /payments/pay1/reverse': { status: 201, body: { ...payment, id: 'rev', amountMinor: -5000000 } },
   });
   vi.stubGlobal('fetch', api.fn);
-  renderApp('/projects/p1', sessionFor('ADMIN'));
+  renderApp('/projects/p1', sessionFor('CEO'));
   const user = userEvent.setup();
   await screen.findByRole('heading', { name: 'Website Redesign' });
   await user.click(screen.getByRole('tab', { name: 'Payments' }));

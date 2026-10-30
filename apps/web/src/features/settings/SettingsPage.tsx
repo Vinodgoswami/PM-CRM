@@ -6,19 +6,20 @@ import { useSession } from '../auth/api';
 import { UsersPanel } from './UsersPanel';
 
 export function SettingsPage() {
-  // D-018: the CEO comes here to manage Project Managers; company settings and import stay with the Admin.
+  // D-021: the Admin edits the company name and manages users; the CEO also sets currency and runs imports.
   const { data: session } = useSession();
-  const admin = !!session && can(session.user, 'settings.manage');
+  const company = !!session && can(session.user, 'settings.company');
+  const ceo = !!session && can(session.user, 'settings.manage');
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold">Settings</h1>
-      <Tabs defaultValue={admin ? 'company' : 'users'}>
+      <Tabs defaultValue={company ? 'company' : 'users'}>
         <TabsList>
-          {admin && <TabsTrigger value="company">Company</TabsTrigger>}
+          {company && <TabsTrigger value="company">Company</TabsTrigger>}
           <TabsTrigger value="users">Users</TabsTrigger>
-          {admin && <TabsTrigger value="import">Import data</TabsTrigger>}
+          {ceo && <TabsTrigger value="import">Import data</TabsTrigger>}
         </TabsList>
-        {admin && (
+        {company && (
           <TabsContent value="company">
             <CompanySettingsForm />
           </TabsContent>
@@ -26,7 +27,7 @@ export function SettingsPage() {
         <TabsContent value="users">
           <UsersPanel />
         </TabsContent>
-        {admin && (
+        {ceo && (
           <TabsContent value="import">
             <ImportPanel />
           </TabsContent>

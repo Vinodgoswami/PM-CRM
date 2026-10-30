@@ -12,18 +12,20 @@ const users = {
 };
 const settings = { companyName: 'Acme', baseCurrency: 'INR', fyStartMonth: 4, timezone: 'Asia/Kolkata', dueSoonDays: 7 };
 
-test('the CEO manages users from Settings, but sees no company settings or import', async () => {
+test('the CEO manages users from Settings and also has company settings and the import (D-021)', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /users': { body: users }, 'GET /settings': { body: settings } }).fn);
   renderApp('/settings', sessionFor('CEO'));
+  expect(await screen.findByRole('tab', { name: 'Company' })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'Import data' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('tab', { name: 'Users' }));
   expect(await screen.findByText('Rohan Mehta')).toBeInTheDocument();
-  expect(screen.queryByRole('tab', { name: 'Company' })).toBeNull();
-  expect(screen.queryByRole('tab', { name: 'Import data' })).toBeNull();
 });
 
 test('the CEO can invite only Project Managers, and cannot change Admin accounts', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /users': { body: users }, 'GET /settings': { body: settings } }).fn);
   renderApp('/settings', sessionFor('CEO'));
   const user = userEvent.setup();
+  await user.click(await screen.findByRole('tab', { name: 'Users' }));
   const adminRow = (await screen.findByText('Asha Admin')).closest('tr')!;
   expect(within(adminRow).queryByRole('button', { name: /reset link|deactivate/i })).toBeNull();
   expect(within(adminRow).queryByRole('combobox')).toBeNull();

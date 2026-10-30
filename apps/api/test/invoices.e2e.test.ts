@@ -34,7 +34,7 @@ async function project(agent: Agent, csrf: string, status: string, milestones: {
 }
 
 test('unpaid milestones are grouped by due date with balance totals; paid and pipeline work excluded', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const p = await project(agent, csrf, 'WON', [
     { title: 'Late', amountMinor: 1000, dueDate: shift(-3) },
     { title: 'Soon', amountMinor: 2000, dueDate: shift(2) },

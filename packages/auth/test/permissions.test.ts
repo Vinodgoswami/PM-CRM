@@ -3,22 +3,26 @@ import { can, manageableRoles, type Permission, PERMISSIONS, type Scope, scopeFo
 
 // Row by row from docs/07-roles-and-permissions.md § Permission matrix: [ADMIN, SALES, CEO].
 const MATRIX: [Permission, Scope, Scope, Scope][] = [
-  ['dashboard.company', 'all', false, 'all'],
-  ['dashboard.own', 'all', 'all', 'all'],
-  ['invoices.read', 'all', 'own', 'all'],
-  ['billing.read', 'all', 'own', 'all'],
-  ['export', 'all', 'own', 'all'],
-  ['projects.read', 'all', 'all', 'all'],
-  ['clients.read', 'all', 'all', 'all'],
-  ['projects.write', 'all', 'own', 'all'],
-  ['clients.write', 'all', 'all', 'all'],
-  ['payments.create', 'all', 'own', 'all'],
-  ['payments.editMeta', 'all', 'own', 'all'],
-  ['payments.reverse', 'all', false, false],
-  ['projects.reassign', 'all', false, 'all'],
+  // D-021: the Admin manages accounts and sees counts only; clients, projects and money belong to the CEO and PMs.
+  ['admin.overview', 'all', false, false],
+  ['dashboard.company', false, false, 'all'],
+  ['dashboard.own', false, 'all', 'all'],
+  ['invoices.read', false, 'own', 'all'],
+  ['billing.read', false, 'own', 'all'],
+  ['export', false, 'own', 'all'],
+  ['projects.read', false, 'all', 'all'],
+  ['clients.read', false, 'all', 'all'],
+  ['projects.write', false, 'own', 'all'],
+  ['clients.write', false, 'all', 'all'],
+  ['payments.create', false, 'own', 'all'],
+  ['payments.editMeta', false, 'own', 'all'],
+  ['payments.reverse', false, false, 'all'],
+  ['projects.reassign', false, false, 'all'],
   ['users.manage', 'all', false, 'all'],
-  ['settings.manage', 'all', false, false],
+  ['settings.company', 'all', false, 'all'],
+  ['settings.manage', false, false, 'all'],
   ['audit.read', 'all', false, 'all'],
+  ['audit.business', false, false, 'all'],
 ];
 
 test('matrix covers exactly the documented permissions', () => {
@@ -38,16 +42,25 @@ test('own scope depends on the resource owner', () => {
   expect(can(sales, 'projects.write')).toBe(true); // may write some resources (their own)
 });
 
-test('D-018 the CEO edits any project and records payments; only Admin reverses payments or changes settings', () => {
+test('D-018/D-021 the CEO edits any project, records and reverses payments, and owns company settings', () => {
   const ceo = { id: 'c1', role: 'CEO' as const };
   expect(can(ceo, 'projects.write', { ownerId: 'someone-else' })).toBe(true);
   expect(can(ceo, 'payments.create', { ownerId: 'someone-else' })).toBe(true);
-  expect(can(ceo, 'payments.reverse')).toBe(false);
-  expect(can(ceo, 'settings.manage')).toBe(false);
+  expect(can(ceo, 'payments.reverse')).toBe(true); // D-021
+  expect(can(ceo, 'settings.manage')).toBe(true); // D-021
 });
 
 test('D-018 Admin adds anyone; the CEO adds and manages Project Managers only; PMs add no one', () => {
   expect(manageableRoles('ADMIN')).toEqual(['ADMIN', 'CEO', 'SALES']);
   expect(manageableRoles('CEO')).toEqual(['SALES']);
   expect(manageableRoles('SALES')).toEqual([]);
+});
+
+test('D-021 the Admin sees no client, project or money data at all', () => {
+  const admin = { id: 'a1', role: 'ADMIN' as const };
+  for (const p of ['projects.read', 'clients.read', 'invoices.read', 'billing.read', 'dashboard.own', 'audit.business'] as const) {
+    expect(can(admin, p)).toBe(false);
+  }
+  expect(can(admin, 'users.manage')).toBe(true);
+  expect(can(admin, 'admin.overview')).toBe(true);
 });

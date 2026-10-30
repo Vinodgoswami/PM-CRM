@@ -48,7 +48,7 @@ const settings = { body: { companyName: '', baseCurrency: 'INR', fyStartMonth: 4
 
 test('sections render in order with counts and totals, overdue first', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /invoices': invoices, 'GET /settings': settings }).fn);
-  renderApp('/invoices', sessionFor('ADMIN'));
+  renderApp('/invoices', sessionFor('CEO'));
   const overdue = await screen.findByRole('region', { name: /Overdue/ });
   expect(within(overdue).getAllByText('₹6,000.00')).toHaveLength(2); // section total and the single row's balance
   expect(within(overdue).getByText('9 days late')).toBeInTheDocument();
@@ -111,7 +111,7 @@ test('client and salesperson filters reach the API; the salesperson list does no
     },
   });
   vi.stubGlobal('fetch', api.fn);
-  renderApp('/invoices', sessionFor('ADMIN'));
+  renderApp('/invoices', sessionFor('CEO'));
   const user = userEvent.setup();
   await screen.findByRole('region', { name: /Overdue/ });
   await user.selectOptions(screen.getByLabelText('Client'), 'c1');

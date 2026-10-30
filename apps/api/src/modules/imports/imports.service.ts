@@ -47,7 +47,7 @@ export class ImportsService {
 
     const emails = [...new Set(plan.projects.flatMap((p) => (p.ownerEmail ? [p.ownerEmail.toLowerCase()] : [])))];
     const users = await db.user.findMany({
-      where: { email: { in: emails, mode: 'insensitive' }, active: true, role: { in: ['ADMIN', 'SALES'] } },
+      where: { email: { in: emails, mode: 'insensitive' }, active: true, role: 'SALES' },
       select: { id: true, email: true },
     });
     const owners = new Map(users.map((u) => [u.email.toLowerCase(), u.id]));
@@ -64,8 +64,11 @@ export class ImportsService {
       const dup = existing.find((e) => e.clientId === clientId && e.name.trim().toLowerCase() === p.name.trim().toLowerCase());
       if (dup) {
         errors.push({ line: p.line, message: `Project "${p.name}" already exists for ${p.client.name} (${dup.code}).` });
-      } else if (p.ownerEmail && !owners.has(p.ownerEmail.toLowerCase())) {
-        errors.push({ line: p.line, message: `owner_email "${p.ownerEmail}" is not an active Admin or Project Manager.` });
+      } else if (!p.ownerEmail) {
+        // D-018/D-021: every project belongs to a project manager; the CEO who imports does not own it.
+        errors.push({ line: p.line, message: 'owner_email is required: give the project manager who owns this project.' });
+      } else if (!owners.has(p.ownerEmail.toLowerCase())) {
+        errors.push({ line: p.line, message: `owner_email "${p.ownerEmail}" is not an active Project Manager.` });
       } else ok.push(p);
     }
 
@@ -156,7 +159,7 @@ export class ImportsService {
               name: p.name,
               description: '',
               clientId,
-              ownerId: p.ownerEmail ? owners.get(p.ownerEmail.toLowerCase())! : user.id,
+              ownerId: owners.get(p.ownerEmail!.toLowerCase())!,
               status: p.status,
               expectedAmountMinor: p.expectedAmountMinor,
               currency: p.currency,

@@ -12,6 +12,8 @@ export interface AuditEntry {
   ip?: string;
 }
 
+export const ACCOUNT_ENTITIES = ['User', 'AuthToken', 'Setting'];
+
 @Injectable()
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
@@ -31,8 +33,15 @@ export class AuditService {
     });
   }
 
-  async list(filter: { entity?: string; entityId?: string }, page: number, pageSize: number) {
-    const where = { ...(filter.entity ? { entity: filter.entity } : {}), ...(filter.entityId ? { entityId: filter.entityId } : {}) };
+  /** `accountsOnly` (D-021, the Admin): user, sign-in and settings events; never clients, projects or money. */
+  async list(filter: { entity?: string; entityId?: string; accountsOnly?: boolean }, page: number, pageSize: number) {
+    const where = {
+      AND: [
+        filter.entity ? { entity: filter.entity } : {},
+        filter.entityId ? { entityId: filter.entityId } : {},
+        filter.accountsOnly ? { entity: { in: ACCOUNT_ENTITIES } } : {},
+      ],
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.auditLog.findMany({
         where,

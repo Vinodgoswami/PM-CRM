@@ -4,6 +4,8 @@ import { Prisma } from '@salescrm/database';
 import { type Settings, type UpdateSettingsInput } from '@salescrm/schemas';
 import { type SessionUser } from '../../common/current-user';
 import { AuditService } from '../audit/audit.service';
+import { can } from '@salescrm/auth/permissions';
+import { forbidden } from '../../common/errors';
 import { PrismaService } from '../prisma/prisma.module';
 
 const SETTINGS_ID = 1;
@@ -48,6 +50,10 @@ export class SettingsService {
   }
 
   async update(user: SessionUser, input: UpdateSettingsInput): Promise<Settings> {
+    // D-021: the Admin may only rename the company; currency, financial year and the rest are the CEO's.
+    if (!can(user, 'settings.manage') && Object.keys(input).some((k) => k !== 'companyName')) {
+      throw forbidden('Only the CEO can change the currency, financial year, time zone or due-soon days.');
+    }
     return this.prisma.$transaction(async (tx) => {
       const before = toDto(await this.load(tx));
       const after = toDto(await tx.setting.update({ where: { id: SETTINGS_ID }, data: input }));

@@ -273,8 +273,9 @@ export class ProjectsService {
     if (user.role === 'CEO' && !requested) throw new AppError(400, 'VALIDATION_FAILED', 'Choose the project manager for this project.');
     if (!requested || !can(user, 'projects.reassign')) return user.id;
     const owner = await tx.user.findUnique({ where: { id: requested } });
-    if (!owner || !owner.active || owner.role === 'CEO')
-      throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active Admin or Project Manager as owner.');
+    // D-021: projects belong to project managers only.
+    if (!owner || !owner.active || owner.role !== 'SALES')
+      throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active Project Manager as owner.');
     return owner.id;
   }
 
@@ -334,7 +335,8 @@ export class ProjectsService {
     await this.prisma.$transaction(async (tx) => {
       const p = await this.loadForWrite(id, user, tx);
       const check = checkTransition(p.status, to, {
-        isAdmin: user.role === 'ADMIN',
+        // D-021: the CEO (not the Admin, who sees no projects) may move a project to any stage.
+        isAdmin: user.role === 'CEO',
         milestones: p.milestones.map((m) => ({ dueDate: isoDate(m.dueDate) })),
         hasPayments: p.milestones.some((m) => m.payments.length > 0),
       });

@@ -11,7 +11,7 @@ export class OwnersController {
   @RequirePermission('dashboard.company')
   async list(): Promise<{ items: { id: string; name: string }[] }> {
     const items = await this.prisma.user.findMany({
-      where: { active: true, role: { in: ['ADMIN', 'SALES'] } },
+      where: { active: true, role: 'SALES' }, // D-021: project managers own projects; the Admin sees none
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });

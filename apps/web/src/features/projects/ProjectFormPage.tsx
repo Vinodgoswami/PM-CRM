@@ -50,7 +50,7 @@ function useOwnerOptions() {
   });
   // D-018: the CEO does not own projects; they choose the project manager who does.
   const mustChoose = session?.user.role === 'CEO';
-  return { isAdmin, mustChoose, owners: (users.data?.items ?? []).filter((u) => u.active && u.role !== 'CEO'), me: session?.user.id };
+  return { isAdmin, mustChoose, owners: (users.data?.items ?? []).filter((u) => u.active && u.role === 'SALES'), me: session?.user.id };
 }
 
 function CreateProject() {
