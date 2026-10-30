@@ -308,6 +308,10 @@ importers:
         version: 3.2.7(@types/node@24.19.2)(happy-dom@18.0.1)(jiti@2.7.0)(jsdom@26.1.0(supports-color@8.1.1))(lightningcss@1.32.0)(supports-color@8.1.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
   packages/core:
+    dependencies:
+      '@salescrm/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@salescrm/eslint-config':
         specifier: workspace:*

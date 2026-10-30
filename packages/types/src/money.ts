@@ -4,7 +4,10 @@
  */
 
 export class MoneyParseError extends Error {
-  constructor(input: string, reason: string) {
+  constructor(
+    input: string,
+    readonly reason: string,
+  ) {
     super(`Invalid amount "${input}": ${reason}`);
     this.name = 'MoneyParseError';
   }

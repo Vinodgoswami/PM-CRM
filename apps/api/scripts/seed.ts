@@ -39,6 +39,8 @@ export async function runSeed(prisma: PrismaClient, opts: { today: IsoDate; pass
         const row = await tx.client.create({
           data: {
             name: c.name,
+            // C-2: the same key the app writes, so duplicate checks and imports match seeded clients.
+            nameKey: c.name.trim().toLowerCase(),
             company: c.company,
             country: c.country,
             createdById: adminId,

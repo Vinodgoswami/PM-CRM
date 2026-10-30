@@ -12,6 +12,7 @@ import { ClientsModule } from './modules/clients/clients.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { HealthController } from './modules/health/health.controller';
+import { ImportsModule } from './modules/imports/imports.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { ProjectsModule } from './modules/projects/projects.module';
@@ -37,6 +38,7 @@ export class AppModule {
         DocumentsModule,
         PaymentsModule,
         DashboardModule,
+        ImportsModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.logLevel,

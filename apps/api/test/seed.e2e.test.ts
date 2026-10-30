@@ -86,3 +86,9 @@ test('seeding refuses non-local databases unless explicitly confirmed', () => {
   expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@127.0.0.1:5432/crm' }, [])).not.toThrow();
   expect(() => assertSafeToSeed({ DATABASE_URL: 'postgresql://u:p@db.staging.example.com/crm' }, ['--yes-wipe'])).not.toThrow();
 });
+
+test('C-2 seeded clients carry their name key, so the app and imports recognise them', async () => {
+  const clients = await prisma.client.findMany({ select: { name: true, nameKey: true } });
+  expect(clients.length).toBeGreaterThan(0);
+  for (const c of clients) expect(c.nameKey).toBe(c.name.trim().toLowerCase());
+});

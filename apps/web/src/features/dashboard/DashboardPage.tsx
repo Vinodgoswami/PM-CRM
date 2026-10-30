@@ -13,13 +13,14 @@ import { useSession } from '../auth/api';
 import { useOwners } from '../filters/api';
 import { HatchedBars, monthLabel, Sparkline, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
-import { dashboardCsv, downloadCsv } from './csv';
+import { dashboardCsv } from './csv';
 import { DrillDownDialog } from './DrillDownDialog';
 import { DueCalendar } from './DueCalendar';
 import { ClientBars, Funnel, QuarterBars, SeriesToggle, UpsellDonut, YoyLine } from './MoreCharts';
 import { Panel } from './Panel';
 import { TeamTable } from './TeamTable';
 import { APP_NAME } from '../../lib/brand';
+import { downloadCsv } from '../../lib/download';
 import { useCountUp } from './useCountUp';
 
 const PERIODS = [

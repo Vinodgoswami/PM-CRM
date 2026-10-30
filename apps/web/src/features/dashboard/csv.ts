@@ -104,12 +104,3 @@ export function dashboardCsv(data: Dashboard): string {
   // BOM so Excel opens the file as UTF-8 (₹ and names survive).
   return `${BOM}${rows.map((r) => r.join(',')).join('\r\n')}\r\n`;
 }
-
-export function downloadCsv(filename: string, csv: string) {
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
