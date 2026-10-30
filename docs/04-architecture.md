@@ -118,3 +118,12 @@ client IPs (`trust proxy = 1`).
 
 - All timestamps stored in UTC. Dates without time (due date, payment date) stored as `DATE`.
 - "Today", periods and overdue are computed in the company timezone from settings (default `Asia/Kolkata`).
+
+## Email (D-023)
+
+Invites, resent invites and password-reset links are emailed by the API's `MailService` after the change is saved;
+the response says `emailed: true|false` and always includes the link, so it can be copied when email is off or a
+send fails. Transport from `EMAIL_TRANSPORT`: `smtp` (nodemailer; any provider — Google Workspace with an App
+Password, Zoho, Microsoft 365, Amazon SES, SendGrid, Resend), `log` (default; writes the email to the API log), `off`.
+Settings live in `.env` (`EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`); the password
+never goes in code or the repository. Names in emails are HTML-escaped.

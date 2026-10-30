@@ -36,7 +36,8 @@ export const userListItemSchema = z.object({
 });
 export type UserListItem = z.infer<typeof userListItemSchema>;
 
-export const linkResponseSchema = z.object({ url: z.string(), expiresAt: z.string() });
+/** `emailed`: the link was also emailed to the person; when false, share `url` by hand. */
+export const linkResponseSchema = z.object({ url: z.string(), expiresAt: z.string(), emailed: z.boolean().default(false) });
 export type LinkResponse = z.infer<typeof linkResponseSchema>;
 
 /** Profile photo (any signed-in user, for themselves): small JPEG, PNG or WebP. */

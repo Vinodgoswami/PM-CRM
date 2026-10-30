@@ -2,11 +2,30 @@ import { Button, Input, Label, toast } from '@salescrm/ui';
 import { Copy } from 'lucide-react';
 import { useId } from 'react';
 
-/** Shows a one-time invite / reset link for the Admin to share (D-010: no email in v1). */
-export function LinkPanel({ url, expiresAt, note }: { url: string; expiresAt: string; note: string }) {
+/** A one-time invite / reset link: says whether it was emailed, and always offers it to copy and share by hand. */
+export function LinkPanel({
+  url,
+  expiresAt,
+  note,
+  emailed,
+  to,
+  what = 'Invite',
+}: {
+  url: string;
+  expiresAt: string;
+  note: string;
+  emailed?: boolean;
+  to?: string;
+  what?: 'Invite' | 'Reset link';
+}) {
   const id = useId();
   return (
     <div className="space-y-2 rounded-md bg-accent p-3">
+      {to && (
+        <p role="status" className={`text-sm font-semibold ${emailed ? 'text-primary' : 'text-danger'}`}>
+          {emailed ? `${what} emailed to ${to}.` : `Not emailed. Copy the link below and send it to ${to} yourself.`}
+        </p>
+      )}
       <Label htmlFor={id}>Link to share</Label>
       <div className="flex gap-2">
         <Input id={id} readOnly value={url} onFocus={(e) => e.target.select()} />

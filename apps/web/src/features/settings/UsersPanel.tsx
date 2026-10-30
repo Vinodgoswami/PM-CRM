@@ -144,7 +144,14 @@ export function UsersPanel() {
           <DialogContent>
             <DialogTitle>Password reset for {resetFor.user.name}</DialogTitle>
             <div className="mt-4">
-              <LinkPanel url={resetFor.link.url} expiresAt={resetFor.link.expiresAt} note="Works once and signs them out everywhere." />
+              <LinkPanel
+                url={resetFor.link.url}
+                expiresAt={resetFor.link.expiresAt}
+                note="Works once and signs them out everywhere."
+                emailed={resetFor.link.emailed}
+                to={resetFor.user.email}
+                what="Reset link"
+              />
             </div>
           </DialogContent>
         </Dialog>

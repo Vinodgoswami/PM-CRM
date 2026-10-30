@@ -12,7 +12,13 @@ export interface AppConfig {
   storage: StorageConfig;
   /** Where daily exchange rates come from (D-020): the public ECB-based service, fixed test rates, or none. */
   fx: { provider: 'frankfurter' | 'fixed' | 'off' };
+  /** Invite and reset emails: SMTP (any provider), written to the log (development), or not sent. */
+  email: EmailConfig;
 }
+
+export type EmailConfig =
+  | { transport: 'log' | 'off'; from: string }
+  | { transport: 'smtp'; from: string; smtp: { host: string; port: number; secure: boolean; user?: string; pass?: string } };
 
 export type StorageConfig =
   | { driver: 'local'; localDir: string }
@@ -35,6 +41,13 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   FX_PROVIDER: z.enum(['frankfurter', 'fixed', 'off']).default('frankfurter'),
+  EMAIL_TRANSPORT: z.enum(['smtp', 'log', 'off']).default('log'),
+  EMAIL_FROM: z.string().min(3).default('Project Management CRM <no-reply@localhost>'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
   STORAGE_LOCAL_DIR: z.string().min(1).default('./uploads'),
   S3_ENDPOINT: z
     .url()
@@ -65,6 +78,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     logLevel: e.LOG_LEVEL,
     storage: storageFrom(e),
     fx: { provider: e.FX_PROVIDER },
+    email: emailFrom(e),
   };
   if (config.nodeEnv === 'production') {
     const problems: string[] = [];
@@ -75,6 +89,22 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     if (problems.length) throw new ConfigError(problems);
   }
   return config;
+}
+
+function emailFrom(e: z.infer<typeof envSchema>): EmailConfig {
+  if (e.EMAIL_TRANSPORT !== 'smtp') return { transport: e.EMAIL_TRANSPORT, from: e.EMAIL_FROM };
+  if (!e.SMTP_HOST) throw new ConfigError(['SMTP_HOST: required when EMAIL_TRANSPORT=smtp']);
+  return {
+    transport: 'smtp',
+    from: e.EMAIL_FROM,
+    smtp: {
+      host: e.SMTP_HOST,
+      port: e.SMTP_PORT,
+      secure: e.SMTP_SECURE === 'true',
+      ...(e.SMTP_USER ? { user: e.SMTP_USER } : {}),
+      ...(e.SMTP_PASS ? { pass: e.SMTP_PASS } : {}),
+    },
+  };
 }
 
 function storageFrom(e: z.infer<typeof envSchema>): StorageConfig {
