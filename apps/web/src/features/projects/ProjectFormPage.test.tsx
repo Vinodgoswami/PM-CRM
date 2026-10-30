@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
 import { detail } from './fixtures';
 
 const clients = {
@@ -235,4 +235,52 @@ test('D-027 the edit page edits the whole project: client, booking amount and mi
   await user.click(await screen.findByRole('option', { name: 'Globex' }));
   await user.click(screen.getByRole('button', { name: 'Save changes' }));
   await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({ clientId: 'c2' }));
+});
+
+test('documents chosen on the new project form are uploaded to the project once it exists', async () => {
+  const api = stubApi({
+    'GET /clients': clients,
+    'POST /projects': created,
+    ...projectRoutes,
+    'POST /projects/p9/documents/upload-url': (req) => ({
+      status: 201,
+      body: {
+        documentId: `d-${(req.body as { name: string }).name}`,
+        url: '/api/v1/storage/local/t',
+        headers: { 'Content-Type': 'application/pdf' },
+      },
+    }),
+    'PUT /storage/local/t': { body: { ok: true } },
+    'POST /documents/d-SOW.pdf/confirm': { body: doc('SOW.pdf', 'SOW') },
+    'POST /documents/d-Contract.pdf/confirm': { body: doc('Contract.pdf', 'CONTRACT') },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user);
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.upload(screen.getByLabelText(/Add documents/), [
+    new File(['%PDF'], 'SOW.pdf', { type: 'application/pdf' }),
+    new File(['%PDF'], 'Contract.pdf', { type: 'application/pdf' }),
+  ]);
+  await choose(user, screen.getByRole('combobox', { name: 'Type of SOW.pdf' }), 'SOW');
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.filter((c) => c.path.endsWith('/confirm'))).toHaveLength(2));
+  const slots = api.calls.filter((c) => c.path === '/projects/p9/documents/upload-url').map((c) => c.body);
+  expect(slots).toEqual([
+    expect.objectContaining({ name: 'SOW.pdf', type: 'SOW' }),
+    expect.objectContaining({ name: 'Contract.pdf', type: 'CONTRACT' }),
+  ]);
+});
+
+const doc = (name: string, type: string) => ({
+  id: `d-${name}`,
+  name,
+  type,
+  mimeType: 'application/pdf',
+  sizeBytes: 4,
+  paymentId: null,
+  uploadedBy: { id: 'u1', name: 'Test User' },
+  createdAt: '2026-10-29T10:00:00.000Z',
 });

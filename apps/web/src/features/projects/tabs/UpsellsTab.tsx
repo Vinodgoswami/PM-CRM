@@ -7,6 +7,7 @@ import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useAddUpsell, useProjects, useRemoveUpsell, useSetParent } from '../api';
 import { StatusBadge } from '../StatusBadge';
+import { ProjectBookingSplit, projectBooking } from '../ProjectBookingSplit';
 import { OptionSelect } from '../../../components/OptionSelect';
 import { MoneyInput } from '../MoneyInput';
 
@@ -78,26 +79,11 @@ function Phases({ project }: { project: ProjectDetail }) {
       </section>
     );
   }
-  const entriesMinor = project.upsellEntries.reduce((s, u) => s + u.amountMinor, 0);
-  const phasesMinor = project.upsellProjects.reduce((s, u) => s + u.contractValueMinor, 0);
-  const initial = project.expectedAmountMinor;
-  const upsell = entriesMinor + phasesMinor;
-  const total = initial + upsell;
+  const { initial } = projectBooking(project);
   const nextPhase = project.upsellProjects.length + 2;
-  const share = (m: number) => (total > 0 ? `${(m * 100) / total}%` : '0%');
   return (
     <section className="space-y-4">
-      <div aria-label="Booking split" role="region" className="space-y-3 rounded-lg border border-border p-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Figure label="Initial booking" value={money(initial)} dot="bg-primary" />
-          <Figure label="Upsell" value={money(upsell)} dot="bg-warning" />
-          <Figure label="Total booking" value={money(total)} strong />
-        </div>
-        <div className="flex h-2 overflow-hidden rounded-full bg-accent" aria-hidden>
-          <span className="bg-primary" style={{ width: share(initial) }} />
-          <span className="bg-warning" style={{ width: share(upsell) }} />
-        </div>
-      </div>
+      <ProjectBookingSplit project={project} />
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-medium">Phases</h2>
@@ -144,18 +130,6 @@ function Phases({ project }: { project: ProjectDetail }) {
         )}
       </div>
     </section>
-  );
-}
-
-function Figure({ label, value, dot, strong }: { label: string; value: string; dot?: string; strong?: boolean }) {
-  return (
-    <div>
-      <p className="flex items-center gap-1.5 text-xs text-text-muted">
-        {dot && <span className={`size-2 rounded-full ${dot}`} aria-hidden />}
-        {label}
-      </p>
-      <p className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'font-medium'}`}>{value}</p>
-    </div>
   );
 }
 

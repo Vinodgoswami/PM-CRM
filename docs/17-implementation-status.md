@@ -80,6 +80,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-26 | Done   | feat/edit-from-invoices                | Edit from Upcoming Invoices: `canEdit` on invoice items, pencil link to the project's Milestones tab with `?edit=<milestone>` opening that row in edit mode                                                                                                                                 |
 | P4-27 | Done   | feat/project-edit-and-client-accordion | D-027 full project edit (client switch, edit client, milestones on the edit page), reset-payments endpoint and confirm dialog for paid milestones, client accordion with worth / initial booking / milestones paid / payment released, project list progress fields                         |
 | P4-28 | Done   | feat/project-edit-and-client-accordion | D-028 phases: `phase` and per-phase totals on project detail, Phases & upsell tab with booking split and Add Phase N, dashboard booking split (initial + upsell = total)                                                                                                                    |
+| P4-29 | Done   | feat/project-docs-back-overview        | Documents picker on the new project form (typed, uploaded after create), Back button on the project page, overview shows the booking split and phases instead of start / duration / end                                                                                                     |
 
 ## Blockers
 

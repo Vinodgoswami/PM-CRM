@@ -4,35 +4,32 @@ import { Link } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { StatusBadge } from '../StatusBadge';
+import { ProjectBookingSplit } from '../ProjectBookingSplit';
 
 export function OverviewTab({ project }: { project: ProjectDetail }) {
-  const duration = project.durationValue ? `${project.durationValue} ${project.durationUnit === 'WEEKS' ? 'weeks' : 'months'}` : '—';
   return (
     <div className="space-y-6">
       {project.description && <p className="max-w-prose whitespace-pre-line">{project.description}</p>}
       <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
-        <Item label="Start">{formatDate(project.startDate)}</Item>
-        <Item label="Duration">{duration}</Item>
-        <Item label="End">{formatDate(project.endDate)}</Item>
-        <Item label="Won on">{formatDate(project.wonAt)}</Item>
-        <Item label="Expected amount">{formatApiMoney(project.expectedAmountMinor, project.currency)}</Item>
+        <Item label="Hired on">{formatDate(project.wonAt)}</Item>
         {project.parent && (
-          <Item label="Extra work for">
+          <Item label="Phase">
             <Link className="text-primary hover:underline" to={`/projects/${project.parent.id}`}>
-              {project.parent.code} {project.parent.name}
+              Phase {project.phase} of {project.parent.code} {project.parent.name}
             </Link>
           </Item>
         )}
       </dl>
+      <ProjectBookingSplit project={project} />
 
       {project.upsellProjects.length > 0 && (
         <div className="space-y-2">
-          <h2 className="font-medium">Extra-work projects</h2>
+          <h2 className="font-medium">Phases</h2>
           <ul className="space-y-1 text-sm">
             {project.upsellProjects.map((u) => (
               <li key={u.id} className="flex items-center gap-2">
                 <Link className="text-primary hover:underline" to={`/projects/${u.id}`}>
-                  {u.code} {u.name}
+                  Phase {u.phase} · {u.code} {u.name}
                 </Link>
                 <StatusBadge status={u.status} />
               </li>

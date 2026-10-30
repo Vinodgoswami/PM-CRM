@@ -15,7 +15,7 @@ test('header shows totals and warns about unscheduled amounts', async () => {
   vi.stubGlobal('fetch', stubApi(base).fn);
   renderApp('/projects/p1', sessionFor('SALES'));
   expect(await screen.findByRole('heading', { name: 'Website Redesign' })).toBeInTheDocument();
-  expect(screen.getByText('₹1,25,000.00')).toBeInTheDocument();
+  expect(screen.getAllByText('₹1,25,000.00')[0]).toBeInTheDocument(); // contract value (also the overview's total booking)
   expect(screen.getByText(/₹25,000.00 not yet in milestones/)).toBeInTheDocument();
 });
 
@@ -121,4 +121,22 @@ test('D-028 a phase points back to its original project', async () => {
   vi.stubGlobal('fetch', stubApi({ ...base, 'GET /projects/p1': { body: child } }).fn);
   renderApp('/projects/p1?tab=upsells', sessionFor('SALES'));
   expect(await screen.findByRole('link', { name: /Phase 2 of PRJ-0000 Website/ })).toHaveAttribute('href', '/projects/p0');
+});
+
+test('the project page has a way back', async () => {
+  vi.stubGlobal('fetch', stubApi(base).fn);
+  const { router } = renderApp('/projects/p1', sessionFor('SALES'));
+  await userEvent.click(await screen.findByRole('button', { name: 'Back' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/projects'));
+});
+
+test('the overview shows the booking split and no start, duration or end', async () => {
+  vi.stubGlobal('fetch', stubApi(base).fn);
+  renderApp('/projects/p1', sessionFor('SALES'));
+  const split = await screen.findByRole('region', { name: 'Booking split' });
+  expect(split).toHaveTextContent('Initial booking₹1,00,000.00');
+  expect(split).toHaveTextContent('Upsell₹25,000.00');
+  expect(split).toHaveTextContent('Total booking₹1,25,000.00');
+  expect(screen.queryByText('Duration')).toBeNull();
+  expect(screen.queryByText('Expected amount')).toBeNull();
 });

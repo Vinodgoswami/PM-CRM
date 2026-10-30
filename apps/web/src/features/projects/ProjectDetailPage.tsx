@@ -15,8 +15,8 @@ import {
   TabsTrigger,
   toast,
 } from '@salescrm/ui';
-import { AlertTriangle, CheckCircle2, ChevronDown, Pencil } from 'lucide-react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronDown, Pencil } from 'lucide-react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { ApiError } from '../../lib/api';
 import { formatApiMoney } from '../../lib/money';
@@ -61,6 +61,7 @@ function ProjectView({ project }: { project: ProjectDetail }) {
   const money = (minor: number) => formatApiMoney(minor, project.currency);
   return (
     <section className="space-y-6">
+      <BackButton />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <p className="text-sm text-text-muted">
@@ -160,6 +161,23 @@ function MarkCompleted({ project }: { project: ProjectDetail }) {
   return (
     <Button onClick={complete} disabled={change.isPending}>
       <CheckCircle2 className="size-4" /> Mark as completed
+    </Button>
+  );
+}
+
+/** Back to where the user came from (clients, invoices, a phase…), or to Projects when the page was opened directly. */
+function BackButton() {
+  const navigate = useNavigate();
+  const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 -mb-4 text-text-muted"
+      aria-label="Back"
+      onClick={() => (canGoBack ? navigate(-1) : navigate('/projects'))}
+    >
+      <ArrowLeft className="size-4" /> Back
     </Button>
   );
 }
