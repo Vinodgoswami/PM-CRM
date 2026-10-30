@@ -5,39 +5,40 @@ but that is never the only protection.
 
 | Role  | Who              | In one line                                                                                     |
 | ----- | ---------------- | ----------------------------------------------------------------------------------------------- |
-| ADMIN | Owner / IT       | Accounts only: adds CEOs and anyone, company name, account audit, counts — no business data     |
+| ADMIN | Owner / IT       | Accounts, plus the dashboard's figures with no client or project names (D-022)                  |
 | SALES | Project Manager  | Works on own projects; sees own performance, quarter by quarter                                 |
 | CEO   | CEO / management | Adds Project Managers; works on any client and project; reversals, settings, import, full audit |
 
 **Flow (D-018, D-021):** Admin creates the CEO → the CEO creates Project Managers → the CEO and Project Managers create
 clients, projects and everything inside them (milestones, payments, extra work, documents). When the CEO creates a
-project they choose the Project Manager who owns it; only Project Managers own projects. The Admin never sees client,
-project or money data — only counts (`/admin/overview`) and account events in the audit log. Someone with access to
+project they choose the Project Manager who owns it; only Project Managers own projects. The Admin never sees client or
+project records — on the dashboard they get every figure and chart, the people counts and the upcoming-invoice totals,
+but lists naming clients or projects are left out (D-022); the audit log shows them account events only. Someone with access to
 the server or database can still see everything; this boundary is inside the app.
 
 ## Permission matrix
 
-| Permission key      | Capability                                              | ADMIN    | SALES        | CEO     |
-| ------------------- | ------------------------------------------------------- | -------- | ------------ | ------- |
-| `admin.overview`    | Counts only: users by role, clients, projects, payments | ✓        | —            | —       |
-| `dashboard.company` | Company-wide dashboard + team performance, compare      | —        | —            | ✓       |
-| `dashboard.own`     | Dashboard filtered to own projects                      | —        | ✓            | ✓       |
-| `invoices.read`     | Upcoming invoices & overdue list                        | —        | own          | all     |
-| `billing.read`      | Completed Billing                                       | —        | own          | all     |
-| `export`            | PDF / CSV exports                                       | —        | own data     | ✓       |
-| `projects.read`     | Projects, milestones, upsells, documents                | —        | all (view)\* | all     |
-| `clients.read`      | Clients                                                 | —        | all          | all     |
-| `projects.write`    | Create/edit projects, milestones, upsells, documents    | —        | own          | all     |
-| `clients.write`     | Create/edit clients                                     | —        | ✓            | ✓       |
-| `payments.create`   | Mark as paid                                            | —        | own          | all     |
-| `payments.editMeta` | Edit invoice ID / date / label / note / rate            | —        | own          | all     |
-| `payments.reverse`  | Reverse a payment                                       | —        | —            | ✓       |
-| `projects.reassign` | Change project owner; jump project stages               | —        | —            | ✓       |
-| `users.manage`      | Invite users, change roles, deactivate                  | ✓        | —            | PMs\*\* |
-| `settings.company`  | Company name                                            | ✓        | —            | ✓       |
-| `settings.manage`   | Currency, FY start, timezone, due-soon days; CSV import | —        | —            | ✓       |
-| `audit.read`        | Audit log                                               | accounts | —            | ✓       |
-| `audit.business`    | Client, project and money events in the audit log       | —        | —            | ✓       |
+| Permission key      | Capability                                                                        | ADMIN        | SALES        | CEO     |
+| ------------------- | --------------------------------------------------------------------------------- | ------------ | ------------ | ------- |
+| `admin.overview`    | Counts only: users by role, clients, projects, payments                           | ✓            | —            | —       |
+| `dashboard.company` | Company-wide dashboard + team performance, compare (Admin: names left out, D-022) | ✓            | —            | ✓       |
+| `dashboard.own`     | Dashboard                                                                         | ✓ (no names) | ✓            | ✓       |
+| `invoices.read`     | Upcoming invoices & overdue list                                                  | —            | own          | all     |
+| `billing.read`      | Completed Billing                                                                 | —            | own          | all     |
+| `export`            | PDF / CSV exports                                                                 | —            | own data     | ✓       |
+| `projects.read`     | Projects, milestones, upsells, documents                                          | —            | all (view)\* | all     |
+| `clients.read`      | Clients                                                                           | —            | all          | all     |
+| `projects.write`    | Create/edit projects, milestones, upsells, documents                              | —            | own          | all     |
+| `clients.write`     | Create/edit clients                                                               | —            | ✓            | ✓       |
+| `payments.create`   | Mark as paid                                                                      | —            | own          | all     |
+| `payments.editMeta` | Edit invoice ID / date / label / note / rate                                      | —            | own          | all     |
+| `payments.reverse`  | Reverse a payment                                                                 | —            | —            | ✓       |
+| `projects.reassign` | Change project owner; jump project stages                                         | —            | —            | ✓       |
+| `users.manage`      | Invite users, change roles, deactivate                                            | ✓            | —            | PMs\*\* |
+| `settings.company`  | Company name                                                                      | ✓            | —            | ✓       |
+| `settings.manage`   | Currency, FY start, timezone, due-soon days; CSV import                           | —            | —            | ✓       |
+| `audit.read`        | Audit log                                                                         | accounts     | —            | ✓       |
+| `audit.business`    | Client, project and money events in the audit log                                 | —            | —            | ✓       |
 
 "Own" = `project.ownerId === currentUser.id`.
 

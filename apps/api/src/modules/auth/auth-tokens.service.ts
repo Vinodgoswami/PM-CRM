@@ -58,6 +58,11 @@ export class AuthTokensService {
     return new AppError(400, 'VALIDATION_FAILED', 'This link is invalid or has expired. Ask your admin for a new one.');
   }
 
+  /** The usable token row, for showing an invite before it is accepted. */
+  async peek(tx: Prisma.TransactionClient, kind: AuthTokenKind, token: string): Promise<AuthToken> {
+    return this.findUsable(tx, kind, token);
+  }
+
   /** Cheap pre-check for public routes, run before any expensive work. Not a reservation: `consume` decides. */
   async assertUsable(tx: Prisma.TransactionClient, kind: AuthTokenKind, token: string): Promise<void> {
     await this.findUsable(tx, kind, token);

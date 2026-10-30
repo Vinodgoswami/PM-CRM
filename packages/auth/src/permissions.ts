@@ -9,8 +9,9 @@ export type Scope = 'all' | 'own' | false;
 export const PERMISSIONS = {
   // D-021: the Admin manages accounts and sees counts only; clients, projects and money are the CEO's and PMs'.
   'admin.overview': { ADMIN: 'all', SALES: false, CEO: false },
-  'dashboard.company': { ADMIN: false, SALES: false, CEO: 'all' },
-  'dashboard.own': { ADMIN: false, SALES: 'all', CEO: 'all' },
+  // D-022: the Admin sees the business figures on the dashboard with client and project names left out.
+  'dashboard.company': { ADMIN: 'all', SALES: false, CEO: 'all' },
+  'dashboard.own': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
   'invoices.read': { ADMIN: false, SALES: 'own', CEO: 'all' },
   'billing.read': { ADMIN: false, SALES: 'own', CEO: 'all' },
   export: { ADMIN: false, SALES: 'own', CEO: 'all' },

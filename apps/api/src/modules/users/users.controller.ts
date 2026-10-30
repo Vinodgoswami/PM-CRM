@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import {
   type InviteUserInput,
   inviteUserSchema,
@@ -20,6 +20,22 @@ export class UsersController {
   @Get()
   list(): Promise<{ items: UserListItem[] }> {
     return this.users.list();
+  }
+
+  @Get('invites')
+  invites(@CurrentUser() actor: SessionUser) {
+    return this.users.listInvites(actor);
+  }
+
+  @Post('invites/:id/resend')
+  resend(@CurrentUser() actor: SessionUser, @Param('id') id: string): Promise<LinkResponse> {
+    return this.users.resendInvite(actor, id);
+  }
+
+  @Delete('invites/:id')
+  @HttpCode(204)
+  cancel(@CurrentUser() actor: SessionUser, @Param('id') id: string): Promise<void> {
+    return this.users.cancelInvite(actor, id);
   }
 
   @Post('invite')

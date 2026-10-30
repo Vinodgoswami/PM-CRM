@@ -128,4 +128,11 @@ export class AuthService {
       await this.audit.record(tx, { actorId: user.id, action: 'user.change_password', entity: 'User', entityId: user.id });
     });
   }
+
+  /** Public: who an invite link is for, so the page can say so before the password is chosen. */
+  async invitePreview(token: string) {
+    const row = await this.tokens.peek(this.prisma, 'INVITE', token);
+    const settings = await this.prisma.setting.findUnique({ where: { id: 1 }, select: { companyName: true } });
+    return { email: row.email, name: row.name, role: row.role, companyName: settings?.companyName ?? '' };
+  }
 }

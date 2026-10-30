@@ -5,11 +5,11 @@ import {
   Building2,
   FileClock,
   FolderKanban,
-  Gauge,
   LayoutDashboard,
   ScrollText,
   Settings,
   type LucideIcon,
+  UsersRound,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -21,14 +21,13 @@ export interface NavItem {
 
 // Order and visibility follow docs/08-screens-and-flows.md § Navigation by role.
 export const NAV_ITEMS: NavItem[] = [
-  // D-021: the Admin's home is a counts-only overview; everyone else lands on the dashboard.
-  { label: 'Overview', path: '/', permission: 'admin.overview', icon: Gauge },
   { label: 'Dashboard', path: '/', permission: 'dashboard.own', icon: LayoutDashboard },
   { label: 'Upcoming Invoices', path: '/invoices', permission: 'invoices.read', icon: FileClock },
   { label: 'Projects', path: '/projects', permission: 'projects.read', icon: FolderKanban },
   { label: 'Completed Billing', path: '/billing', permission: 'billing.read', icon: BadgeIndianRupee },
   { label: 'Clients', path: '/clients', permission: 'clients.read', icon: Building2 },
-  { label: 'Settings', path: '/settings', permission: 'users.manage', icon: Settings },
+  { label: 'Users', path: '/users', permission: 'users.manage', icon: UsersRound },
+  { label: 'Settings', path: '/settings', permission: 'settings.company', icon: Settings },
   { label: 'Audit log', path: '/audit', permission: 'audit.read', icon: ScrollText },
 ];
 

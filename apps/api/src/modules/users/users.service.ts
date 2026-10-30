@@ -7,6 +7,7 @@ import { type SessionUser } from '../../common/current-user';
 import { AppError, conflict, forbidden, notFound } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { AuthTokensService } from '../auth/auth-tokens.service';
+import { type Prisma } from '@salescrm/database';
 import { PrismaService } from '../prisma/prisma.module';
 
 const ROLE_NAME: Record<Role, string> = { ADMIN: 'Admin', CEO: 'CEO', SALES: 'Project Manager' };
@@ -45,6 +46,8 @@ export class UsersService {
       if (await tx.user.findUnique({ where: { email: input.email } })) {
         throw conflict('CONFLICT', 'A user with this email already exists');
       }
+      // A new invite for the same email replaces any pending one, so only the latest link works.
+      await tx.authToken.updateMany({ where: { kind: 'INVITE', email: input.email, usedAt: null }, data: { usedAt: new Date() } });
       const link = await this.tokens.issue(tx, 'INVITE', { ...input, createdById: actor.id });
       await this.audit.record(tx, {
         actorId: actor.id,
@@ -106,6 +109,68 @@ export class UsersService {
       const link = await this.tokens.issue(tx, 'RESET', { email: user.email, userId: user.id, createdById: actor.id });
       await this.audit.record(tx, { actorId: actor.id, action: 'user.reset_link', entity: 'User', entityId: id });
       return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+    });
+  }
+
+  /** Invites not yet accepted (and not expired), for roles the viewer may manage. */
+  async listInvites(actor: SessionUser) {
+    const rows = await this.prisma.authToken.findMany({
+      where: { kind: 'INVITE', usedAt: null, expiresAt: { gt: new Date() }, role: { in: manageableRoles(actor.role) } },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        role: r.role!,
+        expiresAt: r.expiresAt.toISOString(),
+        invitedBy: r.createdBy.name,
+      })),
+    };
+  }
+
+  private async pendingInvite(tx: Prisma.TransactionClient, actor: SessionUser, id: string) {
+    const row = await tx.authToken.findUnique({ where: { id } });
+    if (!row || row.kind !== 'INVITE' || row.usedAt || !row.role) throw notFound();
+    assertManages(actor, row.role);
+    return row;
+  }
+
+  /** A fresh link for a pending invite; the old link stops working. */
+  async resendInvite(actor: SessionUser, id: string): Promise<LinkResponse> {
+    return this.prisma.$transaction(async (tx) => {
+      const old = await this.pendingInvite(tx, actor, id);
+      await tx.authToken.update({ where: { id }, data: { usedAt: new Date() } });
+      const link = await this.tokens.issue(tx, 'INVITE', {
+        email: old.email,
+        ...(old.name ? { name: old.name } : {}),
+        role: old.role!,
+        createdById: actor.id,
+      });
+      await this.audit.record(tx, {
+        actorId: actor.id,
+        action: 'user.invite_resend',
+        entity: 'AuthToken',
+        entityId: link.id,
+        after: { email: old.email },
+      });
+      return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+    });
+  }
+
+  async cancelInvite(actor: SessionUser, id: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const row = await this.pendingInvite(tx, actor, id);
+      await tx.authToken.update({ where: { id }, data: { usedAt: new Date() } });
+      await this.audit.record(tx, {
+        actorId: actor.id,
+        action: 'user.invite_cancel',
+        entity: 'AuthToken',
+        entityId: id,
+        after: { email: row.email },
+      });
     });
   }
 }

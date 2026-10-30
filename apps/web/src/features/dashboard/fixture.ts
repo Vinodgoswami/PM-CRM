@@ -2,6 +2,8 @@ import { type Dashboard } from '@salescrm/schemas';
 
 export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
   currency: 'INR',
+  anonymous: false,
+  upcomingSummary: [],
   otherCurrencyProjects: 0,
   period: { key: 'THIS_FY', from: '2026-04-01', to: '2027-03-31' },
   kpis: {

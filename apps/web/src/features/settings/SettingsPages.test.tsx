@@ -10,7 +10,7 @@ const users = {
     { id: 'u2', name: 'Rohan', email: 'rohan@example.com', role: 'SALES', active: true, lastLoginAt: '2026-10-28T10:00:00.000Z' },
   ],
 };
-const base = { 'GET /settings': { body: settings }, 'GET /users': { body: users } };
+const base = { 'GET /settings': { body: settings }, 'GET /users': { body: users }, 'GET /users/invites': { body: { items: [] } } };
 
 test('company settings save only the fields that changed', async () => {
   const api = stubApi({ ...base, 'PATCH /settings': ({ body }) => ({ body: { ...settings, ...(body as object) } }) });
@@ -31,10 +31,9 @@ test('inviting a user shows the link to share, with copy', async () => {
     'POST /users/invite': { status: 201, body: { url: 'http://localhost:5173/invite/abc', expiresAt: '2026-11-01T10:00:00.000Z' } },
   });
   vi.stubGlobal('fetch', api.fn);
-  renderApp('/settings', sessionFor('ADMIN'));
+  renderApp('/users', sessionFor('ADMIN'));
   const user = userEvent.setup(); // installs user-event's clipboard stub, so spy on it afterwards
   const writeText = vi.spyOn(navigator.clipboard, 'writeText');
-  await user.click(await screen.findByRole('tab', { name: 'Users' }));
   await user.click(await screen.findByRole('button', { name: 'Invite user' }));
   await user.type(screen.getByLabelText('Name'), 'Meera');
   await user.type(screen.getByLabelText('Email'), 'meera@example.com');
@@ -55,9 +54,8 @@ test('a refused role change shows the server explanation', async () => {
       'PATCH /users/u2': { status: 409, body: { error: { code: 'LAST_ADMIN', message: 'At least one active admin must remain' } } },
     }).fn,
   );
-  renderApp('/settings', sessionFor('ADMIN'));
+  renderApp('/users', sessionFor('ADMIN'));
   const user = userEvent.setup();
-  await user.click(await screen.findByRole('tab', { name: 'Users' }));
   await choose(user, await screen.findByLabelText('Role for Rohan'), 'CEO');
   expect(await screen.findByText('At least one active admin must remain')).toBeInTheDocument();
 });

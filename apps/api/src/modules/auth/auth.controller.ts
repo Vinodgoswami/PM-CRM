@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 import { type AppConfig } from '@salescrm/config';
 import {
   type AcceptInviteInput,
@@ -42,6 +42,12 @@ export class AuthController {
     const { token, ...session } = await this.auth.login(body, req.ip ?? 'unknown', req.headers['user-agent']);
     res.cookie(SESSION_COOKIE, token, { ...this.cookieOptions(), maxAge: ABSOLUTE_TIMEOUT_MS });
     return session;
+  }
+
+  @Public()
+  @Get('invite/:token')
+  invitePreview(@Param('token') token: string) {
+    return this.auth.invitePreview(token);
   }
 
   @Public()
