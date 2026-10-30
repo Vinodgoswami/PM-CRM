@@ -4,7 +4,7 @@ import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, CalendarClock, FileDown, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
@@ -15,6 +15,9 @@ import { HatchedBars, monthLabel, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
 import { DrillDownDialog } from './DrillDownDialog';
 import { DueCalendar } from './DueCalendar';
+import { ClientBars, Funnel, QuarterBars, SeriesToggle, UpsellDonut, YoyLine } from './MoreCharts';
+import { Panel } from './Panel';
+import { TeamTable } from './TeamTable';
 import { APP_NAME } from '../../lib/brand';
 import { useCountUp } from './useCountUp';
 
@@ -50,39 +53,6 @@ function Delta({ value, inverse = false }: { value: number | null; inverse?: boo
       {value >= 0 ? '+' : ''}
       {value}%
     </span>
-  );
-}
-
-function Panel({
-  title,
-  subtitle,
-  action,
-  children,
-  className = '',
-}: {
-  title: string;
-  subtitle?: string;
-  action?: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <motion.section
-      aria-label={title}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.2, 0, 0, 1] }}
-      className={`min-w-0 rounded-xl bg-surface p-5 shadow-card ${className}`}
-    >
-      <header className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-bold">{title}</h2>
-          {subtitle && <p className="text-xs text-text-muted">{subtitle}</p>}
-        </div>
-        {action}
-      </header>
-      {children}
-    </motion.section>
   );
 }
 
@@ -187,6 +157,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
   const outstanding = useCountUp(k.outstandingMinor);
   const [series, setSeries] = useState<'collected' | 'booked'>('collected');
   const [drill, setDrill] = useState<string | null>(null);
+  const [qSeries, setQSeries] = useState<'booked' | 'collected'>('booked');
   const bars = data.monthly.map((m) => ({
     key: m.month,
     label: monthLabel(m.month),
@@ -289,7 +260,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
         </Panel>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <section aria-label="Key figures" className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Kpi label="Booked" value={money(k.bookedMinor)} delta={pct(k.bookedMinor, data.previous?.bookedMinor)} />
         <Kpi label="Expected in period" value={money(k.expectedMinor)} />
         <Kpi label="Due next 30 days" value={money(k.dueNext30Minor)} />
@@ -299,11 +270,27 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
           value={k.bookedMinor > 0 ? `${Math.round((k.upsellMinor * 100) / k.bookedMinor)}%` : '—'}
           hint={money(k.upsellMinor)}
         />
+        <Kpi label="Collection rate" value={k.collectionRate === null ? '—' : `${Math.round(k.collectionRate * 100)}%`} />
+        <Kpi label="Avg deal" value={k.avgDealMinor === null ? '—' : money(k.avgDealMinor)} />
         <Kpi
-          label="Collection rate"
-          value={k.collectionRate === null ? '—' : `${Math.round(k.collectionRate * 100)}%`}
-          hint={k.avgDealMinor ? `Avg deal ${money(k.avgDealMinor)}` : undefined}
+          label="Avg days to pay"
+          value={k.avgDaysToPay === null ? '—' : `${k.avgDaysToPay} days`}
+          hint={k.avgDaysToPay !== null && k.avgDaysToPay < 0 ? 'Paid early on average' : 'After the due date'}
         />
+      </section>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <Panel
+          title="Quarter comparison"
+          subtitle="This financial year against last"
+          className="lg:col-span-6"
+          action={<SeriesToggle label="Quarter series" value={qSeries} options={['booked', 'collected'] as const} onChange={setQSeries} />}
+        >
+          <QuarterBars data={data.quarters} series={qSeries} money={money} />
+        </Panel>
+        <Panel title="Year over year" subtitle="Cumulative money collected" className="lg:col-span-6">
+          <YoyLine data={data.yearOverYear} money={money} />
+        </Panel>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
@@ -347,9 +334,71 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <Panel
+          title="Overdue milestones"
+          subtitle="Most days overdue first"
+          className="lg:col-span-7"
+          action={<CornerLink to="/invoices" label="Open upcoming invoices" />}
+        >
+          {data.overdue.length === 0 ? (
+            <p className="text-sm text-text-muted">Nothing overdue. </p>
+          ) : (
+            <Table className="text-sm">
+              <THead>
+                <TR>
+                  <TH>Milestone</TH>
+                  <TH>Salesperson</TH>
+                  <TH className="text-right">Overdue</TH>
+                  <TH className="text-right">Balance</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {data.overdue.map((o) => (
+                  <TR key={o.milestoneId}>
+                    <TD>
+                      <Link to={`/projects/${o.project.id}`} className="font-medium hover:underline">
+                        M{o.number} {o.title}
+                      </Link>
+                      <p className="text-xs text-text-muted">
+                        {o.client.name} · {o.project.code}
+                      </p>
+                    </TD>
+                    <TD>{o.owner.name}</TD>
+                    <TD className="text-right font-semibold text-danger tabular-nums">{o.daysOverdue} days</TD>
+                    <TD className="text-right font-semibold tabular-nums">{money(o.balanceMinor)}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          )}
+        </Panel>
+
+        <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-5">
+          <ul className="space-y-3">
+            {agingRows.map((r, i) => (
+              <li key={r.label} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">{r.label}</span>
+                  <span className="font-semibold tabular-nums">{money(r.value)}</span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-background">
+                  <motion.div
+                    className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(r.value / agingMax) * 100}%` }}
+                    transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <Panel
           title="Recent payments"
           subtitle="Latest money in"
-          className="lg:col-span-12 xl:col-span-6"
+          className="lg:col-span-7"
           action={<CornerLink to="/billing" label="Completed billing" />}
         >
           {data.recentPayments.length === 0 ? (
@@ -388,83 +437,21 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
           )}
         </Panel>
 
-        <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-6 xl:col-span-3">
-          <ul className="space-y-3">
-            {agingRows.map((r, i) => (
-              <li key={r.label} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">{r.label}</span>
-                  <span className="font-semibold tabular-nums">{money(r.value)}</span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-background">
-                  <motion.div
-                    className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(r.value / agingMax) * 100}%` }}
-                    transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-
-        <Panel title="Top clients" subtitle="By money collected in the period" className="lg:col-span-6 xl:col-span-3">
-          {data.topClients.length === 0 ? (
-            <p className="text-sm text-text-muted">No client activity in this period.</p>
-          ) : (
-            <ul className="space-y-3">
-              {data.topClients.map((c, i) => (
-                <li key={c.id} className="flex items-center gap-3">
-                  <span
-                    className={`grid size-9 place-items-center rounded-full text-sm font-bold ${i === 0 ? 'bg-primary text-primary-contrast' : 'bg-accent text-primary'}`}
-                  >
-                    {c.name.slice(0, 1)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <Link to={`/clients/${c.id}`} className="block truncate font-medium hover:underline">
-                      {c.name}
-                    </Link>
-                    <p className="text-xs text-text-muted">Booked {money(c.bookedMinor)}</p>
-                  </div>
-                  <span className="font-semibold tabular-nums">{money(c.collectedMinor)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+        <Panel title="Revenue by client" subtitle="Collected in the period (track = booked)" className="lg:col-span-5">
+          <ClientBars data={data.clientRevenue} money={money} />
         </Panel>
       </div>
 
-      {data.team && (
-        <Panel title="Team performance" subtitle="Per salesperson, this period">
-          <Table>
-            <THead>
-              <TR>
-                <TH>Salesperson</TH>
-                <TH className="text-right">Booked</TH>
-                <TH className="text-right">Collected</TH>
-                <TH className="text-right">Outstanding</TH>
-                <TH className="text-right">Overdue</TH>
-                <TH className="text-right">Upsell</TH>
-                <TH className="text-right">Active projects</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {data.team.map((t) => (
-                <TR key={t.user.id}>
-                  <TD className="font-medium">{t.user.name}</TD>
-                  <TD className="text-right tabular-nums">{money(t.bookedMinor)}</TD>
-                  <TD className="text-right tabular-nums text-success">{money(t.collectedMinor)}</TD>
-                  <TD className="text-right tabular-nums">{money(t.outstandingMinor)}</TD>
-                  <TD className={`text-right tabular-nums ${t.overdueMinor > 0 ? 'text-danger' : ''}`}>{money(t.overdueMinor)}</TD>
-                  <TD className="text-right tabular-nums">{money(t.upsellMinor)}</TD>
-                  <TD className="text-right tabular-nums">{t.activeProjects}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <Panel title="Pipeline" subtitle="Projects by current status · count and value" className="lg:col-span-7">
+          <Funnel data={data.funnel} money={money} />
         </Panel>
-      )}
+        <Panel title="New vs upsell" subtitle="Booked in the period" className="lg:col-span-5">
+          <UpsellDonut bookedMinor={k.bookedMinor} upsellMinor={k.upsellMinor} money={money} />
+        </Panel>
+      </div>
+
+      {data.team && <TeamTable team={data.team} currency={data.currency} />}
     </div>
   );
 }

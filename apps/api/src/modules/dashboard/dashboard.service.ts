@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { scopeFor } from '@salescrm/auth/permissions';
-import { agingBuckets, cashInForecast, comparableRange, type MetricProject, monthlySeries, periodRange, summarise } from '@salescrm/core';
+import {
+  agingBuckets,
+  cashInForecast,
+  comparableRange,
+  fyOf,
+  type MetricProject,
+  monthlySeries,
+  periodRange,
+  pipelineFunnel,
+  quarterComparison,
+  summarise,
+  yearOverYear,
+} from '@salescrm/core';
 import { type Dashboard, type DashboardQuery } from '@salescrm/schemas';
 import { minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
@@ -10,6 +22,7 @@ import { SettingsService } from '../settings/settings.service';
 
 const j = minorToJson;
 const EVER = { from: '0000-01-01', to: '9999-12-31' };
+const BOOKED: string[] = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'];
 
 /** docs/09: one call for KPIs, charts, team performance and the two tables. */
 @Injectable()
@@ -94,6 +107,13 @@ export class DashboardService {
               overdueMinor: j(t.overdueMinor),
               upsellMinor: j(t.upsellMinor),
               activeProjects: mine.filter((p) => p.status === 'ACTIVE').length,
+              winRate: t.winRate,
+              avgDealMinor: t.wonCount > 0 ? j(t.wonExpectedMinor / BigInt(t.wonCount)) : null,
+              monthly: monthlySeries(mine, months, today).map((x) => ({
+                month: x.month,
+                bookedMinor: j(x.bookedMinor),
+                collectedMinor: j(x.collectedMinor),
+              })),
             };
           })
           .sort((a, b) => b.bookedMinor - a.bookedMinor)
@@ -121,6 +141,52 @@ export class DashboardService {
         project: { id: p.id, code: p.code, name: p.name },
         client: p.client,
       }));
+
+    const overdue = rows
+      .flatMap((p) =>
+        BOOKED.includes(p.status)
+          ? p.milestones.map((ms) => ({
+              p,
+              ms,
+              balance: ms.amountMinor - ms.payments.reduce((a, x) => a + x.amountMinor, 0n),
+              due: isoDate(ms.dueDate),
+            }))
+          : [],
+      )
+      .filter((x) => x.balance > 0n && x.due !== null && x.due < today)
+      .sort((a, b) => a.due!.localeCompare(b.due!))
+      .slice(0, 10)
+      .map(({ p, ms, balance, due }) => ({
+        milestoneId: ms.id,
+        number: ms.number,
+        title: ms.title,
+        balanceMinor: j(balance),
+        dueDate: due!,
+        daysOverdue: Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${due!}T00:00:00Z`)) / 86_400_000),
+        project: { id: p.id, code: p.code, name: p.name },
+        client: p.client,
+        owner: p.owner,
+      }));
+
+    // C6: top 10 by collected, the rest folded into "Others".
+    const ranked = [...byClient.values()]
+      .filter((c) => c.collected > 0n || c.booked > 0n)
+      .sort((a, b) => (b.collected > a.collected ? 1 : b.collected < a.collected ? -1 : 0));
+    const rest = ranked.slice(10);
+    const clientRevenue = [
+      ...ranked.slice(0, 10).map((c) => ({ id: c.id, name: c.name, bookedMinor: j(c.booked), collectedMinor: j(c.collected) })),
+      ...(rest.length
+        ? [
+            {
+              id: null,
+              name: `Others (${rest.length})`,
+              bookedMinor: j(rest.reduce((a, c) => a + c.booked, 0n)),
+              collectedMinor: j(rest.reduce((a, c) => a + c.collected, 0n)),
+            },
+          ]
+        : []),
+    ];
+    const fyFrom = fyOf(range.from ?? today, settings.fyStartMonth).start;
 
     const recentPayments = rows
       .flatMap((p) => p.milestones.flatMap((ms) => ms.payments.map((pay) => ({ p, pay }))))
@@ -154,6 +220,7 @@ export class DashboardService {
         wonCount: s.wonCount,
         winRate: s.winRate,
         avgDealMinor: s.wonCount > 0 ? j(s.wonExpectedMinor / BigInt(s.wonCount)) : null,
+        avgDaysToPay: s.avgDaysToPay,
       },
       previous: prev ? { bookedMinor: j(prev.bookedMinor), collectedMinor: j(prev.collectedMinor) } : null,
       monthly: monthlySeries(metric, months, today).map((x) => ({
@@ -164,6 +231,21 @@ export class DashboardService {
       })),
       forecast: cashInForecast(metric, today, 6).map((x) => ({ month: x.month, scheduledMinor: j(x.scheduledMinor) })),
       aging: { d1_30: j(aging.d1_30), d31_60: j(aging.d31_60), d61_90: j(aging.d61_90), d90plus: j(aging.d90plus) },
+      quarters: quarterComparison(metric, fyFrom, today).map((x) => ({
+        label: x.label,
+        bookedMinor: j(x.bookedMinor),
+        collectedMinor: j(x.collectedMinor),
+        prevBookedMinor: j(x.prevBookedMinor),
+        prevCollectedMinor: j(x.prevCollectedMinor),
+      })),
+      yearOverYear: yearOverYear(metric, fyFrom, today).map((x) => ({
+        month: x.month,
+        cumulativeMinor: x.cumulativeMinor === null ? null : j(x.cumulativeMinor),
+        previousCumulativeMinor: j(x.previousCumulativeMinor),
+      })),
+      clientRevenue,
+      funnel: pipelineFunnel(metric).map((f) => ({ status: f.status, count: f.count, valueMinor: j(f.valueMinor) })),
+      overdue,
       topClients: [...byClient.values()]
         .filter((c) => c.collected > 0n || c.booked > 0n)
         .sort((a, b) => (b.collected > a.collected ? 1 : b.collected < a.collected ? -1 : 0))

@@ -83,3 +83,40 @@ test('K11 win rate counts projects won and lost in the period', async () => {
   const res = await rep.agent.get('/api/v1/dashboard?period=THIS_FY');
   expect(res.body.kpis.winRate).toBeCloseTo(0.5);
 });
+
+test('the dashboard returns quarters, year over year, client revenue, funnel, overdue list and team extras', async () => {
+  const rep = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(rep.agent, rep.csrf, 'Acme', 100000);
+  // An overdue milestone: due 10 days ago, unpaid.
+  const due = new Date(Date.parse(`${today()}T00:00:00Z`) - 10 * 86_400_000).toISOString().slice(0, 10);
+  await rep.agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', rep.csrf)
+    .send({
+      name: 'Late',
+      expectedAmountMinor: 30000,
+      status: 'WON',
+      newClient: { name: 'Bluepeak' },
+      milestones: [{ title: 'Kickoff', amountMinor: 30000, dueDate: due }],
+    })
+    .expect(201);
+  const ceo = await loginAs(app, prisma, 'CEO');
+  const res = await ceo.agent.get('/api/v1/dashboard?period=THIS_FY');
+  expect(res.status).toBe(200);
+  expect(res.body.kpis.avgDaysToPay).toBe(0);
+  expect(res.body.quarters).toHaveLength(4);
+  expect(res.body.quarters.reduce((s: number, q: { bookedMinor: number }) => s + q.bookedMinor, 0)).toBe(130000);
+  expect(res.body.yearOverYear).toHaveLength(12);
+  expect(res.body.clientRevenue.map((c: { name: string }) => c.name)).toEqual(['Acme', 'Bluepeak']);
+  expect(res.body.funnel.find((f: { status: string }) => f.status === 'WON')).toEqual({ status: 'WON', count: 2, valueMinor: 130000 });
+  expect(res.body.overdue).toEqual([
+    expect.objectContaining({
+      title: 'Kickoff',
+      balanceMinor: 30000,
+      daysOverdue: 10,
+      client: expect.objectContaining({ name: 'Bluepeak' }),
+    }),
+  ]);
+  expect(res.body.team[0]).toMatchObject({ winRate: 1, avgDealMinor: 65000 });
+  expect(res.body.team[0].monthly).toHaveLength(12);
+});

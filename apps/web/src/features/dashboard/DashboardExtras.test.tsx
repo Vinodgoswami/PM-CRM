@@ -98,7 +98,7 @@ test('on the Booked series the drill-down lists projects won that month', async 
   vi.stubGlobal('fetch', api.fn);
   renderApp('/', sessionFor('CEO'));
   const user = userEvent.setup();
-  await user.click(await screen.findByRole('radio', { name: 'booked' }));
+  await user.click(within(await screen.findByRole('radiogroup', { name: 'Series' })).getByRole('radio', { name: 'booked' }));
   await user.click(await screen.findByRole('button', { name: /^Dec: / }));
   const dialog = await screen.findByRole('dialog');
   expect(dialog).toHaveTextContent('Won in December 2026');

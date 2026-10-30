@@ -30,7 +30,7 @@ Each card: value, delta vs comparison (▲/▼ with %), 12-point sparkline, clic
 | K7  | Pipeline            | Σ expectedAmount of LEAD + PROPOSAL projects (point-in-time)                                                                                | Projects (pipeline)   |
 | K8  | Upsell revenue      | Upsell part of K1 (upsell entries ∈ P + expectedAmount of projects with a parent won ∈ P), and % of K1                                      | Projects (upsells)    |
 | K9  | Collection rate     | Σ paid on milestones due ∈ P ÷ K3                                                                                                           | Invoices (P)          |
-| K10 | Avg days to pay     | mean(`paymentDate − dueDate`) over payments ∈ P whose milestone has a due date                                                              | Completed Billing     |
+| K10 | Avg days to pay     | mean(`paymentDate − dueDate`) over payments ∈ P (reversals excluded) whose milestone has a due date                                         | Completed Billing     |
 | K11 | Win rate            | count(wonAt ∈ P, not LOST) ÷ (that + count(LOST with closedAt ∈ P)); won-then-lost is a loss; null if both 0                                | Projects              |
 | K12 | Average deal size   | Σ expectedAmount of projects won ∈ P ÷ count(projects won ∈ P)                                                                              | Projects              |
 
@@ -45,7 +45,7 @@ Each card: value, delta vs comparison (▲/▼ with %), 12-point sparkline, clic
 | C5  | Receivables aging   | Horizontal stacked bar / donut | Overdue balance in 1–30, 31–60, 61–90, 90+ days past due                                                                 |
 | C6  | Revenue by client   | Bar (top 10 + "Others")        | Booked and collected in P per client                                                                                     |
 | C7  | New vs upsell       | Donut                          | K1 split into new and upsell                                                                                             |
-| C8  | Pipeline funnel     | Funnel                         | Count and value by status: Lead → Proposal → Won → Active → Completed                                                    |
+| C8  | Pipeline funnel     | Funnel                         | Count and value by current status: Lead → Proposal → Won → Active (incl. On hold) → Completed, Lost last                 |
 | C9  | Due-date calendar   | Calendar heatmap (month view)  | Balance due per day; click a day → milestones                                                                            |
 
 ## Team performance (`dashboard.company`)
