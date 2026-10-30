@@ -1,4 +1,4 @@
-import { MoneyParseError, toMinor } from '@salescrm/types';
+import { MoneyParseError, parseRate, toMinor } from '@salescrm/types';
 import { checkPayment } from './payments';
 import { type IsoDate } from './period';
 import { STATUS_NAME } from './project-status';
@@ -24,6 +24,7 @@ export const IMPORT_COLUMNS = [
   'paid_amount',
   'paid_date',
   'invoice_id',
+  'fx_rate',
 ] as const;
 type Column = (typeof IMPORT_COLUMNS)[number];
 const REQUIRED: Column[] = ['client', 'project', 'expected_amount'];
@@ -48,6 +49,8 @@ export interface ImportPayment {
   amountMinor: bigint;
   paymentDate: IsoDate;
   invoiceId: string | null;
+  /** D-020: base-currency units per 1 unit of the project's currency; null = look up the payment day's rate. */
+  fxRate: string | null;
 }
 export interface ImportMilestone {
   title: string;
@@ -273,7 +276,17 @@ export function parseImport(
           : `P-2: payments on milestone "${milestone.title}" add up to more than its amount.`,
       );
     }
-    milestone.payments.push({ amountMinor: paid, paymentDate: paidDate, invoiceId: get('invoice_id') || null });
+    let fxRate: string | null = null;
+    if (get('fx_rate')) {
+      try {
+        fxRate = parseRate(get('fx_rate'));
+      } catch (e) {
+        if (!(e instanceof MoneyParseError)) throw e;
+        broken.add(key);
+        return fail(`fx_rate: "${get('fx_rate')}" is not a valid rate (${e.reason}).`);
+      }
+    }
+    milestone.payments.push({ amountMinor: paid, paymentDate: paidDate, invoiceId: get('invoice_id') || null, fxRate });
   });
 
   // PS-4 needs the whole project, so it is checked once every row is in.

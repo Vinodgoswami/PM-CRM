@@ -12,6 +12,7 @@ import { FilterSelect } from '../filters/FilterSelect';
 import { usePayments } from '../payments/api';
 import { EditPaymentDialog } from '../payments/EditPaymentDialog';
 import { OWNER } from '../../lib/labels';
+import { BaseAmount } from '../payments/BaseAmount';
 import { useSettings } from '../settings/api';
 
 const PAGE_SIZE = 50;
@@ -171,7 +172,10 @@ export function BillingPage() {
                       {p.reversedById && <span className="ml-2 text-xs text-text-muted">(reversed)</span>}
                     </TD>
                     <TD>{p.invoiceId ?? '—'}</TD>
-                    <TD className="text-right font-medium tabular-nums">{formatApiMoney(p.amountMinor, p.project.currency)}</TD>
+                    <TD className="text-right font-medium tabular-nums">
+                      {formatApiMoney(p.amountMinor, p.project.currency)}
+                      <BaseAmount payment={p} />
+                    </TD>
                     <TD>{p.createdBy.name}</TD>
                     <TD className="text-right">
                       {p.canEdit && (

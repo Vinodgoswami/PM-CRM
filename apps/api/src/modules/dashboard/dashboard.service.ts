@@ -18,6 +18,7 @@ import { minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
 import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
+import { inBase } from '../fx/to-base';
 import { SettingsService } from '../settings/settings.service';
 
 const j = minorToJson;
@@ -51,13 +52,24 @@ export class DashboardService {
             title: true,
             amountMinor: true,
             dueDate: true,
-            payments: { select: { id: true, amountMinor: true, paymentDate: true, invoiceId: true, createdAt: true } },
+            payments: {
+              select: {
+                id: true,
+                amountMinor: true,
+                paymentDate: true,
+                invoiceId: true,
+                createdAt: true,
+                baseAmountMinor: true,
+                baseCurrency: true,
+              },
+            },
           },
         },
       },
     });
-    // M-4: totals are in the base currency; other-currency projects are counted for a note, not summed.
-    const rows = all.filter((p) => p.currency === settings.baseCurrency);
+    // D-020: every project is converted to the base currency at its saved rate; one without a rate is left out and
+    // counted for a note (M-4).
+    const rows = all.flatMap((p) => inBase(p, settings.baseCurrency) ?? []);
     const metric: MetricProject[] = rows.map((p) => ({
       id: p.id,
       ownerId: p.ownerId,
@@ -71,7 +83,11 @@ export class DashboardService {
       milestones: p.milestones.map((m) => ({
         amountMinor: m.amountMinor,
         dueDate: isoDate(m.dueDate),
-        payments: m.payments.map((x) => ({ amountMinor: x.amountMinor, paymentDate: isoDate(x.paymentDate)! })),
+        payments: m.payments.map((x) => ({
+          amountMinor: x.amountMinor,
+          collectedMinor: x.collectedMinor,
+          paymentDate: isoDate(x.paymentDate)!,
+        })),
       })),
     }));
 
@@ -209,7 +225,7 @@ export class DashboardService {
       .slice(0, 6)
       .map(({ p, pay }) => ({
         id: pay.id,
-        amountMinor: j(pay.amountMinor),
+        amountMinor: j(pay.collectedMinor),
         paymentDate: isoDate(pay.paymentDate)!,
         invoiceId: pay.invoiceId,
         project: { id: p.id, code: p.code, name: p.name },

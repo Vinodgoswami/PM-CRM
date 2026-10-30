@@ -3,6 +3,7 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, L
 import { useState } from 'react';
 import { formatApiMoney } from '../../lib/money';
 import { useEditPayment } from './api';
+import { converted } from './FxField';
 
 /** P-4: label, invoice ID, date and note stay editable; the amount is shown but never editable. */
 export function EditPaymentDialog({ payment, onClose }: { payment: PaymentDto; onClose: () => void }) {
@@ -11,6 +12,9 @@ export function EditPaymentDialog({ payment, onClose }: { payment: PaymentDto; o
   const [invoiceId, setInvoiceId] = useState(payment.invoiceId ?? '');
   const [date, setDate] = useState(payment.paymentDate);
   const [note, setNote] = useState(payment.note ?? '');
+  // D-020: the rate can be corrected (e.g. to the bank's actual rate); the base amount is recomputed by the server.
+  const foreign = !!payment.baseCurrency && payment.baseCurrency !== payment.project.currency;
+  const [rate, setRate] = useState(payment.fxRate ?? '');
   const [error, setError] = useState<string | null>(null);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -29,6 +33,7 @@ export function EditPaymentDialog({ payment, onClose }: { payment: PaymentDto; o
               invoiceId: invoiceId || null,
               paymentDate: date,
               note: note || null,
+              ...(foreign && rate.trim() !== (payment.fxRate ?? '') ? { fxRate: rate.trim() } : {}),
             });
             if (!parsed.success) return setError(parsed.error.issues[0]!.message);
             edit.mutate(parsed.data, {
@@ -55,6 +60,19 @@ export function EditPaymentDialog({ payment, onClose }: { payment: PaymentDto; o
               <Input id="ep-note" value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
           </div>
+          {foreign && (
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-rate">
+                Exchange rate (1 {payment.project.currency} in {payment.baseCurrency})
+              </Label>
+              <Input id="ep-rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} />
+              {converted(payment.amountMinor, rate, payment.project.currency, payment.baseCurrency!) && (
+                <p className="text-xs text-text-muted">
+                  = {converted(payment.amountMinor, rate, payment.project.currency, payment.baseCurrency!)} received
+                </p>
+              )}
+            </div>
+          )}
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>

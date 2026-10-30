@@ -55,7 +55,7 @@ test('the dashboard opens on this quarter; switching the period asks the API for
 test('other-currency projects are called out, not silently mixed in', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard({ otherCurrencyProjects: 2 }) } }).fn);
   renderApp('/', sessionFor('CEO'));
-  expect(await screen.findByText(/2 projects in other currencies are not included/)).toBeInTheDocument();
+  expect(await screen.findByText(/2 projects in other currencies have no exchange rate yet/)).toBeInTheDocument();
 });
 
 test('K11 win rate shows in the headline card', async () => {

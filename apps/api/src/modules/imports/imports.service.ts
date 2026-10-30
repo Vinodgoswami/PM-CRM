@@ -7,6 +7,8 @@ import { AppError } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { ClientsService, nameKeyOf } from '../clients/clients.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { convertMinor } from '@salescrm/types';
+import { FxService } from '../fx/fx.service';
 import { SettingsService } from '../settings/settings.service';
 
 type Db = Prisma.TransactionClient;
@@ -18,6 +20,8 @@ interface Checked {
   clients: Map<string, string>;
   /** owner email (lower case) → user id */
   owners: Map<string, string>;
+  /** D-020: per project, its rate (null if none) and each payment's rate, milestone by milestone. */
+  fx: Map<ImportProject, { project: { rate: string; date: string } | null; payments: string[][] }>;
 }
 
 /** CSV import of existing work (P6-4). Preview and import run the same checks; import is all-or-nothing. */
@@ -28,6 +32,7 @@ export class ImportsService {
     private readonly settings: SettingsService,
     private readonly clients: ClientsService,
     private readonly audit: AuditService,
+    private readonly fx: FxService,
   ) {}
 
   /** File rules (core) plus what needs the database: known owners, existing clients, no duplicate projects. */
@@ -60,11 +65,36 @@ export class ImportsService {
       if (dup) {
         errors.push({ line: p.line, message: `Project "${p.name}" already exists for ${p.client.name} (${dup.code}).` });
       } else if (p.ownerEmail && !owners.has(p.ownerEmail.toLowerCase())) {
-        errors.push({ line: p.line, message: `owner_email "${p.ownerEmail}" is not an active Admin or Sales user.` });
+        errors.push({ line: p.line, message: `owner_email "${p.ownerEmail}" is not an active Admin or Project Manager.` });
       } else ok.push(p);
     }
+
+    // D-020: rates for other-currency work — the project's (when confirmed, else today), and each payment's
+    // (the fx_rate column, else that day's). A payment without a rate cannot be recorded.
+    const base = settings.baseCurrency;
+    const fx: Checked['fx'] = new Map();
+    const withRates: ImportProject[] = [];
+    for (const p of ok) {
+      const project = p.currency === base ? { rate: '1', date: p.wonAt ?? today } : await this.fx.find(p.currency, base, p.wonAt ?? today);
+      const payments: string[][] = [];
+      let missing: string | null = null;
+      for (const m of p.milestones) {
+        const rates: string[] = [];
+        for (const pay of m.payments) {
+          const rate = pay.fxRate ?? (p.currency === base ? '1' : (await this.fx.find(p.currency, base, pay.paymentDate))?.rate);
+          if (!rate) missing ??= `No exchange rate for ${p.currency} → ${base} on ${pay.paymentDate}. Add it in the fx_rate column.`;
+          rates.push(rate ?? '');
+        }
+        payments.push(rates);
+      }
+      if (missing) errors.push({ line: p.line, message: missing });
+      else {
+        fx.set(p, { project: project ? { rate: project.rate, date: project.date } : null, payments });
+        withRates.push(p);
+      }
+    }
     errors.sort((a, b) => a.line - b.line);
-    return { projects: ok, errors, clients, owners };
+    return { projects: withRates, errors, clients, owners, fx };
   }
 
   async preview(csv: string): Promise<ImportPreview> {
@@ -97,7 +127,8 @@ export class ImportsService {
       async (tx) => {
         // One import at a time, so two runs of the same file cannot both pass the duplicate check.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('salescrm.import'))`;
-        const { projects, errors, clients, owners } = await this.check(tx, csv);
+        const { projects, errors, clients, owners, fx } = await this.check(tx, csv);
+        const base = (await this.settings.get()).baseCurrency;
         if (errors.length)
           throw new AppError(400, 'VALIDATION_FAILED', `The file has ${errors.length} problem(s); nothing was imported.`, { errors });
         if (projects.length === 0) throw new AppError(400, 'VALIDATION_FAILED', 'The file has no projects to import.', { errors: [] });
@@ -131,6 +162,9 @@ export class ImportsService {
               currency: p.currency,
               wonAt: toDate(p.wonAt),
               closedAt: toDate(p.closedAt),
+              fxRate: fx.get(p)!.project?.rate ?? null,
+              fxRateDate: toDate(fx.get(p)!.project?.date ?? null),
+              fxBaseCurrency: fx.get(p)!.project ? base : null,
               tags: [],
               createdById: user.id,
             },
@@ -146,7 +180,10 @@ export class ImportsService {
                 dueDate: toDate(m.dueDate),
                 createdById: user.id,
                 payments: {
-                  create: m.payments.map((x) => ({
+                  create: m.payments.map((x, j) => ({
+                    baseCurrency: base,
+                    fxRate: fx.get(p)!.payments[i]![j]!,
+                    baseAmountMinor: convertMinor(x.amountMinor, fx.get(p)!.payments[i]![j]!, p.currency, base),
                     milestoneLabel: `M${i + 1}`,
                     invoiceId: x.invoiceId,
                     paymentDate: toDate(x.paymentDate)!,

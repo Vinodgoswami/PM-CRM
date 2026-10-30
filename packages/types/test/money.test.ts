@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { formatMoney, minorFromJson, minorToJson, MoneyParseError, sumMinor, toMinor } from '../src/money';
+import { convertMinor, formatMoney, minorFromJson, minorToJson, MoneyParseError, parseRate, sumMinor, toMinor } from '../src/money';
 
 test('M-1 toMinor parses exact decimals', () => {
   expect(toMinor('1250', 'INR')).toBe(125000n);
@@ -44,4 +44,20 @@ test('minorToJson guards precision', () => {
   expect(() => minorToJson(2n ** 60n)).toThrow(RangeError);
   expect(minorFromJson(125000)).toBe(125000n);
   expect(() => minorFromJson(1.5)).toThrow(RangeError);
+});
+
+test('convertMinor turns paise into cents with a decimal rate, exactly, rounding half away from zero', () => {
+  expect(convertMinor(5000000n, '0.012', 'INR', 'USD')).toBe(60000n); // ₹50,000 → $600.00
+  expect(convertMinor(100n, '0.0119', 'INR', 'USD')).toBe(1n); // ₹1 → $0.0119 → 1 cent
+  expect(convertMinor(-5000000n, '0.012', 'INR', 'USD')).toBe(-60000n); // reversals stay negative
+  expect(convertMinor(60000n, '84.15', 'USD', 'INR')).toBe(5049000n); // $600 → ₹50,490
+  expect(convertMinor(12345n, '1', 'INR', 'INR')).toBe(12345n);
+  expect(convertMinor(1000n, '150.5', 'USD', 'JPY')).toBe(1505n); // $10 → ¥1,505 (no minor unit)
+  expect(convertMinor(15n, '0.1', 'USD', 'USD')).toBe(2n); // 1.5 cents rounds up
+});
+
+test('parseRate accepts positive decimals up to 10 places and nothing else', () => {
+  expect(parseRate('0.0119')).toBe('0.0119');
+  expect(parseRate(' 84.15 ')).toBe('84.15');
+  for (const bad of ['0', '-1', 'abc', '1e3', '0.12345678901', '']) expect(() => parseRate(bad)).toThrow();
 });

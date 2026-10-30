@@ -9,9 +9,12 @@ the rule id (e.g. `MS-3`). If another doc disagrees, this one wins.
 - **M-2** Formatting (₹1,25,000.00, $12,500) happens only in the UI, using the currency and locale.
 - **M-3** A project has one currency, fixed once it has a milestone. Upsell entries, milestones and payments use the
   project currency.
-- **M-4** v1 dashboard totals assume the base currency. Projects in another currency are shown in their own currency
-  and excluded from totals with a visible "n projects in other currencies" note, until multi-currency is decided
-  (Q-03).
+- **M-4** Totals (dashboard, billing, invoices) are in the company's base currency (D-020). Work in another currency is
+  converted: each **payment** records its amount in the project's currency _and_ in the base currency at that day's
+  rate (auto-filled from the ECB-based rate service, editable to the bank's actual rate); each **project** saves its
+  rate when created and again when confirmed, which converts its contract, milestones, extra work and balances so the
+  numbers shown to the CEO don't move with the market. "Collected" uses what each payment actually brought in.
+  Work with no rate yet is listed in its own currency and left out of totals with a visible note.
 
 ## Project status
 

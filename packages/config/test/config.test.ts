@@ -14,6 +14,7 @@ test('valid env produces typed config with defaults', () => {
     cookieSecure: false,
     logLevel: 'info',
     storage: { driver: 'local', localDir: './uploads' },
+    fx: { provider: 'frankfurter' },
   });
 });
 
@@ -77,4 +78,10 @@ test('production with real values passes', () => {
     S3_SECRET_ACCESS_KEY: 'secret',
   });
   expect(config.cookieSecure).toBe(true);
+});
+
+test('FX_PROVIDER picks where exchange rates come from (D-020)', () => {
+  expect(loadConfig({ ...valid, FX_PROVIDER: 'fixed' }).fx).toEqual({ provider: 'fixed' });
+  expect(loadConfig({ ...valid, FX_PROVIDER: 'off' }).fx).toEqual({ provider: 'off' });
+  expect(() => loadConfig({ ...valid, FX_PROVIDER: 'random' })).toThrow(/FX_PROVIDER/);
 });

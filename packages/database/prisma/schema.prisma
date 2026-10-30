@@ -167,6 +167,11 @@ model Project {
   upsellProjects      Project[]     @relation("Upsell")
   wonAt               DateTime?     @db.Date
   closedAt            DateTime?     @db.Date
+  /// FX (D-020): units of fxBaseCurrency per 1 unit of `currency`, saved when the project is created and again when it
+  /// is confirmed, so its converted contract value stays fixed. Null = no rate yet (left out of converted totals).
+  fxRate              Decimal?      @db.Decimal(20, 10)
+  fxRateDate          DateTime?     @db.Date
+  fxBaseCurrency      String?
   tags                String[]      @default([])
   archivedAt          DateTime?     @db.Timestamptz(3)
   createdById         String
@@ -225,6 +230,10 @@ model Payment {
   invoiceId         String?
   paymentDate       DateTime  @db.Date
   amountMinor       BigInt
+  /// FX (D-020): the same money in the company's base currency at the payment day's rate (both amounts are recorded).
+  baseCurrency      String?
+  fxRate            Decimal?  @db.Decimal(20, 10)
+  baseAmountMinor   BigInt?
   /// Client-generated key from the Mark-as-paid dialog: a retried request returns the same payment.
   idempotencyKey    String?   @unique
   reversesPaymentId String?   @unique
@@ -282,4 +291,17 @@ model Setting {
   timezone     String   @default("Asia/Kolkata")
   dueSoonDays  Int      @default(7)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+}
+
+/// Daily exchange rates fetched from the rate service, cached so each (date, pair) is asked for once (D-020).
+model FxRate {
+  id        String   @id @default(cuid(2))
+  date      DateTime @db.Date
+  from      String
+  to        String
+  rate      Decimal  @db.Decimal(20, 10)
+  source    String
+  fetchedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([date, from, to])
 }

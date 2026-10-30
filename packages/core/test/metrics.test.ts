@@ -150,3 +150,18 @@ test('C8 pipeline funnel: count and expected value by current status', () => {
     { status: 'LOST', count: 1, valueMinor: 90000n },
   ]);
 });
+
+test('D-020 collected uses what each payment actually brought in; balances use the contract-rate amounts', () => {
+  const p = P({
+    milestones: [
+      {
+        amountMinor: 72000n,
+        dueDate: '2026-06-01',
+        payments: [{ amountMinor: 72000n, paymentDate: '2026-06-10', collectedMinor: 63000n }],
+      },
+    ],
+  });
+  const s = summarise([p], FY, TODAY);
+  expect(s.collectedMinor).toBe(63000n);
+  expect(s.outstandingMinor).toBe(0n);
+});

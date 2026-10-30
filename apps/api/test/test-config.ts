@@ -13,6 +13,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     cookieSecure: false,
     logLevel: 'silent',
     storage: { driver: 'local', localDir: path.join(os.tmpdir(), 'salescrm-test-uploads') },
+    fx: { provider: 'fixed' },
     ...overrides,
   };
 }

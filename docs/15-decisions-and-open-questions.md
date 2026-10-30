@@ -23,6 +23,7 @@
 | D-017 | 2026-10-30 | Audience is project managers reporting quarterly to the CEO: no sales words on screen (see 01 glossary); dashboard opens on this quarter; stored codes unchanged                                                                                               | Owner request                                                    |
 | D-018 | 2026-10-30 | Admin creates the CEO; the CEO creates and manages Project Managers and, like them, creates and edits clients, projects, milestones, payments, extra work and documents (any project; must pick the owning PM). Reversals, settings and import stay Admin-only | Owner request                                                    |
 | D-019 | 2026-10-30 | Dashboard periods add YTD (FY to date) and 2 years (last + this FY), default Quarter; Upcoming bookings (Enquiry/Quoted) on the dashboard; CEO/Admin compare two project managers on /compare                                                                  | Owner request                                                    |
+| D-020 | 2026-10-30 | Multi-currency: totals in the base currency; payments record both amounts at the day's rate (auto-filled from Frankfurter/ECB, editable); projects save their rate when created and confirmed; work with no rate is left out with a note (answers Q-03)        | Owner choice                                                     |
 
 ## Open questions
 

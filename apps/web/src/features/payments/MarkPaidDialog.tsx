@@ -6,6 +6,7 @@ import { formatApiMoney } from '../../lib/money';
 import { MoneyInput } from '../projects/MoneyInput';
 import { useSettings } from '../settings/api';
 import { useMarkPaid } from './api';
+import { converted, FxField } from './FxField';
 
 export interface MarkPaidTarget {
   milestoneId: string;
@@ -18,7 +19,12 @@ export interface MarkPaidTarget {
 /** docs/08 S6 / flow F2. The amount defaults to the remaining balance and is locked once saved (P-4). */
 export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; onClose: () => void }) {
   const markPaid = useMarkPaid(target.milestoneId);
-  const timezone = useSettings().data?.timezone ?? 'Asia/Kolkata';
+  const settings = useSettings().data;
+  const timezone = settings?.timezone ?? 'Asia/Kolkata';
+  // D-020: a payment in another currency than the company's records the rate too.
+  const base = settings?.baseCurrency ?? target.currency;
+  const needsRate = base !== target.currency;
+  const [rate, setRate] = useState('');
   const today = todayIn(timezone, new Date());
   // One key per dialog: a retry or double click replays the same request instead of paying twice.
   const [key] = useState(() => crypto.randomUUID());
@@ -34,12 +40,14 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
     e.preventDefault();
     if (sending.current) return;
     if (amount.minor === null) return setError(amount.error ?? 'Enter an amount');
+    if (needsRate && !converted(amount.minor, rate, target.currency, base)) return setError('Enter the exchange rate (e.g. 0.0119).');
     const parsed = createPaymentSchema.safeParse({
       milestoneLabel: label,
       paymentDate: date,
       amountMinor: amount.minor,
       ...(invoiceId.trim() ? { invoiceId } : {}),
       ...(note.trim() ? { note } : {}),
+      ...(needsRate ? { fxRate: rate.trim() } : {}),
     });
     if (!parsed.success) return setError(parsed.error.issues[0]!.message);
     setError(null);
@@ -91,6 +99,9 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
               <p className="text-xs text-text-muted">The amount can&apos;t be changed after saving.</p>
             </div>
           </div>
+          {needsRate && (
+            <FxField id="mp-rate" from={target.currency} to={base} date={date} amountMinor={amount.minor} value={rate} onChange={setRate} />
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="mp-note">Note</Label>
             <Input id="mp-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />

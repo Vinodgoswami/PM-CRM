@@ -8,6 +8,7 @@ import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { usePayments } from '../../payments/api';
 import { EditPaymentDialog } from '../../payments/EditPaymentDialog';
+import { BaseAmount } from '../../payments/BaseAmount';
 import { ReverseDialog } from '../../payments/ReverseDialog';
 
 export function PaymentsTab({ project }: { project: ProjectDetail }) {
@@ -46,7 +47,10 @@ export function PaymentsTab({ project }: { project: ProjectDetail }) {
                   {p.reversedById && <span className="ml-2 text-xs text-text-muted">(reversed)</span>}
                 </TD>
                 <TD>{p.invoiceId ?? '—'}</TD>
-                <TD className="text-right font-medium tabular-nums">{formatApiMoney(p.amountMinor, p.project.currency)}</TD>
+                <TD className="text-right font-medium tabular-nums">
+                  {formatApiMoney(p.amountMinor, p.project.currency)}
+                  <BaseAmount payment={p} />
+                </TD>
                 <TD>{p.createdBy.name}</TD>
                 <TD className="space-x-1 text-right">
                   {canEdit && !reversal && (

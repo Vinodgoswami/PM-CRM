@@ -64,3 +64,27 @@ export function minorFromJson(value: number): bigint {
   if (!Number.isSafeInteger(value)) throw new RangeError(`Amount ${value} must be a safe integer of minor units`);
   return BigInt(value);
 }
+
+const RATE = /^\d+(?:\.\d{1,10})?$/;
+
+/** Validates an exchange rate ("0.0119", "84.15"): positive, at most 10 decimal places. Returns it trimmed. */
+export function parseRate(input: string): string {
+  const text = input.trim();
+  if (!RATE.test(text) || !/[1-9]/.test(text)) throw new MoneyParseError(input, 'expected a positive rate like 0.0119 or 84.15');
+  return text;
+}
+
+/**
+ * Converts minor units of `from` into minor units of `to` at `rate` (units of `to` per 1 unit of `from`).
+ * Exact integer arithmetic (M-1); rounds half away from zero to the nearest minor unit of `to`.
+ */
+export function convertMinor(minor: bigint, rate: string, from: string, to: string): bigint {
+  const r = parseRate(rate);
+  const [whole, frac = ''] = r.split('.');
+  const rateScaled = BigInt(whole! + frac);
+  const numerator = minor * rateScaled * 10n ** BigInt(currencyDigits(to));
+  const denominator = 10n ** BigInt(frac.length + currencyDigits(from));
+  const sign = numerator < 0n ? -1n : 1n;
+  const abs = numerator * sign;
+  return sign * ((abs * 2n + denominator) / (denominator * 2n));
+}

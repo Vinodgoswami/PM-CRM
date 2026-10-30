@@ -10,6 +10,8 @@ export interface AppConfig {
   cookieSecure: boolean;
   logLevel: string;
   storage: StorageConfig;
+  /** Where daily exchange rates come from (D-020): the public ECB-based service, fixed test rates, or none. */
+  fx: { provider: 'frankfurter' | 'fixed' | 'off' };
 }
 
 export type StorageConfig =
@@ -32,6 +34,7 @@ const envSchema = z.object({
   COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.string().default('info'),
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  FX_PROVIDER: z.enum(['frankfurter', 'fixed', 'off']).default('frankfurter'),
   STORAGE_LOCAL_DIR: z.string().min(1).default('./uploads'),
   S3_ENDPOINT: z
     .url()
@@ -61,6 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     cookieSecure: e.COOKIE_SECURE === 'true',
     logLevel: e.LOG_LEVEL,
     storage: storageFrom(e),
+    fx: { provider: e.FX_PROVIDER },
   };
   if (config.nodeEnv === 'production') {
     const problems: string[] = [];
