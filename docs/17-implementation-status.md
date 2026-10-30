@@ -64,6 +64,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-10 | Done   | feat/pm-wording                 | Project-manager wording everywhere (D-017): role, stages, dashboard, extra work, audit log, server messages, CSV, import aliases; dashboard opens on this quarter; demo users renamed (pm1@/pm2@pmcrm.test)                          |
 | P4-11 | Done   | feat/ceo-manages-pms            | D-018 flow: Admin creates CEO; CEO invites/manages Project Managers (links valid while the CEO is active) and edits clients, projects, milestones, payments; CEO must choose the owning PM                                           |
 | P4-12 | Done   | feat/pm-compare-periods         | D-019: YTD and 2-year periods (dashboard, billing), Upcoming bookings panel, Compare project managers page; every select draws its arrow in reserved space (text no longer runs under it)                                            |
+| P4-13 | Done   | feat/profile-self-service       | Profile page (user menu): your details and change password (current password required; other sessions end). Users list has no actions on your own row; Deactivate is light red                                                       |
 
 ## Blockers
 

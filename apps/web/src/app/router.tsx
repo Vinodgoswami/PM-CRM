@@ -17,6 +17,7 @@ import { ProjectsListPage } from '../features/projects/ProjectsListPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { AppLayout } from './AppLayout';
 import { ComparePage } from '../features/dashboard/ComparePage';
+import { ProfilePage } from '../features/settings/ProfilePage';
 import { RequireAuth, RequirePermission } from './guards';
 
 const guarded = (permission: Permission, element: ReactNode) => <RequirePermission permission={permission}>{element}</RequirePermission>;
@@ -43,6 +44,7 @@ export const routes: RouteObject[] = [
       { path: 'clients', element: guarded('clients.read', <ClientsListPage />) },
       { path: 'clients/:id', element: guarded('clients.read', <ClientDetailPage />) },
       { path: 'settings', element: guarded('users.manage', <SettingsPage />) },
+      { path: 'profile', element: <ProfilePage /> },
       { path: 'audit', element: guarded('audit.read', <AuditLogPage />) },
     ],
   },

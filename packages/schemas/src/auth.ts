@@ -31,3 +31,10 @@ export const sessionResponseSchema = z.object({
   csrfToken: z.string(),
 });
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
+
+/** Signed-in user changes their own password (profile). */
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Enter your current password').max(128),
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

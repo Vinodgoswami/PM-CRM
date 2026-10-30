@@ -46,19 +46,19 @@ test('inviting a user shows the link to share, with copy', async () => {
   expect(writeText).toHaveBeenCalledWith('http://localhost:5173/invite/abc');
 });
 
-test('demoting the last admin shows the server explanation', async () => {
+test('a refused role change shows the server explanation', async () => {
   vi.spyOn(window, 'confirm').mockReturnValue(true);
   vi.stubGlobal(
     'fetch',
     stubApi({
       ...base,
-      'PATCH /users/u1': { status: 409, body: { error: { code: 'LAST_ADMIN', message: 'At least one active admin must remain' } } },
+      'PATCH /users/u2': { status: 409, body: { error: { code: 'LAST_ADMIN', message: 'At least one active admin must remain' } } },
     }).fn,
   );
   renderApp('/settings', sessionFor('ADMIN'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Users' }));
-  await user.selectOptions(await screen.findByLabelText('Role for Test User'), 'SALES');
+  await user.selectOptions(await screen.findByLabelText('Role for Rohan'), 'CEO');
   expect(await screen.findByText('At least one active admin must remain')).toBeInTheDocument();
 });
 

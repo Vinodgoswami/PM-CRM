@@ -4,12 +4,14 @@ import { changedFields } from '@salescrm/core';
 import { type InviteUserInput, type LinkResponse, type UpdateUserInput, type UserListItem } from '@salescrm/schemas';
 import { type Role } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
-import { conflict, forbidden, notFound } from '../../common/errors';
+import { AppError, conflict, forbidden, notFound } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { AuthTokensService } from '../auth/auth-tokens.service';
 import { PrismaService } from '../prisma/prisma.module';
 
 const ROLE_NAME: Record<Role, string> = { ADMIN: 'Admin', CEO: 'CEO', SALES: 'Project Manager' };
+/** Your own role, status and password are managed from your profile, never from the users list. */
+const notYourself = () => new AppError(400, 'VALIDATION_FAILED', 'Manage your own account from your profile.');
 const assertManages = (actor: SessionUser, role: Role) => {
   if (!manageableRoles(actor.role).includes(role)) throw forbidden(`Only an Admin can manage ${ROLE_NAME[role]} accounts.`);
 };
@@ -62,6 +64,7 @@ export class UsersService {
       await tx.$queryRaw`SELECT id FROM "User" WHERE role = 'ADMIN' AND active = true ORDER BY id FOR UPDATE`;
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw notFound();
+      if (id === actor.id) throw notYourself();
       const role = input.role ?? user.role;
       const active = input.active ?? user.active;
       assertManages(actor, user.role);
@@ -98,6 +101,7 @@ export class UsersService {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw notFound();
+      if (id === actor.id) throw notYourself();
       assertManages(actor, user.role);
       const link = await this.tokens.issue(tx, 'RESET', { email: user.email, userId: user.id, createdById: actor.id });
       await this.audit.record(tx, { actorId: actor.id, action: 'user.reset_link', entity: 'User', entityId: id });

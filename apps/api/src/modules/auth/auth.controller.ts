@@ -8,6 +8,8 @@ import {
   type ResetPasswordInput,
   resetPasswordSchema,
   type SessionResponse,
+  type ChangePasswordInput,
+  changePasswordSchema,
 } from '@salescrm/schemas';
 import { type CookieOptions, type Request, type Response } from 'express';
 import { APP_CONFIG } from '../../config.module';
@@ -60,6 +62,16 @@ export class AuthController {
   @HttpCode(204)
   async resetPassword(@Body(new ZodValidationPipe(resetPasswordSchema)) body: ResetPasswordInput): Promise<void> {
     await this.auth.resetPassword(body);
+  }
+
+  @Authenticated()
+  @Post('password/change')
+  @HttpCode(204)
+  changePassword(
+    @CurrentUser() user: SessionUser,
+    @Body(new ZodValidationPipe(changePasswordSchema)) body: ChangePasswordInput,
+  ): Promise<void> {
+    return this.auth.changePassword(user, body);
   }
 
   @Authenticated()
