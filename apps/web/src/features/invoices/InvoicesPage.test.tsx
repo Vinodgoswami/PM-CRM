@@ -123,3 +123,19 @@ test('client and salesperson filters reach the API; the salesperson list does no
   await user.click(screen.getByLabelText('Project manager'));
   expect(within(await screen.findByRole('listbox')).getAllByRole('option')).toHaveLength(3);
 });
+
+test('an invoice the viewer may edit links straight to its milestone in edit mode', async () => {
+  const editable = {
+    body: { ...invoices.body, groups: invoices.body.groups.map((g) => ({ ...g, items: g.items.map((i) => ({ ...i, canEdit: true })) })) },
+  };
+  vi.stubGlobal('fetch', stubApi({ 'GET /invoices': editable, 'GET /settings': settings }).fn);
+  renderApp('/invoices', sessionFor('SALES'));
+  expect(await screen.findByRole('link', { name: 'Edit M1 Design' })).toHaveAttribute('href', '/projects/p1?tab=milestones&edit=m1');
+});
+
+test('without edit rights there is no Edit link', async () => {
+  vi.stubGlobal('fetch', stubApi({ 'GET /invoices': invoices, 'GET /settings': settings }).fn);
+  renderApp('/invoices', sessionFor('SALES'));
+  await screen.findByRole('region', { name: /Overdue/ });
+  expect(screen.queryByRole('link', { name: /^Edit M/ })).toBeNull();
+});

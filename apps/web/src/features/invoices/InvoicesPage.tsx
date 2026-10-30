@@ -1,7 +1,7 @@
 import { type InvoiceItem, type InvoicesResponse, invoicesResponseSchema } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton } from '@salescrm/ui';
 import { useQuery } from '@tanstack/react-query';
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, Pencil } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -152,7 +152,17 @@ function Row({ item, base, onPay }: { item: InvoiceItem; base: string; onPay: ()
           )}
         </span>
       </div>
-      <div className="sm:text-right">
+      <div className="flex items-center gap-1 sm:justify-end">
+        {item.canEdit && (
+          <Button asChild size="icon" variant="ghost" title="Edit milestone">
+            <Link
+              to={`/projects/${item.project.id}?tab=milestones&edit=${item.milestoneId}`}
+              aria-label={`Edit M${item.number} ${item.title}`}
+            >
+              <Pencil className="size-4" />
+            </Link>
+          </Button>
+        )}
         {item.canPay && (
           <Button size="sm" aria-label={`Mark M${item.number} ${item.title} as paid`} onClick={onPay}>
             <BadgeCheck className="size-4" /> Mark as paid

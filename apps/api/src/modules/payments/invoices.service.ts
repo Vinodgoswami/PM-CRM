@@ -80,6 +80,7 @@ export class InvoicesService {
         status: milestoneStatus({ amountMinor: m.amountMinor, paidMinor: paid, dueDate: due }, today, settings.dueSoonDays),
         currency: m.project.currency,
         canPay: can(user, 'payments.create', { ownerId: m.project.ownerId }),
+        canEdit: can(user, 'projects.write', { ownerId: m.project.ownerId }),
         project: { id: m.project.id, code: m.project.code, name: m.project.name },
         client: m.project.client,
         owner: m.project.owner,

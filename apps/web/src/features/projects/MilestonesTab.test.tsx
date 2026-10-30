@@ -241,3 +241,9 @@ test('D-026 a slip can be dropped onto the dialog and removed again', async () =
   await user.click(within(dialog).getByRole('button', { name: 'Remove Bank slip.pdf' }));
   expect(within(dialog).getByText('Choose a file')).toBeInTheDocument();
 });
+
+test('opening the Milestones tab with ?edit= starts that milestone in edit mode', async () => {
+  vi.stubGlobal('fetch', stubApi(routes).fn);
+  renderApp('/projects/p1?tab=milestones&edit=m1', sessionFor('SALES'));
+  expect(await screen.findByLabelText('M1 task')).toBeInTheDocument();
+});

@@ -81,3 +81,10 @@ test('SALES see only their own projects, even when filtering by another owner', 
   const ceo = await loginAs(app, prisma, 'CEO');
   expect((await ceo.agent.get('/api/v1/invoices')).body.groups[0].items[0]).toMatchObject({ title: 'Mine', owner: { id: owner.user.id } });
 });
+
+test('each invoice says whether the viewer may edit its milestone', async () => {
+  const pm = await loginAs(app, prisma, 'SALES');
+  await project(pm.agent, pm.csrf, 'ACTIVE', [{ title: 'Build', amountMinor: 100000, dueDate: shift(10) }]);
+  const items = (await pm.agent.get('/api/v1/invoices')).body.groups.flatMap((g: { items: unknown[] }) => g.items);
+  expect(items).toMatchObject([{ title: 'Build', canEdit: true }]);
+});

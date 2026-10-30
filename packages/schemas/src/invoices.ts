@@ -20,6 +20,8 @@ export const invoiceItemSchema = z.object({
   status: z.enum(['PAID', 'OVERDUE', 'PARTIALLY_PAID', 'DUE_SOON', 'SCHEDULED', 'UNSCHEDULED']),
   currency: z.string(),
   canPay: z.boolean(),
+  /** The viewer may change this milestone (task, amount, due date) on its project. */
+  canEdit: z.boolean().default(false),
   project: z.object({ id: z.string(), code: z.string(), name: z.string() }),
   client: ref,
   owner: ref,

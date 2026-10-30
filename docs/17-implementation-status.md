@@ -77,6 +77,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-23 | Done   | feat/simpler-project-form       | D-025 simpler project form (Active on create, required booking amount, milestone due dates required, no start date / duration), "Mark as completed" on the project page, redesigned invite dialog (email status card, Send invite, copy button that does not wrap)                          |
 | P4-24 | Done   | feat/payment-invoice-file       | D-026 invoice / payment-slip files: `Document.paymentId` (migration `20261031090000_payment_documents`), upload in Mark as paid, attach and download on the Payments tab, download on Completed Billing, label on Documents                                                                 |
 | P4-25 | Done   | feat/slip-dropzone              | Mark-as-paid dialog polish: drop zone (choose or drag) for the invoice / payment slip, file card with size and remove, footer divider                                                                                                                                                       |
+| P4-26 | Done   | feat/edit-from-invoices         | Edit from Upcoming Invoices: `canEdit` on invoice items, pencil link to the project's Milestones tab with `?edit=<milestone>` opening that row in edit mode                                                                                                                                 |
 
 ## Blockers
 
