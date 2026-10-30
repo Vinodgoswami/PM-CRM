@@ -98,3 +98,39 @@ test('the CEO can add and edit clients (D-018)', async () => {
   await screen.findByRole('heading', { name: 'Acme' });
   expect(screen.getAllByRole('button', { name: /edit|archive|add contact/i }).length).toBeGreaterThan(0);
 });
+
+test('a client row opens to list its projects with booking, milestones and payments, each linking to the project', async () => {
+  const project = {
+    id: 'p1',
+    code: 'PRJ-0001',
+    name: 'Website',
+    status: 'ACTIVE',
+    currency: 'INR',
+    client: { id: 'c1', name: 'Acme' },
+    owner: { id: 'u1', name: 'Test User' },
+    wonAt: '2026-09-01',
+    contractValueMinor: 12500000,
+    collectedMinor: 5000000,
+    outstandingMinor: 2500000,
+    nextDueDate: null,
+    hasOverdue: false,
+    parentProjectId: null,
+    expectedAmountMinor: 10000000,
+    milestoneCount: 4,
+    paidMilestoneCount: 1,
+  };
+  const api = stubApi({ 'GET /clients': list([acme]), 'GET /projects': { body: { items: [project], page: 1, pageSize: 100, total: 1 } } });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/clients', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Show projects for Acme' }));
+  const panel = await screen.findByRole('region', { name: 'Projects for Acme' });
+  expect(api.calls.find((c) => c.path === '/projects')!.url.search).toContain('clientId=c1');
+  const link = await within(panel).findByRole('link', { name: /Website/ });
+  expect(link).toHaveAttribute('href', '/projects/p1');
+  expect(link).toHaveTextContent('₹1,25,000.00'); // worth = booking + extra work
+  expect(link).toHaveTextContent('₹1,00,000.00'); // initial booking
+  expect(link).toHaveTextContent('1 / 4');
+  expect(link).toHaveTextContent('₹50,000.00 of ₹1,25,000.00');
+  expect(link).toHaveTextContent('Active');
+});

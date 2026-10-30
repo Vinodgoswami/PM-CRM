@@ -25,7 +25,7 @@ test('a project the user cannot edit shows no edit controls', async () => {
   await screen.findByRole('heading', { name: 'Website Redesign' });
   expect(screen.queryByRole('button', { name: /change status/i })).toBeNull();
   expect(screen.queryByRole('link', { name: /edit/i })).toBeNull();
-  await userEvent.click(screen.getByRole('tab', { name: 'Extra work' }));
+  await userEvent.click(screen.getByRole('tab', { name: 'Phases & upsell' }));
   expect(screen.queryByRole('button', { name: /add extra work amount/i })).toBeNull();
 });
 
@@ -87,4 +87,38 @@ test('D-025 an active project is finished with one clear button', async () => {
   renderApp('/projects/p1', sessionFor('SALES'));
   await userEvent.click(await screen.findByRole('button', { name: 'Mark as completed' }));
   await waitFor(() => expect(api.calls.find((c) => c.method === 'POST')?.body).toEqual({ status: 'COMPLETED' }));
+});
+
+test('D-028 the Phases & upsell tab splits the booking: initial + upsell = total, and adds the next phase', async () => {
+  const phased = detail({
+    phase: 1,
+    upsellProjects: [
+      {
+        id: 'p2',
+        code: 'PRJ-0002',
+        name: 'Website phase 2',
+        status: 'ACTIVE',
+        phase: 2,
+        expectedAmountMinor: 3000000,
+        contractValueMinor: 3000000,
+        collectedMinor: 1000000,
+      },
+    ],
+  });
+  vi.stubGlobal('fetch', stubApi({ ...base, 'GET /projects/p1': { body: phased } }).fn);
+  renderApp('/projects/p1?tab=upsells', sessionFor('SALES'));
+  const summary = await screen.findByRole('region', { name: 'Booking split' });
+  // Initial ₹1,00,000 + upsell (₹25,000 extra work + ₹30,000 phase 2) = ₹1,55,000
+  expect(summary).toHaveTextContent('Initial booking₹1,00,000.00');
+  expect(summary).toHaveTextContent('Upsell₹55,000.00');
+  expect(summary).toHaveTextContent('Total booking₹1,55,000.00');
+  expect(screen.getByRole('link', { name: /Phase 2.*Website phase 2/ })).toHaveAttribute('href', '/projects/p2');
+  expect(screen.getByRole('link', { name: 'Add Phase 3' }).getAttribute('href')).toContain('parent=p1');
+});
+
+test('D-028 a phase points back to its original project', async () => {
+  const child = detail({ id: 'p1', phase: 2, parent: { id: 'p0', code: 'PRJ-0000', name: 'Website' }, upsellEntries: [] });
+  vi.stubGlobal('fetch', stubApi({ ...base, 'GET /projects/p1': { body: child } }).fn);
+  renderApp('/projects/p1?tab=upsells', sessionFor('SALES'));
+  expect(await screen.findByRole('link', { name: /Phase 2 of PRJ-0000 Website/ })).toHaveAttribute('href', '/projects/p0');
 });

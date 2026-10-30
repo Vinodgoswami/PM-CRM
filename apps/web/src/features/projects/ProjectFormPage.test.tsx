@@ -217,3 +217,22 @@ test('D-025 editing a project has no start date or duration either', async () =>
   expect(screen.queryByLabelText('Start date')).toBeNull();
   expect(screen.queryByLabelText('Duration')).toBeNull();
 });
+
+test('D-027 the edit page edits the whole project: client, booking amount and milestones', async () => {
+  const other = { ...clients.body.items[0]!, id: 'c2', name: 'Globex' };
+  const api = stubApi({
+    ...projectRoutes,
+    'GET /clients': { body: { ...clients.body, items: [clients.body.items[0], other] } },
+    'PATCH /projects/p9': { body: detail({ id: 'p9' }) },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p9/edit', sessionFor('SALES'));
+  const user = userEvent.setup();
+  expect(await screen.findByRole('combobox', { name: 'Client' })).toHaveTextContent('Acme');
+  expect(screen.getByRole('button', { name: 'Edit client details' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Edit M1' })).toBeInTheDocument();
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.click(await screen.findByRole('option', { name: 'Globex' }));
+  await user.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({ clientId: 'c2' }));
+});

@@ -27,6 +27,8 @@ export const updatePaymentMetaSchema = z
 export type UpdatePaymentMetaInput = z.infer<typeof updatePaymentMetaSchema>;
 
 export const reversePaymentSchema = z.object({ reason: z.string().trim().min(1, 'Give a reason for the reversal').max(500) });
+/** D-027: reverse every live payment of a milestone so it can be changed. */
+export const resetMilestonePaymentsSchema = z.object({ reason: z.string().trim().min(1, 'Give a reason for the reset').max(480) });
 
 export const paymentDtoSchema = z.object({
   id: z.string(),

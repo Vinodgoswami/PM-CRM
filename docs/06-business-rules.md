@@ -45,7 +45,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 
 - **MS-1** Numbers are 1..n per project with no gaps; deleting or reordering renumbers. Milestones with payments
   cannot be deleted.
-- **MS-2** `amount` may not be set below what is already paid on it.
+- **MS-2** `amount` may not be set below what is already paid on it. D-027: to change a paid milestone's amount, whoever
+  may edit the project first **resets** it (every live payment reversed with a reason, kept in history), then edits it.
 - **MS-3** <a id="milestone-status"></a>Derived status, evaluated in the company timezone, in this order:
 
 | Status           | Condition                                              |
@@ -80,6 +81,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 - **U-2** Upsell project: a project with `parentProjectId`. Its booked value counts as **upsell** in reports. The
   parent must belong to the same client and must not be itself or one of its descendants (no cycles).
 - **U-3** Upsell share = upsell booked ÷ total booked in the period.
+- **U-4** D-028: the original project is **Phase 1**; its upsell projects are **Phase 2, 3, …** in code order.
+  Total booking = initial booking (Phase 1 amounts) + upsell (later phases and extra-work entries).
 
 ## Periods
 

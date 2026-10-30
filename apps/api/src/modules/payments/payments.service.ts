@@ -215,6 +215,70 @@ export class PaymentsService {
   }
 
   /** P-5: the only way to correct an amount. One reversal per payment; reversals cannot be reversed. */
+  private createReversal(
+    tx: Prisma.TransactionClient,
+    user: SessionUser,
+    original: Pick<
+      PaymentRow,
+      'id' | 'milestoneId' | 'milestoneLabel' | 'invoiceId' | 'amountMinor' | 'baseCurrency' | 'fxRate' | 'baseAmountMinor'
+    >,
+    reason: string,
+    today: string,
+  ) {
+    return tx.payment.create({
+      data: {
+        milestoneId: original.milestoneId,
+        milestoneLabel: original.milestoneLabel,
+        invoiceId: original.invoiceId,
+        paymentDate: toDate(today),
+        amountMinor: -original.amountMinor,
+        // Mirrors the original in both currencies, so the base totals cancel exactly.
+        baseCurrency: original.baseCurrency,
+        fxRate: original.fxRate,
+        baseAmountMinor: original.baseAmountMinor === null ? null : -original.baseAmountMinor,
+        reversesPaymentId: original.id,
+        note: reason,
+        createdById: user.id,
+      },
+      include: PAYMENT_INCLUDE,
+    });
+  }
+
+  /** D-027: reverses every live payment of a milestone (kept in history) so its amount can be changed. */
+  async resetMilestone(user: SessionUser, milestoneId: string, reason: string): Promise<{ reversed: number }> {
+    const today = await this.settings.today();
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const milestone = await tx.milestone.findUnique({ where: { id: milestoneId }, select: { projectId: true, number: true } });
+        if (!milestone) throw notFound();
+        await this.projects.loadForWrite(milestone.projectId, user, tx);
+        const live = await tx.payment.findMany({
+          where: { milestoneId, reversesPaymentId: null, reversedBy: null },
+          include: PAYMENT_INCLUDE,
+        });
+        for (const original of live) await this.createReversal(tx, user, original, `Reset: ${reason}`, today);
+        if (live.length > 0) {
+          await this.audit.record(tx, {
+            actorId: user.id,
+            action: 'milestone.reset',
+            entity: 'Project',
+            entityId: milestone.projectId,
+            after: {
+              milestoneId,
+              number: milestone.number,
+              reversed: live.map((p) => ({ paymentId: p.id, amountMinor: p.amountMinor.toString() })),
+              reason,
+            },
+          });
+        }
+        return { reversed: live.length };
+      });
+    } catch (e) {
+      if (isUnique(e)) throw conflict('CONFLICT', 'These payments were just changed. Reload and try again.');
+      throw e;
+    }
+  }
+
   async reverse(user: SessionUser, id: string, reason: string): Promise<PaymentDto> {
     const today = await this.settings.today();
     try {
@@ -222,23 +286,7 @@ export class PaymentsService {
         const original = await this.loadPayment(tx, user, id);
         if (original.reversesPaymentId) throw conflict('CONFLICT', 'A reversal cannot be reversed. Record a new payment instead.');
         if (original.reversedBy) throw conflict('CONFLICT', 'This payment has already been reversed.');
-        const reversal = await tx.payment.create({
-          data: {
-            milestoneId: original.milestoneId,
-            milestoneLabel: original.milestoneLabel,
-            invoiceId: original.invoiceId,
-            paymentDate: toDate(today),
-            amountMinor: -original.amountMinor,
-            // Mirrors the original in both currencies, so the base totals cancel exactly.
-            baseCurrency: original.baseCurrency,
-            fxRate: original.fxRate,
-            baseAmountMinor: original.baseAmountMinor === null ? null : -original.baseAmountMinor,
-            reversesPaymentId: original.id,
-            note: reason,
-            createdById: user.id,
-          },
-          include: PAYMENT_INCLUDE,
-        });
+        const reversal = await this.createReversal(tx, user, original, reason, today);
         await this.audit.record(tx, {
           actorId: user.id,
           action: 'payment.reverse',

@@ -172,6 +172,22 @@ export const useUpdateMilestone = (id: string) =>
   useProjectMutation(id, ({ milestoneId, ...input }: UpdateMilestoneInput & { milestoneId: string }) =>
     apiFetch(`/milestones/${milestoneId}`, { method: 'PATCH', body: input, schema: projectDetailSchema }),
   );
+/** D-027: reverse a milestone's payments (kept in history) so its amount can change. */
+export function useResetMilestone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ milestoneId, reason }: { milestoneId: string; reason: string }) =>
+      apiFetch(`/milestones/${milestoneId}/reset-payments`, {
+        method: 'POST',
+        body: { reason },
+        schema: z.object({ reversed: z.number() }),
+      }),
+    onSuccess: () => {
+      for (const key of ['projects', 'payments', 'invoices', 'dashboard']) void qc.invalidateQueries({ queryKey: [key] });
+    },
+  });
+}
+
 export const useDeleteMilestone = (id: string) =>
   useProjectMutation(id, (milestoneId: string) =>
     apiFetch(`/milestones/${milestoneId}`, { method: 'DELETE', schema: projectDetailSchema }),

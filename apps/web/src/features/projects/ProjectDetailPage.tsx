@@ -110,7 +110,7 @@ function ProjectView({ project }: { project: ProjectDetail }) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="milestones">Milestones</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="upsells">Extra work</TabsTrigger>
+          <TabsTrigger value="upsells">Phases &amp; upsell</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>

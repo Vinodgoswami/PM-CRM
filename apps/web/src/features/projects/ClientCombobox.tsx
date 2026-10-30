@@ -11,11 +11,14 @@ export function ClientCombobox({
   value,
   onChange,
   invalid,
+  allowNew = true,
 }: {
   id: string;
   value: ClientChoice;
   onChange: (v: ClientChoice) => void;
   invalid?: boolean;
+  /** Off when editing a project: it moves only to a client that already exists. */
+  allowNew?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -61,15 +64,17 @@ export function ClientCombobox({
                 {c.name}
               </CommandItem>
             ))}
-            <CommandItem
-              value="__new__"
-              onSelect={() => {
-                onChange({ newClient: { name: search.trim() } });
-                setOpen(false);
-              }}
-            >
-              <Plus className="size-4" aria-hidden /> Add new client{search.trim() ? ` “${search.trim()}”` : ''}
-            </CommandItem>
+            {allowNew && (
+              <CommandItem
+                value="__new__"
+                onSelect={() => {
+                  onChange({ newClient: { name: search.trim() } });
+                  setOpen(false);
+                }}
+              >
+                <Plus className="size-4" aria-hidden /> Add new client{search.trim() ? ` “${search.trim()}”` : ''}
+              </CommandItem>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

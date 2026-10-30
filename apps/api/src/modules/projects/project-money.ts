@@ -7,7 +7,10 @@ export const PROJECT_MONEY_INCLUDE = {
   milestones: { select: { amountMinor: true, dueDate: true, payments: { select: { amountMinor: true } } } },
 } satisfies Prisma.ProjectInclude;
 
-type ProjectWithMoney = Prisma.ProjectGetPayload<{ include: typeof PROJECT_MONEY_INCLUDE }>;
+type ProjectWithMoney = Pick<
+  Prisma.ProjectGetPayload<{ include: typeof PROJECT_MONEY_INCLUDE }>,
+  'expectedAmountMinor' | 'upsellEntries' | 'milestones'
+>;
 
 export const isoDate = (d: Date | null): IsoDate | null => (d ? d.toISOString().slice(0, 10) : null);
 

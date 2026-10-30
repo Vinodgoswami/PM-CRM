@@ -6,7 +6,8 @@ import { detail, listItem } from '../features/projects/fixtures';
 import { renderApp, sessionFor, stubApi } from '../test/render';
 
 /** The product is for project managers reporting to the CEO (D-017): no sales vocabulary on screen. */
-const SALES_WORDS = /\b(sales|salesperson|booked|booking|upsells?|pipeline|win rate|won|lead|proposal|lost)\b/i;
+// D-028: "booking" and "upsell" are the owner's own words for project work, so they are allowed.
+const SALES_WORDS = /\b(sales|salesperson|booked|pipeline|win rate|won|lead|proposal|lost)\b/i;
 const owners = { 'GET /owners': { body: { items: [{ id: 'u2', name: 'Rohan Mehta' }] } } };
 
 test('the dashboard speaks project-manager language', async () => {
@@ -21,7 +22,7 @@ test('the dashboard speaks project-manager language', async () => {
   renderApp('/', sessionFor('CEO'));
   await screen.findByRole('region', { name: 'Team performance' });
   expect(document.body.textContent).not.toMatch(SALES_WORDS);
-  expect(screen.getByRole('region', { name: 'Key figures' })).toHaveTextContent('Contracted');
+  expect(screen.getByRole('region', { name: 'Key figures' })).toHaveTextContent('Total booking');
   expect(screen.getByRole('region', { name: 'Collected' })).toHaveTextContent('Confirmation rate');
   expect(screen.getByRole('region', { name: 'Team performance' })).toHaveTextContent('Project manager');
 });
@@ -62,7 +63,7 @@ test('the Admin invites Project Managers', async () => {
 test('a project page calls upsells "Extra work"', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /projects/p1': { body: detail({ status: 'WON' }) } }).fn);
   renderApp('/projects/p1', sessionFor('CEO'));
-  expect(await screen.findByRole('tab', { name: 'Extra work' })).toBeInTheDocument();
+  expect(await screen.findByRole('tab', { name: 'Phases & upsell' })).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(SALES_WORDS);
 });
 
