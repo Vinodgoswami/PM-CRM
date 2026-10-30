@@ -2,17 +2,18 @@ import { can } from '@salescrm/auth/permissions';
 import { type Dashboard, dashboardSchema } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarClock, FileDown, Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, Download, FileDown, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
 import { useOwners } from '../filters/api';
-import { HatchedBars, monthLabel, Wave } from './charts';
+import { HatchedBars, monthLabel, Sparkline, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
+import { dashboardCsv, downloadCsv } from './csv';
 import { DrillDownDialog } from './DrillDownDialog';
 import { DueCalendar } from './DueCalendar';
 import { ClientBars, Funnel, QuarterBars, SeriesToggle, UpsellDonut, YoyLine } from './MoreCharts';
@@ -68,8 +69,23 @@ const CornerLink = ({ to, label }: { to: string; label: string }) => (
 
 export function DashboardPage() {
   const { data: session } = useSession();
-  const [period, setPeriod] = useState<Period>('THIS_FY');
-  const [ownerId, setOwnerId] = useState('');
+  // Filters live in the address (?period=&ownerId=) so a view can be bookmarked or shared.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get('period');
+  const period: Period = PERIODS.some((p) => p.key === asked) ? (asked as Period) : 'THIS_FY';
+  const ownerId = params.get('ownerId') ?? '';
+  const setFilter = (key: 'period' | 'ownerId', value: string, fallback: string) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === fallback) next.delete(key);
+        else next.set(key, value);
+        return next;
+      },
+      { replace: true },
+    );
+  const setPeriod = (p: Period) => setFilter('period', p, 'THIS_FY');
+  const setOwnerId = (id: string) => setFilter('ownerId', id, '');
   const { data, isPending, isError, refetch } = useDashboard(period, ownerId);
   const firstName = session?.user.name.split(' ')[0] ?? '';
   const canCreate = !!session && can(session.user, 'projects.write');
@@ -115,6 +131,15 @@ export function DashboardPage() {
               ))}
             </select>
           )}
+          <Button
+            variant="outline"
+            disabled={!data}
+            onClick={() =>
+              data && downloadCsv(`dashboard-${data.period.from ?? 'all'}-${data.period.to ?? 'time'}.csv`, dashboardCsv(data))
+            }
+          >
+            <Download className="size-4" /> Export CSV
+          </Button>
           <Button variant="outline" onClick={() => window.print()} disabled={!data}>
             <FileDown className="size-4" /> Export PDF
           </Button>
@@ -261,8 +286,13 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
       </div>
 
       <section aria-label="Key figures" className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Kpi label="Booked" value={money(k.bookedMinor)} delta={pct(k.bookedMinor, data.previous?.bookedMinor)} />
-        <Kpi label="Expected in period" value={money(k.expectedMinor)} />
+        <Kpi
+          label="Booked"
+          value={money(k.bookedMinor)}
+          delta={pct(k.bookedMinor, data.previous?.bookedMinor)}
+          spark={data.monthly.map((x) => x.bookedMinor)}
+        />
+        <Kpi label="Expected in period" value={money(k.expectedMinor)} spark={data.monthly.map((x) => x.expectedMinor)} />
         <Kpi label="Due next 30 days" value={money(k.dueNext30Minor)} />
         <Kpi label="Pipeline" value={money(k.pipelineMinor)} />
         <Kpi
@@ -456,7 +486,20 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
   );
 }
 
-function Kpi({ label, value, delta, hint }: { label: string; value: string; delta?: number | null; hint?: string }) {
+function Kpi({
+  label,
+  value,
+  delta,
+  hint,
+  spark,
+}: {
+  label: string;
+  value: string;
+  delta?: number | null;
+  hint?: string;
+  /** Last 12 months, oldest first. */
+  spark?: number[];
+}) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="min-w-0 rounded-xl bg-surface p-4 shadow-card">
       <p className="text-xs text-text-muted">{label}</p>
@@ -469,6 +512,11 @@ function Kpi({ label, value, delta, hint }: { label: string; value: string; delt
           </span>
         )}
         {hint && <span className="truncate">{hint}</span>}
+        {spark && (
+          <span className="ml-auto">
+            <Sparkline values={spark} label={`${label}, last 12 months`} />
+          </span>
+        )}
       </div>
     </motion.div>
   );
