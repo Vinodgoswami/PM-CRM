@@ -5,9 +5,8 @@ import { useRef, useState } from 'react';
 import { formatApiMoney } from '../../lib/money';
 import { MoneyInput } from '../projects/MoneyInput';
 import { useSettings } from '../settings/api';
-import { Paperclip, X } from 'lucide-react';
-import { fileProblem } from '../projects/api';
 import { useAttachSlip, useMarkPaid } from './api';
+import { SlipDropzone } from './SlipDropzone';
 import { converted, FxField } from './FxField';
 
 export interface MarkPaidTarget {
@@ -123,39 +122,17 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
             <Input id="mp-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="mp-slip">Invoice or payment slip</Label>
-            {slip ? (
-              <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                <Paperclip className="size-4 shrink-0 text-text-muted" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{slip.name}</span>
-                <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${slip.name}`} onClick={() => setSlip(null)}>
-                  <X className="size-4" />
-                </Button>
-              </div>
-            ) : (
-              <Input
-                id="mp-slip"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.zip"
-                className="file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const problem = fileProblem(file);
-                  setError(problem);
-                  if (!problem) setSlip(file);
-                  e.target.value = '';
-                }}
-              />
-            )}
-            <p className="text-xs text-text-muted">Optional. PDF, image or Office file up to 25 MB; stored with the payment.</p>
+            <Label htmlFor="mp-slip">
+              Invoice or payment slip <span className="font-normal text-text-muted">(optional)</span>
+            </Label>
+            <SlipDropzone id="mp-slip" file={slip} onChange={setSlip} onError={setError} />
           </div>
           {error && (
             <p role="alert" className="text-sm text-danger">
               {error}
             </p>
           )}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
