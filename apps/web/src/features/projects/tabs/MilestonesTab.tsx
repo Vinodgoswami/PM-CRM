@@ -3,6 +3,7 @@ import { type ProjectDetail } from '@salescrm/schemas';
 import { Button, Input, Table, TBody, TD, TH, THead, TR, toast } from '@salescrm/ui';
 import { ArrowDown, ArrowUp, BadgeCheck, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
@@ -20,7 +21,9 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
   const canPay = booked && project.canEdit && !!session && can(session.user, 'payments.create', { ownerId: project.owner.id });
   const money = (m: number) => formatApiMoney(m, project.currency);
   const [paying, setPaying] = useState<MarkPaidTarget | null>(null);
-  const [editing, setEditing] = useState<string | null>(null);
+  // Upcoming Invoices links here with ?edit=<milestone id> to open that row ready to change.
+  const [params, setParams] = useSearchParams();
+  const [editing, setEditing] = useState<string | null>(() => (project.canEdit ? params.get('edit') : null));
   const del = useDeleteMilestone(project.id);
   const reorder = useReorderMilestones(project.id);
   const ids = project.milestones.map((m) => m.id);
@@ -59,7 +62,22 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
           )}
           {project.milestones.map((m, i) =>
             editing === m.id ? (
-              <EditRow key={m.id} project={project} milestone={m} onDone={() => setEditing(null)} />
+              <EditRow
+                key={m.id}
+                project={project}
+                milestone={m}
+                onDone={() => {
+                  setEditing(null);
+                  if (params.has('edit'))
+                    setParams(
+                      (p) => {
+                        p.delete('edit');
+                        return p;
+                      },
+                      { replace: true },
+                    );
+                }}
+              />
             ) : (
               <TR key={m.id}>
                 <TD className="font-medium">M{m.number}</TD>
