@@ -1,5 +1,5 @@
 import { todayIn } from '@salescrm/core';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
@@ -171,7 +171,7 @@ test('D-026 an invoice or payment slip chosen in the dialog is stored with the n
   const user = await openMarkPaid();
   const dialog = await screen.findByRole('dialog');
   await user.upload(
-    within(dialog).getByLabelText('Invoice or payment slip'),
+    within(dialog).getByLabelText(/Invoice or payment slip/),
     new File(['%PDF'], 'INV-200.pdf', { type: 'application/pdf' }),
   );
   expect(within(dialog).getByText('INV-200.pdf')).toBeInTheDocument();
@@ -196,7 +196,7 @@ test('D-026 a file type that cannot be stored is refused before saving', async (
   await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
   const dialog = await screen.findByRole('dialog');
   await user.upload(
-    within(dialog).getByLabelText('Invoice or payment slip'),
+    within(dialog).getByLabelText(/Invoice or payment slip/),
     new File(['x'], 'run.exe', { type: 'application/x-msdownload' }),
   );
   expect(within(dialog).getByRole('alert')).toHaveTextContent('Use PDF, Office, PNG, JPG or ZIP');
@@ -228,4 +228,16 @@ test('D-026 the Payments tab lists stored slips and lets you attach one later', 
   await waitFor(() =>
     expect(api.calls.find((c) => c.path === '/projects/p1/documents/upload-url')?.body).toMatchObject({ paymentId: 'pay2' }),
   );
+});
+
+test('D-026 a slip can be dropped onto the dialog and removed again', async () => {
+  vi.stubGlobal('fetch', stubApi(routes).fn);
+  renderApp('/projects/p1', sessionFor('SALES'));
+  const user = await openMarkPaid();
+  const dialog = await screen.findByRole('dialog');
+  const file = new File(['%PDF'], 'Bank slip.pdf', { type: 'application/pdf' });
+  fireEvent.drop(within(dialog).getByTestId('slip-dropzone'), { dataTransfer: { files: [file] } });
+  expect(within(dialog).getByText('Bank slip.pdf')).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Remove Bank slip.pdf' }));
+  expect(within(dialog).getByText('Choose a file')).toBeInTheDocument();
 });
