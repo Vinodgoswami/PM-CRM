@@ -13,6 +13,7 @@ import { useCreateProject, useProject, useUpdateProject } from './api';
 import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
 import { OWNER } from '../../lib/labels';
+import { OptionSelect } from '../../components/OptionSelect';
 import { MoneyInput } from './MoneyInput';
 
 const selectClass = 'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm';
@@ -190,20 +191,20 @@ function CreateProject() {
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="status" label="Status">
-              <select id="status" className={selectClass} value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+              <OptionSelect id="status" className={selectClass} value={status} onValueChange={(v) => setStatus(v as typeof status)}>
                 <option value="LEAD">Enquiry</option>
                 <option value="PROPOSAL">Quoted</option>
                 <option value="WON">Confirmed</option>
                 <option value="ACTIVE">Active</option>
-              </select>
+              </OptionSelect>
             </Field>
             {isAdmin && (
               <Field id="owner" label={OWNER} error={errors.ownerId}>
-                <select
+                <OptionSelect
                   id="owner"
                   className={selectClass}
-                  value={mustChoose ? ownerId : ownerId || me}
-                  onChange={(e) => setOwnerId(e.target.value)}
+                  value={mustChoose ? ownerId : ownerId || (me ?? '')}
+                  onValueChange={(v) => setOwnerId(v)}
                   aria-invalid={!!errors.ownerId || undefined}
                 >
                   {mustChoose && <option value="">Choose a project manager</option>}
@@ -212,7 +213,7 @@ function CreateProject() {
                       {u.name}
                     </option>
                   ))}
-                </select>
+                </OptionSelect>
               </Field>
             )}
           </div>
@@ -223,15 +224,15 @@ function CreateProject() {
             <Field id="duration" label="Duration">
               <div className="flex gap-2">
                 <Input id="duration" type="number" min={1} value={durationValue} onChange={(e) => setDurationValue(e.target.value)} />
-                <select
+                <OptionSelect
                   aria-label="Duration unit"
                   className={selectClass}
                   value={durationUnit}
-                  onChange={(e) => setDurationUnit(e.target.value as 'WEEKS' | 'MONTHS')}
+                  onValueChange={(v) => setDurationUnit(v as 'WEEKS' | 'MONTHS')}
                 >
                   <option value="MONTHS">months</option>
                   <option value="WEEKS">weeks</option>
-                </select>
+                </OptionSelect>
               </div>
             </Field>
             <Field id="expected" label="Expected amount" error={errors.expectedAmountMinor}>
@@ -330,15 +331,15 @@ function EditForm({ project }: { project: ProjectDetail }) {
             <Field id="duration" label="Duration">
               <div className="flex gap-2">
                 <Input id="duration" type="number" min={1} value={durationValue} onChange={(e) => setDurationValue(e.target.value)} />
-                <select
+                <OptionSelect
                   aria-label="Duration unit"
                   className={selectClass}
                   value={durationUnit}
-                  onChange={(e) => setDurationUnit(e.target.value as 'WEEKS' | 'MONTHS')}
+                  onValueChange={(v) => setDurationUnit(v as 'WEEKS' | 'MONTHS')}
                 >
                   <option value="MONTHS">months</option>
                   <option value="WEEKS">weeks</option>
-                </select>
+                </OptionSelect>
               </div>
             </Field>
             <Field id="expected" label="Expected amount" error={errors.expectedAmountMinor}>

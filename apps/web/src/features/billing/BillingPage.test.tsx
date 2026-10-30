@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
 import { periodRange } from '@salescrm/core';
 
 const payment = (over: object) => ({
@@ -53,7 +53,7 @@ test('payments list with total; reversals marked; filters reach the API', async 
   expect(await screen.findByText('-₹50,000.00')).toBeInTheDocument();
   expect(screen.getByText(/Reversal/)).toBeInTheDocument();
   expect(screen.getByText('₹0.00')).toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByLabelText('Period'), 'LAST_FY');
+  await choose(userEvent, screen.getByLabelText('Period'), 'LAST_FY');
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('from')).toMatch(/^\d{4}-04-01$/));
   expect(screen.getByRole('link', { name: /export csv/i }).getAttribute('href')).toContain('/api/v1/exports/csv/billing?');
 });
@@ -97,9 +97,9 @@ test('client, owner and a custom period reach the API and the CSV link', async (
   renderApp('/billing', sessionFor('CEO'));
   const user = userEvent.setup();
   await screen.findByText('INV-9');
-  await user.selectOptions(screen.getByLabelText('Client'), 'c1');
-  await user.selectOptions(await screen.findByLabelText('Project manager'), 'u2');
-  await user.selectOptions(screen.getByLabelText('Period'), 'CUSTOM');
+  await choose(user, screen.getByLabelText('Client'), 'c1');
+  await choose(user, await screen.findByLabelText('Project manager'), 'u2');
+  await choose(user, screen.getByLabelText('Period'), 'CUSTOM');
   await user.type(screen.getByLabelText('From'), '2026-05-01');
   await user.type(screen.getByLabelText('To'), '2026-06-30');
   await waitFor(() => {

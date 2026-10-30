@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type SessionResponse } from '@salescrm/schemas';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { setQueryClient } from '../lib/query-client';
 import { routes } from '../app/router';
@@ -53,4 +53,13 @@ export function stubApi(routes: Record<string, Reply | ((req: { url: URL; body: 
     });
   };
   return { fn, calls };
+}
+
+/** Picks `value` in one of our custom dropdowns (OptionSelect / Select), the way a user would: open, click. */
+export async function choose(user: { click: (el: Element) => Promise<void> }, trigger: HTMLElement, value: string) {
+  await user.click(trigger);
+  const list = await screen.findByRole('listbox');
+  const option = list.querySelector<HTMLElement>(`[role="option"][data-value="${CSS.escape(value)}"]`);
+  if (!option) throw new Error(`No option with value "${value}" in ${trigger.getAttribute('aria-label') ?? trigger.id}`);
+  await user.click(option);
 }

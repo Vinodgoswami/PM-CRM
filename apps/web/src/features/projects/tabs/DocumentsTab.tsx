@@ -3,6 +3,7 @@ import { Button, EmptyState, Label, Skeleton, Table, TBody, TD, TH, THead, TR, t
 import { Download, Trash2, Upload } from 'lucide-react';
 import { useId, useState } from 'react';
 import { formatDate } from '../../../lib/dates';
+import { OptionSelect } from '../../../components/OptionSelect';
 import { documentDownloadUrl, useDeleteDocument, useDocuments, useUploadDocument } from '../api';
 
 type DocType = (typeof DOCUMENT_TYPES)[number];
@@ -32,18 +33,18 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
         <div className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-border p-4">
           <div className="space-y-1.5">
             <Label htmlFor={`${inputId}-type`}>Type</Label>
-            <select
+            <OptionSelect
               id={`${inputId}-type`}
               className="h-9 rounded-md border border-border bg-surface px-3 text-sm"
               value={type}
-              onChange={(e) => setType(e.target.value as DocType)}
+              onValueChange={(v) => setType(v as DocType)}
             >
               {DOCUMENT_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {TYPE_LABEL[t]}
                 </option>
               ))}
-            </select>
+            </OptionSelect>
           </div>
           <label
             htmlFor={inputId}

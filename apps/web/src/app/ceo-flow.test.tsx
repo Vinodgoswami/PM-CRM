@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../test/render';
 
 // D-018: Admin adds CEOs; the CEO adds Project Managers and works on clients and projects alongside them.
 const users = {
@@ -34,7 +34,8 @@ test('the CEO can invite only Project Managers, and cannot change Admin accounts
   expect(within(pmRow).queryByRole('combobox')).toBeNull();
 
   await user.click(screen.getByRole('button', { name: /invite/i }));
-  const options = within(await screen.findByRole('dialog')).getAllByRole('option');
+  await user.click(within(await screen.findByRole('dialog')).getByLabelText('Role'));
+  const options = within(await screen.findByRole('listbox')).getAllByRole('option');
   expect(options.map((o) => o.textContent)).toEqual(['Project Manager']);
 });
 
@@ -44,7 +45,8 @@ test('the Admin can invite a CEO', async () => {
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Users' }));
   await user.click(await screen.findByRole('button', { name: /invite/i }));
-  const options = within(await screen.findByRole('dialog')).getAllByRole('option');
+  await user.click(within(await screen.findByRole('dialog')).getByLabelText('Role'));
+  const options = within(await screen.findByRole('listbox')).getAllByRole('option');
   expect(options.map((o) => o.textContent)).toEqual(['Project Manager', 'CEO', 'Admin']);
 });
 
@@ -59,12 +61,12 @@ test('the CEO creates a project and must choose its project manager', async () =
   renderApp('/projects/new', sessionFor('CEO'));
   const user = userEvent.setup();
   const owner = await screen.findByLabelText('Project manager');
-  expect(owner).toHaveValue('');
+  expect(owner).toHaveTextContent('Choose a project manager');
   await user.type(screen.getByLabelText('Project name'), 'Portal');
   await user.type(screen.getByLabelText('Expected amount'), '50,000');
   await user.click(screen.getByRole('button', { name: 'Create project' }));
   expect(await screen.findByText('Choose the project manager for this project.')).toBeInTheDocument();
   expect(api.calls.some((c) => c.method === 'POST')).toBe(false);
-  await user.selectOptions(owner, 'u2');
-  await waitFor(() => expect(owner).toHaveValue('u2'));
+  await choose(user, owner, 'u2');
+  await waitFor(() => expect(owner).toHaveTextContent('Rohan Mehta'));
 });

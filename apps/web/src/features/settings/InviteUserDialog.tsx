@@ -6,6 +6,7 @@ import { useInviteUser } from './api';
 import { manageableRoles } from '@salescrm/auth/permissions';
 import { ROLE_LABEL } from '../../lib/labels';
 import { useSession } from '../auth/api';
+import { OptionSelect } from '../../components/OptionSelect';
 import { LinkPanel } from './LinkPanel';
 
 export function InviteUserDialog({ onClose }: { onClose: () => void }) {
@@ -60,18 +61,18 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="inv-role">Role</Label>
-              <select
+              <OptionSelect
                 id="inv-role"
                 className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
                 value={role}
-                onChange={(e) => setRole(e.target.value as typeof role)}
+                onValueChange={(v) => setRole(v as typeof role)}
               >
                 {roles.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]}
                   </option>
                 ))}
-              </select>
+              </OptionSelect>
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end">

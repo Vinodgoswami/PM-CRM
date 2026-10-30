@@ -69,6 +69,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-15 | Done   | feat/fx-conversion              | D-020 currency conversion: GET /fx-rate (cached), payments store rate + base amount (form pre-fills, editable; reversal mirrors), projects save rate on create/confirm, dashboard/billing/invoices/import convert, both amounts shown on payments and invoices, CSV has rate + base columns |
 | P4-16 | Done   | feat/profile-photo              | Profile photo: two-column profile (large photo left with change / remove; details and password right); photo shown in the top bar; private storage, JPEG/PNG/WebP up to 2 MB                                                                                                                |
 | P4-17 | Done   | feat/admin-accounts-only        | D-021: Admin = accounts + counts (Overview home, company name, account audit); CEO gains reversals, settings, import, full audit, stage jumps; owners are PMs only; import requires owner_email                                                                                             |
+| P4-18 | Done   | feat/custom-select              | Own dropdown (`Select` in packages/ui on Radix Popover, no react-select): opens below the field, pill style, keyboard + type-ahead, screen-reader roles; all 12 native selects replaced (`OptionSelect` wrapper)                                                                            |
 
 ## Blockers
 

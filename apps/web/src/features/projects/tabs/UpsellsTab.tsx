@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useAddUpsell, useProjects, useRemoveUpsell, useSetParent } from '../api';
+import { OptionSelect } from '../../../components/OptionSelect';
 import { MoneyInput } from '../MoneyInput';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -130,13 +131,13 @@ function ParentPicker({ project }: { project: ProjectDetail }) {
   return (
     <div className="max-w-md space-y-1.5">
       <Label htmlFor="parent-project">Original project</Label>
-      <select
+      <OptionSelect
         id="parent-project"
         className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
         value={project.parent?.id ?? ''}
         disabled={setParent.isPending}
-        onChange={(e) =>
-          setParent.mutate(e.target.value || null, {
+        onValueChange={(v) =>
+          setParent.mutate(v || null, {
             onSuccess: () => toast.success('Link updated'),
             onError: (err) => toast.error(err.message),
           })
@@ -148,7 +149,7 @@ function ParentPicker({ project }: { project: ProjectDetail }) {
             {p.code} {p.name}
           </option>
         ))}
-      </select>
+      </OptionSelect>
     </div>
   );
 }

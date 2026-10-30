@@ -3,6 +3,7 @@ import { Button, Card, Input, Label, Skeleton, toast } from '@salescrm/ui';
 import { useState } from 'react';
 import { can } from '@salescrm/auth/permissions';
 import { useSession } from '../auth/api';
+import { OptionSelect } from '../../components/OptionSelect';
 import { useSettings, useUpdateSettings } from './api';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -56,19 +57,19 @@ function Form({ initial }: { initial: Settings }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-fy">Financial year starts in</Label>
-            <select
+            <OptionSelect
               id="s-fy"
               disabled={locked}
               className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-              value={values.fyStartMonth}
-              onChange={(e) => set('fyStartMonth', Number(e.target.value))}
+              value={String(values.fyStartMonth)}
+              onValueChange={(v) => set('fyStartMonth', Number(v))}
             >
               {MONTHS.map((m, i) => (
                 <option key={m} value={i + 1}>
                   {m}
                 </option>
               ))}
-            </select>
+            </OptionSelect>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-tz">Timezone</Label>

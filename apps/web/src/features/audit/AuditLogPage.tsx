@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { z } from 'zod';
 import { ROLE_LABEL, STATUS_LABEL } from '../../lib/labels';
+import { OptionSelect } from '../../components/OptionSelect';
 import { apiFetch } from '../../lib/api';
 
 const PAGE_SIZE = 50;
@@ -59,12 +60,12 @@ export function AuditLogPage() {
       <div className="flex items-end gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="audit-entity">Entity</Label>
-          <select
+          <OptionSelect
             id="audit-entity"
             className="h-9 rounded-md border border-border bg-surface px-3 text-sm"
             value={entity}
-            onChange={(e) => {
-              setEntity(e.target.value);
+            onValueChange={(v) => {
+              setEntity(v);
               setPage(1);
             }}
           >
@@ -74,7 +75,7 @@ export function AuditLogPage() {
                 {e}
               </option>
             ))}
-          </select>
+          </OptionSelect>
         </div>
       </div>
       {isPending ? (

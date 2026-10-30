@@ -55,7 +55,8 @@ test('the Admin invites Project Managers', async () => {
   expect(screen.getByText('Project Manager')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: /invite/i }));
   const dialog = await screen.findByRole('dialog');
-  expect(within(dialog).getByRole('option', { name: 'Project Manager' })).toBeInTheDocument();
+  await user.click(within(dialog).getByLabelText('Role'));
+  expect(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Project Manager' })).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(SALES_WORDS);
 });
 
