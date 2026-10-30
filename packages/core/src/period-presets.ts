@@ -3,8 +3,10 @@ import { fyOf, type IsoDate, quarterOf } from './period';
 export const PERIODS = [
   { key: 'THIS_MONTH', label: 'This month' },
   { key: 'THIS_QUARTER', label: 'This quarter' },
+  { key: 'FY_TO_DATE', label: 'Financial year to date' },
   { key: 'THIS_FY', label: 'This financial year' },
   { key: 'LAST_FY', label: 'Last financial year' },
+  { key: 'TWO_FY', label: 'Last 2 financial years' },
   { key: 'ALL', label: 'All time' },
 ] as const;
 export type PeriodKey = (typeof PERIODS)[number]['key'];
@@ -24,6 +26,13 @@ export function periodRange(key: PeriodKey, today: IsoDate, fyStartMonth: number
     case 'THIS_FY': {
       const fy = fyOf(today, fyStartMonth);
       return { from: fy.start, to: fy.end };
+    }
+    case 'FY_TO_DATE':
+      return { from: fyOf(today, fyStartMonth).start, to: today };
+    case 'TWO_FY': {
+      // Last and this financial year together.
+      const last = periodRange('LAST_FY', today, fyStartMonth);
+      return { from: last.from, to: fyOf(today, fyStartMonth).end };
     }
     case 'LAST_FY': {
       const prev = fyOf(fyOf(today, fyStartMonth).start, fyStartMonth);

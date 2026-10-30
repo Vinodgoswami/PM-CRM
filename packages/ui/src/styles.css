@@ -83,3 +83,18 @@ body {
 .hatch {
   background-image: repeating-linear-gradient(135deg, var(--chart-3) 0 6px, transparent 6px 11px);
 }
+
+/*
+ * Every single-choice select draws its own chevron in space reserved on the right, so long option text
+ * ("This financial year") never runs under the arrow. Unlayered on purpose: it must win over Tailwind's px-* utilities.
+ */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7a72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+  text-overflow: ellipsis;
+}

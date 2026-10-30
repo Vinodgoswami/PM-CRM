@@ -16,6 +16,7 @@ import { ProjectFormPage } from '../features/projects/ProjectFormPage';
 import { ProjectsListPage } from '../features/projects/ProjectsListPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { AppLayout } from './AppLayout';
+import { ComparePage } from '../features/dashboard/ComparePage';
 import { RequireAuth, RequirePermission } from './guards';
 
 const guarded = (permission: Permission, element: ReactNode) => <RequirePermission permission={permission}>{element}</RequirePermission>;
@@ -32,6 +33,7 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { index: true, element: guarded('dashboard.own', <DashboardPage />) },
+      { path: 'compare', element: guarded('dashboard.company', <ComparePage />) },
       { path: 'invoices', element: guarded('invoices.read', <InvoicesPage />) },
       { path: 'projects', element: guarded('projects.read', <ProjectsListPage />) },
       { path: 'projects/new', element: guarded('projects.write', <ProjectFormPage />) },

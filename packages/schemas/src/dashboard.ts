@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { isoDateSchema, minorSchema } from './projects';
 
 export const dashboardQuerySchema = z.object({
-  period: z.enum(['THIS_MONTH', 'THIS_QUARTER', 'THIS_FY', 'LAST_FY', 'ALL']).default('THIS_FY'),
+  period: z.enum(['THIS_MONTH', 'THIS_QUARTER', 'FY_TO_DATE', 'THIS_FY', 'LAST_FY', 'TWO_FY', 'ALL']).default('THIS_QUARTER'),
   ownerId: z.string().optional(),
 });
 export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
@@ -63,6 +63,19 @@ export const dashboardSchema = z.object({
       dueDate: isoDateSchema,
       daysOverdue: z.number(),
       project: z.object({ id: z.string(), code: z.string(), name: z.string() }),
+      client: ref,
+      owner: ref,
+    }),
+  ),
+  /** Projects not yet confirmed (Enquiry, Quoted), biggest first (top 10). */
+  upcomingBookings: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string(),
+      name: z.string(),
+      status: z.string(),
+      expectedAmountMinor: minorSchema,
+      startDate: isoDateSchema.nullable(),
       client: ref,
       owner: ref,
     }),

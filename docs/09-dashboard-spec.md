@@ -5,13 +5,13 @@ API, exports and tests. Date rules come from [06 PR-3](06-business-rules.md#peri
 
 ## Filters (top bar, kept in the URL query string)
 
-| Filter     | Values                                                                       | Default         |
-| ---------- | ---------------------------------------------------------------------------- | --------------- |
-| Period     | This month, Last month, This quarter, Last quarter, This FY, Last FY, Custom | This FY         |
-| Compare to | Previous period, Same period last year, None                                 | Previous period |
-| Year basis | Financial year, Calendar year                                                | Financial year  |
-| Owner      | All / one user (SALES users are fixed to themselves)                         | All             |
-| Client     | All / one                                                                    | All             |
+| Filter     | Values                                                                                        | Default         |
+| ---------- | --------------------------------------------------------------------------------------------- | --------------- |
+| Period     | Month, Quarter, YTD (FY to date), Year (this FY), Last year, 2 years (last + this FY) — D-019 | Quarter         |
+| Compare to | Previous period, Same period last year, None                                                  | Previous period |
+| Year basis | Financial year, Calendar year                                                                 | Financial year  |
+| Owner      | All / one user (SALES users are fixed to themselves)                                          | All             |
+| Client     | All / one                                                                                     | All             |
 
 Scope: CEO and ADMIN see company data; SALES see only their own projects (`dashboard.own`).
 
@@ -70,6 +70,16 @@ Sorted by Booked; row expands to a 12-month booked/collected mini chart. Target 
 - **T1 Upcoming (next 30 days)** — client, project, milestone, amount, due date, owner; top 10 + "View all".
 - **T2 Overdue** — same columns + days overdue, sorted by days overdue desc.
 - **T3 Recently paid** — last 10 payments.
+- **T4 Upcoming bookings** (D-019) — projects not yet confirmed (Enquiry, Quoted), biggest expected amount first (top 10),
+  with stage, project manager, expected start and amount; the panel subtitle gives the count and total.
+
+## Compare project managers (`dashboard.company`, D-019)
+
+`/compare?a=&b=&period=` — two project managers side by side for one period: Contracted, Collected, Expected,
+Projects confirmed, Confirmation rate, Collection rate, Avg deal, Avg days to pay (lower is better), Extra work,
+Outstanding and Overdue (lower is better), Not yet confirmed; the better figure is marked. Below, their monthly
+collected amounts as paired bars. Unknown ids in the address fall back to the first two project managers. One person's
+own numbers: the dashboard's project-manager filter with any period.
 
 ## Export
 

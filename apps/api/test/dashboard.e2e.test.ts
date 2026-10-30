@@ -120,3 +120,38 @@ test('the dashboard returns quarters, year over year, client revenue, funnel, ov
   expect(res.body.team[0]).toMatchObject({ winRate: 1, avgDealMinor: 65000 });
   expect(res.body.team[0].monthly).toHaveLength(12);
 });
+
+test('year-to-date and two-year periods are accepted', async () => {
+  const { agent } = await loginAs(app, prisma, 'CEO');
+  const ytd = await agent.get('/api/v1/dashboard?period=FY_TO_DATE');
+  expect(ytd.status).toBe(200);
+  expect(ytd.body.period.to).toBe(today());
+  const two = await agent.get('/api/v1/dashboard?period=TWO_FY');
+  expect(two.status).toBe(200);
+  expect(Date.parse(two.body.period.to) - Date.parse(two.body.period.from)).toBeGreaterThan(700 * 86_400_000);
+});
+
+test('upcoming bookings list projects not yet confirmed, biggest first, with their project manager', async () => {
+  const rep = await loginAs(app, prisma, 'SALES');
+  const make = (name: string, status: string, amount: number) =>
+    rep.agent
+      .post('/api/v1/projects')
+      .set('X-CSRF-Token', rep.csrf)
+      .send({ name, expectedAmountMinor: amount, status, newClient: { name: `C ${name}` }, startDate: '2026-12-01' })
+      .expect(201);
+  await make('Small enquiry', 'LEAD', 10000);
+  await make('Big quote', 'PROPOSAL', 90000);
+  await wonProjectWithPayment(rep.agent, rep.csrf, 'Acme', 50000);
+  const { agent } = await loginAs(app, prisma, 'CEO');
+  const res = await agent.get('/api/v1/dashboard?period=THIS_QUARTER');
+  expect(res.body.upcomingBookings).toEqual([
+    expect.objectContaining({
+      name: 'Big quote',
+      status: 'PROPOSAL',
+      expectedAmountMinor: 90000,
+      startDate: '2026-12-01',
+      owner: expect.objectContaining({ id: rep.user.id }),
+    }),
+    expect.objectContaining({ name: 'Small enquiry', status: 'LEAD', expectedAmountMinor: 10000 }),
+  ]);
+});

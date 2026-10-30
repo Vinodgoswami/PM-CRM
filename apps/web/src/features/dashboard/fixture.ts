@@ -66,6 +66,18 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
       owner: { id: 'u2', name: 'Rohan Mehta' },
     },
   ],
+  upcomingBookings: [
+    {
+      id: 'p7',
+      code: 'PRJ-0031',
+      name: 'Loyalty App',
+      status: 'PROPOSAL',
+      expectedAmountMinor: 90000000,
+      startDate: '2026-12-01',
+      client: { id: 'c3', name: 'Zenith Pharma' },
+      owner: { id: 'u2', name: 'Rohan Mehta' },
+    },
+  ],
   topClients: [{ id: 'c1', name: 'Acme', bookedMinor: 500000000, collectedMinor: 300000000 }],
   team: [
     {
