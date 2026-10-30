@@ -54,6 +54,8 @@ export interface Summary {
   lostCount: number;
   /** K11: won ÷ (won + lost) in the period; a project won and later lost is a loss. Null when neither happened. */
   winRate: number | null;
+  /** K10: mean days from due date to payment (negative = early), one decimal; null with no dated payments. */
+  avgDaysToPay: number | null;
 }
 
 export function summarise(projects: MetricProject[], range: MetricRange, today: IsoDate): Summary {
@@ -71,6 +73,8 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
   let wonExpectedMinor = 0n;
   let wins = 0;
   let losses = 0;
+  let payDays = 0;
+  let payCount = 0;
   const in30 = addDays(today, 30);
 
   for (const p of projects) {
@@ -95,6 +99,13 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
       const balance = m.amountMinor - paid;
       // Money actually received always counts; expected / owed only for booked work.
       collectedMinor += sum(m.payments.filter((x) => inRange(x.paymentDate, range)).map((x) => x.amountMinor));
+      // K10 ignores reversals (negative rows) so a corrected payment is not counted twice.
+      for (const x of m.payments) {
+        if (m.dueDate && x.amountMinor > 0n && inRange(x.paymentDate, range)) {
+          payDays += daysBetween(m.dueDate, x.paymentDate);
+          payCount += 1;
+        }
+      }
       if (!receivable(p)) continue;
       if (inRange(m.dueDate, range)) {
         expectedMinor += m.amountMinor;
@@ -125,6 +136,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
     wonExpectedMinor,
     lostCount,
     winRate: wins + losses > 0 ? wins / (wins + losses) : null,
+    avgDaysToPay: payCount > 0 ? Math.round((payDays / payCount) * 10) / 10 : null,
   };
 }
 
@@ -169,4 +181,54 @@ export function cashInForecast(projects: MetricProject[], today: IsoDate, months
     }
   }
   return keys.map((month) => ({ month, scheduledMinor: out.get(month)! }));
+}
+
+const shiftYears = (d: IsoDate, n: number): IsoDate => `${Number(d.slice(0, 4)) + n}${d.slice(4)}`;
+const monthEnd = (ym: string): IsoDate => {
+  const [y, m] = ym.split('-').map(Number) as [number, number];
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+};
+/** The 12 "YYYY-MM" months of the financial year starting on `fyFrom`. */
+const fyMonths = (fyFrom: IsoDate) => {
+  const [y, m] = fyFrom.split('-').map(Number) as [number, number];
+  return Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(y, m - 1 + i, 1)).toISOString().slice(0, 7));
+};
+
+/** C2: booked / collected per quarter of the FY starting `fyFrom`, against the same quarter a year earlier. */
+export function quarterComparison(projects: MetricProject[], fyFrom: IsoDate, today: IsoDate) {
+  const months = fyMonths(fyFrom);
+  return [0, 1, 2, 3].map((q) => {
+    const range = { from: `${months[q * 3]!}-01`, to: monthEnd(months[q * 3 + 2]!) };
+    const prev = { from: shiftYears(range.from, -1), to: monthEnd(shiftYears(months[q * 3 + 2]!, -1)) };
+    const now = summarise(projects, range, today);
+    const before = summarise(projects, prev, today);
+    return {
+      label: `Q${q + 1}`,
+      bookedMinor: now.bookedMinor,
+      collectedMinor: now.collectedMinor,
+      prevBookedMinor: before.bookedMinor,
+      prevCollectedMinor: before.collectedMinor,
+    };
+  });
+}
+
+/** C3: cumulative collected by month of the FY starting `fyFrom` (null after today's month) and of the FY before. */
+export function yearOverYear(projects: MetricProject[], fyFrom: IsoDate, today: IsoDate) {
+  let current = 0n;
+  let previous = 0n;
+  return fyMonths(fyFrom).map((month) => {
+    const prevMonth = shiftYears(month, -1);
+    current += summarise(projects, { from: `${month}-01`, to: monthEnd(month) }, today).collectedMinor;
+    previous += summarise(projects, { from: `${prevMonth}-01`, to: monthEnd(prevMonth) }, today).collectedMinor;
+    return { month, cumulativeMinor: month > today.slice(0, 7) ? null : current, previousCumulativeMinor: previous };
+  });
+}
+
+const FUNNEL: MetricProject['status'][] = ['LEAD', 'PROPOSAL', 'WON', 'ACTIVE', 'COMPLETED', 'LOST'];
+/** C8: count and expected value of projects by current status (ON_HOLD counts with ACTIVE; LOST listed last). */
+export function pipelineFunnel(projects: MetricProject[]) {
+  return FUNNEL.map((status) => {
+    const mine = projects.filter((p) => (p.status === 'ON_HOLD' ? 'ACTIVE' : p.status) === status);
+    return { status, count: mine.length, valueMinor: sum(mine.map((p) => p.expectedAmountMinor)) };
+  });
 }

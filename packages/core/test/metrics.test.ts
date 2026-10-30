@@ -1,5 +1,13 @@
 import { expect, test } from 'vitest';
-import { agingBuckets, type MetricProject, monthlySeries, summarise } from '../src/metrics';
+import {
+  agingBuckets,
+  type MetricProject,
+  monthlySeries,
+  pipelineFunnel,
+  quarterComparison,
+  summarise,
+  yearOverYear,
+} from '../src/metrics';
 
 const TODAY = '2026-10-29';
 const P = (over: Partial<MetricProject>): MetricProject => ({
@@ -108,4 +116,37 @@ test('K11 a project won and later lost counts as a loss, not a win', () => {
 
 test('K11 is null when nothing was won or lost in the period', () => {
   expect(summarise([P({ status: 'PROPOSAL', wonAt: null })], FY, TODAY).winRate).toBeNull();
+});
+
+test('K10 average days to pay = mean(paymentDate − dueDate) over payments in the period', () => {
+  // a: M1 due 06-01 paid 06-10 (9 days); M2 due 09-01 paid 09-20 (19 days).
+  expect(summarise(projects, FY, TODAY).avgDaysToPay).toBe(14);
+  expect(summarise(projects, { from: '2027-01-01', to: '2027-03-31' }, TODAY).avgDaysToPay).toBeNull();
+});
+
+test('C2 quarter comparison: each FY quarter against the same quarter a year earlier', () => {
+  expect(quarterComparison(projects, '2026-04-01', TODAY)).toEqual([
+    { label: 'Q1', bookedMinor: 100000n, collectedMinor: 60000n, prevBookedMinor: 0n, prevCollectedMinor: 0n },
+    { label: 'Q2', bookedMinor: 20000n, collectedMinor: 10000n, prevBookedMinor: 0n, prevCollectedMinor: 0n },
+    { label: 'Q3', bookedMinor: 50000n, collectedMinor: 0n, prevBookedMinor: 30000n, prevCollectedMinor: 0n },
+    { label: 'Q4', bookedMinor: 0n, collectedMinor: 0n, prevBookedMinor: 0n, prevCollectedMinor: 0n },
+  ]);
+});
+
+test('C3 year over year: cumulative collected by FY month; future months are null', () => {
+  const yoy = yearOverYear(projects, '2026-04-01', TODAY);
+  expect(yoy).toHaveLength(12);
+  expect(yoy.slice(0, 8).map((x) => x.cumulativeMinor)).toEqual([0n, 0n, 60000n, 60000n, 60000n, 70000n, 70000n, null]);
+  expect(yoy[0]).toMatchObject({ month: '2026-04', previousCumulativeMinor: 0n });
+});
+
+test('C8 pipeline funnel: count and expected value by current status', () => {
+  expect(pipelineFunnel(projects)).toEqual([
+    { status: 'LEAD', count: 0, valueMinor: 0n },
+    { status: 'PROPOSAL', count: 1, valueMinor: 70000n },
+    { status: 'WON', count: 0, valueMinor: 0n },
+    { status: 'ACTIVE', count: 3, valueMinor: 180000n },
+    { status: 'COMPLETED', count: 0, valueMinor: 0n },
+    { status: 'LOST', count: 1, valueMinor: 90000n },
+  ]);
 });

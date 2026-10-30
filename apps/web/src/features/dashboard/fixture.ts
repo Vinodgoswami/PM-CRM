@@ -18,6 +18,7 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
     wonCount: 12,
     winRate: 0.6,
     avgDealMinor: 187500000,
+    avgDaysToPay: 4.5,
   },
   previous: { bookedMinor: 2000000000, collectedMinor: 1000000000 },
   monthly: Array.from({ length: 12 }, (_, i) => ({
@@ -28,6 +29,43 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
   })),
   forecast: Array.from({ length: 6 }, (_, i) => ({ month: `2026-${String(i + 5).padStart(2, '0')}`, scheduledMinor: (i + 1) * 5000000 })),
   aging: { d1_30: 100000000, d31_60: 50000000, d61_90: 0, d90plus: 250000000 },
+  quarters: ['Q1', 'Q2', 'Q3', 'Q4'].map((label, i) => ({
+    label,
+    bookedMinor: (i + 1) * 100000000,
+    collectedMinor: (i + 1) * 80000000,
+    prevBookedMinor: (i + 1) * 90000000,
+    prevCollectedMinor: (i + 1) * 70000000,
+  })),
+  yearOverYear: Array.from({ length: 12 }, (_, i) => ({
+    month: new Date(Date.UTC(2026, 3 + i, 1)).toISOString().slice(0, 7),
+    cumulativeMinor: i < 7 ? (i + 1) * 100000000 : null,
+    previousCumulativeMinor: (i + 1) * 90000000,
+  })),
+  clientRevenue: [
+    { id: 'c1', name: 'Acme', bookedMinor: 500000000, collectedMinor: 300000000 },
+    { id: null, name: 'Others (3)', bookedMinor: 200000000, collectedMinor: 100000000 },
+  ],
+  funnel: [
+    { status: 'LEAD', count: 5, valueMinor: 300000000 },
+    { status: 'PROPOSAL', count: 4, valueMinor: 500000000 },
+    { status: 'WON', count: 4, valueMinor: 600000000 },
+    { status: 'ACTIVE', count: 14, valueMinor: 1400000000 },
+    { status: 'COMPLETED', count: 9, valueMinor: 900000000 },
+    { status: 'LOST', count: 3, valueMinor: 200000000 },
+  ],
+  overdue: [
+    {
+      milestoneId: 'm9',
+      number: 1,
+      title: 'Kickoff',
+      balanceMinor: 3000000,
+      dueDate: '2026-10-20',
+      daysOverdue: 10,
+      project: { id: 'p2', code: 'PRJ-0020', name: 'Portal' },
+      client: { id: 'c2', name: 'Bluepeak' },
+      owner: { id: 'u2', name: 'Rohan Sales' },
+    },
+  ],
   topClients: [{ id: 'c1', name: 'Acme', bookedMinor: 500000000, collectedMinor: 300000000 }],
   team: [
     {
@@ -38,6 +76,13 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
       overdueMinor: 200000000,
       upsellMinor: 100000000,
       activeProjects: 6,
+      winRate: 0.8,
+      avgDealMinor: 125000000,
+      monthly: Array.from({ length: 12 }, (_, i) => ({
+        month: `2026-${String(i + 1).padStart(2, '0')}`,
+        bookedMinor: i * 1000000,
+        collectedMinor: i * 800000,
+      })),
     },
   ],
   upcoming: [

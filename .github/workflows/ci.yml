@@ -51,3 +51,8 @@ jobs:
         run: pnpm db:generate && pnpm db:migrate
       - if: hashFiles('apps/*/package.json') != ''
         run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
+      # Flows F1–F5 (docs/08) in a real browser against the built API, its own seeded database.
+      - if: hashFiles('apps/e2e/package.json') != ''
+        run: pnpm --filter @salescrm/e2e exec playwright install --with-deps chromium && pnpm e2e
+        env:
+          E2E_DATABASE_URL: postgresql://salescrm:salescrm@localhost:5432/salescrm_e2e

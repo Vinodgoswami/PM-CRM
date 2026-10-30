@@ -23,6 +23,8 @@ const kpis = z.object({
   /** K11: won ÷ (won + lost) in the period; null when neither happened. */
   winRate: z.number().nullable(),
   avgDealMinor: minorSchema.nullable(),
+  /** K10: mean days from due date to payment; negative = paid early. */
+  avgDaysToPay: z.number().nullable(),
 });
 
 export const dashboardSchema = z.object({
@@ -35,6 +37,36 @@ export const dashboardSchema = z.object({
   monthly: z.array(z.object({ month: z.string(), bookedMinor: minorSchema, collectedMinor: minorSchema, expectedMinor: minorSchema })),
   forecast: z.array(z.object({ month: z.string(), scheduledMinor: minorSchema })),
   aging: z.object({ d1_30: minorSchema, d31_60: minorSchema, d61_90: minorSchema, d90plus: minorSchema }),
+  /** C2: quarters of the selected FY against the same quarters a year earlier. */
+  quarters: z.array(
+    z.object({
+      label: z.string(),
+      bookedMinor: minorSchema,
+      collectedMinor: minorSchema,
+      prevBookedMinor: minorSchema,
+      prevCollectedMinor: minorSchema,
+    }),
+  ),
+  /** C3: cumulative collected by FY month; null for months still ahead. */
+  yearOverYear: z.array(z.object({ month: z.string(), cumulativeMinor: minorSchema.nullable(), previousCumulativeMinor: minorSchema })),
+  /** C6: top 10 clients by collected in the period, then one "Others" row (id null). */
+  clientRevenue: z.array(z.object({ id: z.string().nullable(), name: z.string(), bookedMinor: minorSchema, collectedMinor: minorSchema })),
+  /** C8: projects by current status. */
+  funnel: z.array(z.object({ status: z.string(), count: z.number(), valueMinor: minorSchema })),
+  /** T2: overdue milestones, most days overdue first (top 10). */
+  overdue: z.array(
+    z.object({
+      milestoneId: z.string(),
+      number: z.number(),
+      title: z.string(),
+      balanceMinor: minorSchema,
+      dueDate: isoDateSchema,
+      daysOverdue: z.number(),
+      project: z.object({ id: z.string(), code: z.string(), name: z.string() }),
+      client: ref,
+      owner: ref,
+    }),
+  ),
   topClients: z.array(z.object({ id: z.string(), name: z.string(), bookedMinor: minorSchema, collectedMinor: minorSchema })),
   team: z
     .array(
@@ -46,6 +78,9 @@ export const dashboardSchema = z.object({
         overdueMinor: minorSchema,
         upsellMinor: minorSchema,
         activeProjects: z.number(),
+        winRate: z.number().nullable(),
+        avgDealMinor: minorSchema.nullable(),
+        monthly: z.array(z.object({ month: z.string(), bookedMinor: minorSchema, collectedMinor: minorSchema })),
       }),
     )
     .nullable(),

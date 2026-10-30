@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { type DocumentDto, type RequestUploadInput, type UploadSlot } from '@salescrm/schemas';
 import { type SessionUser } from '../../common/current-user';
 import { AppError, notFound } from '../../common/errors';
@@ -8,14 +8,45 @@ import { PrismaService } from '../prisma/prisma.module';
 import { ProjectsService } from '../projects/projects.service';
 import { STORAGE_DRIVER, type StorageDriver } from '../storage/storage.driver';
 
+/** A PENDING row older than this was abandoned: its upload URL expired long ago (PUT_TTL_MS is minutes). */
+const ABANDONED_AFTER_MS = 60 * 60_000;
+const SWEEP_EVERY_MS = 60 * 60_000;
+
 @Injectable()
-export class DocumentsService {
+export class DocumentsService implements OnModuleInit, OnModuleDestroy {
+  private readonly log = new Logger('Documents');
+  private timer?: NodeJS.Timeout;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projects: ProjectsService,
     private readonly audit: AuditService,
     @Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
   ) {}
+
+  onModuleInit() {
+    // Hourly; unref so the timer never keeps the process (or a test run) alive.
+    this.timer = setInterval(() => void this.sweepAbandoned().catch((e: unknown) => this.log.error(e)), SWEEP_EVERY_MS);
+    this.timer.unref();
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.timer);
+  }
+
+  /** Removes uploads that were requested but never confirmed (row and any stored bytes). Returns how many. */
+  async sweepAbandoned(now = new Date()): Promise<number> {
+    const stale = await this.prisma.document.findMany({
+      where: { status: 'PENDING', createdAt: { lt: new Date(now.getTime() - ABANDONED_AFTER_MS) } },
+      select: { id: true, storageKey: true },
+    });
+    for (const doc of stale) {
+      await this.storage.delete(doc.storageKey).catch(() => undefined);
+      // deleteMany: a confirm that raced us leaves the row READY, and READY rows are never touched.
+      await this.prisma.document.deleteMany({ where: { id: doc.id, status: 'PENDING' } });
+    }
+    return stale.length;
+  }
 
   /** Step 1 of docs/04 § Documents: a PENDING row plus a short-lived signed upload URL. */
   async requestUpload(user: SessionUser, projectId: string, input: RequestUploadInput): Promise<UploadSlot> {

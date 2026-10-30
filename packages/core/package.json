@@ -21,6 +21,9 @@
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests"
   },
+  "dependencies": {
+    "@salescrm/types": "workspace:*"
+  },
   "devDependencies": {
     "@salescrm/eslint-config": "workspace:*",
     "@salescrm/typescript-config": "workspace:*",

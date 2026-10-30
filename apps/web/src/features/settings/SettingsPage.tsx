@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@salescrm/ui';
 import { CompanySettingsForm } from './CompanySettingsForm';
+import { ImportPanel } from './ImportPanel';
 import { UsersPanel } from './UsersPanel';
 
 export function SettingsPage() {
@@ -10,12 +11,16 @@ export function SettingsPage() {
         <TabsList>
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="import">Import data</TabsTrigger>
         </TabsList>
         <TabsContent value="company">
           <CompanySettingsForm />
         </TabsContent>
         <TabsContent value="users">
           <UsersPanel />
+        </TabsContent>
+        <TabsContent value="import">
+          <ImportPanel />
         </TabsContent>
       </Tabs>
     </section>

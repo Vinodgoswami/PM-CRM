@@ -2,6 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import { type PrismaClient } from '@salescrm/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
+import { DocumentsService } from '../src/modules/documents/documents.service';
 import { createTestApp, loginAs, resetDatabase } from './harness';
 
 let app: INestApplication;
@@ -170,4 +171,24 @@ test('the raw upload body parser is only mounted for local storage', async () =>
   } finally {
     await s3App.close();
   }
+});
+
+test('abandoned uploads are swept after an hour; fresh and confirmed ones stay', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const projectId = await newProject(agent, csrf);
+  const old = await requestUpload(agent, csrf, projectId, { name: 'Old.pdf' });
+  const fresh = await requestUpload(agent, csrf, projectId, { name: 'Fresh.pdf' });
+  const done = await requestUpload(agent, csrf, projectId, { name: 'Done.pdf' });
+  await http().put(pathOf(done.body.url)).set('Content-Type', 'application/pdf').send(PDF).expect(200);
+  await agent.post(`/api/v1/documents/${done.body.documentId}/confirm`).set('X-CSRF-Token', csrf).expect(200);
+  const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000);
+  await prisma.document.updateMany({
+    where: { id: { in: [old.body.documentId, done.body.documentId] } },
+    data: { createdAt: twoHoursAgo },
+  });
+
+  const swept = await app.get(DocumentsService).sweepAbandoned();
+  expect(swept).toBe(1);
+  const left = await prisma.document.findMany({ select: { id: true } });
+  expect(left.map((d) => d.id).sort()).toEqual([fresh.body.documentId, done.body.documentId].sort());
 });

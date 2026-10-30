@@ -116,11 +116,13 @@ Permission keys from [07](07-roles-and-permissions.md).
 
 ### Dashboard & export
 
-| Method | Path                  | Permission                        | Notes                                  |
-| ------ | --------------------- | --------------------------------- | -------------------------------------- |
-| GET    | /dashboard            | dashboard.own / dashboard.company | KPIs K1–K12 + series C1–C9 for filters |
-| GET    | /dashboard/team       | dashboard.company                 | team performance rows                  |
-| GET    | /dashboard/tables     | dashboard.own                     | T1–T3                                  |
-| GET    | /dashboard/drilldown  | dashboard.own                     | `?metric=K1&bucket=2026-07`            |
-| POST   | /exports/pdf          | export                            | `{ path, query }` → file               |
-| GET    | /exports/csv/:dataset | export                            | invoices, billing, projects, team      |
+| Method | Path                  | Permission                        | Notes                                                                                                                      |
+| ------ | --------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| GET    | /dashboard            | dashboard.own / dashboard.company | KPIs K1–K12 + series C1–C9 for filters                                                                                     |
+| POST   | /imports/preview      | settings.manage                   | `{ csv }` → counts, problems by line, first 100 projects (P6-4); writes nothing                                            |
+| POST   | /imports              | settings.manage                   | `{ csv }` → creates clients, projects, milestones, payments in one transaction; 400 with `details.errors` if any row fails |
+| GET    | /dashboard/team       | dashboard.company                 | team performance rows                                                                                                      |
+| GET    | /dashboard/tables     | dashboard.own                     | T1–T3                                                                                                                      |
+| GET    | /dashboard/drilldown  | dashboard.own                     | `?metric=K1&bucket=2026-07`                                                                                                |
+| POST   | /exports/pdf          | export                            | `{ path, query }` → file                                                                                                   |
+| GET    | /exports/csv/:dataset | export                            | invoices, billing, projects, team                                                                                          |

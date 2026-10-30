@@ -24,3 +24,6 @@ test-results
 # CI copies of trusted scanners
 scripts/.guard-trusted.mjs
 scripts/.scan-trusted.mjs
+
+# Uploads written by the e2e API (apps/e2e)
+.e2e-uploads/
