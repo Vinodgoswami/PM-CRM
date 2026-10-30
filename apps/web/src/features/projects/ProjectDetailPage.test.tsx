@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
@@ -123,10 +123,16 @@ test('D-028 a phase points back to its original project', async () => {
   expect(await screen.findByRole('link', { name: /Phase 2 of PRJ-0000 Website/ })).toHaveAttribute('href', '/projects/p0');
 });
 
-test('the project page has a way back', async () => {
-  vi.stubGlobal('fetch', stubApi(base).fn);
+test('the back arrow returns to Projects, and breadcrumbs lead to the client and the original project', async () => {
+  const phase = detail({ phase: 2, parent: { id: 'p0', code: 'PRJ-0000', name: 'Website' } });
+  vi.stubGlobal('fetch', stubApi({ ...base, 'GET /projects/p1': { body: phase } }).fn);
   const { router } = renderApp('/projects/p1', sessionFor('SALES'));
-  await userEvent.click(await screen.findByRole('button', { name: 'Back' }));
+  const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+  expect(within(crumbs).getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects');
+  expect(within(crumbs).getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/clients/c1');
+  expect(within(crumbs).getByRole('link', { name: 'PRJ-0000 Website' })).toHaveAttribute('href', '/projects/p0');
+  expect(within(crumbs).getByText('PRJ-0001 Website Redesign')).toHaveAttribute('aria-current', 'page');
+  await userEvent.click(screen.getByRole('link', { name: 'Back to Projects' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/projects'));
 });
 
