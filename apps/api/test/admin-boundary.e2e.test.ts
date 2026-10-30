@@ -40,19 +40,10 @@ async function someWork() {
   return { ceo, project: p.body, payment: pay.body };
 }
 
-test('the Admin cannot read or write clients, projects, money, dashboards or imports', async () => {
+test('the Admin cannot read or write client, project or payment records, or import', async () => {
   const { project } = await someWork();
   const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
-  for (const path of [
-    '/projects',
-    `/projects/${project.id}`,
-    '/clients',
-    '/dashboard',
-    '/invoices',
-    '/payments',
-    '/exports/csv/billing',
-    '/owners',
-  ]) {
+  for (const path of ['/projects', `/projects/${project.id}`, '/clients', '/invoices', '/payments', '/exports/csv/billing']) {
     expect([path, (await agent.get(`/api/v1${path}`)).status]).toEqual([path, 403]);
   }
   expect(
@@ -116,4 +107,23 @@ test('the CEO reverses a wrong payment', async () => {
   const { ceo, payment } = await someWork();
   const rev = await ceo.agent.post(`/api/v1/payments/${payment.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({ reason: 'Wrong amount' });
   expect(rev.status).toBe(201);
+});
+
+test('D-022 the Admin’s dashboard has the business figures, with every client and project name left out', async () => {
+  await someWork();
+  const { agent } = await loginAs(app, prisma, 'ADMIN');
+  const d = (await agent.get('/api/v1/dashboard?period=TWO_FY')).body;
+  expect(d.anonymous).toBe(true);
+  expect(d.kpis).toMatchObject({ bookedMinor: 100000, collectedMinor: 40000, wonCount: 1 });
+  expect(d.monthly).toHaveLength(12);
+  expect(d.team).toHaveLength(1); // per project manager: the Admin manages these people
+  expect(d.upcomingSummary.reduce((s: number, g: { count: number }) => s + g.count, 0)).toBe(1);
+  for (const list of ['upcoming', 'overdue', 'recentPayments', 'topClients', 'clientRevenue', 'upcomingBookings'])
+    expect([list, d[list]]).toEqual([list, []]);
+  expect(JSON.stringify(d)).not.toMatch(/Secret/);
+
+  const ceo = await loginAs(app, prisma, 'CEO');
+  const full = (await ceo.agent.get('/api/v1/dashboard?period=TWO_FY')).body;
+  expect(full.anonymous).toBe(false);
+  expect(JSON.stringify(full)).toMatch(/Secret client/);
 });

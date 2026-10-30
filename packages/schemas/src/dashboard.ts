@@ -29,6 +29,10 @@ const kpis = z.object({
 
 export const dashboardSchema = z.object({
   currency: z.string(),
+  /** D-022: true for a viewer who may not see client or project records; every named list is then empty. */
+  anonymous: z.boolean().default(false),
+  /** Unpaid balances by when they fall due (base currency), for everyone including the Admin. */
+  upcomingSummary: z.array(z.object({ key: z.string(), count: z.number(), totalMinor: minorSchema })).default([]),
   /** M-4: projects in another currency are left out of every total; the page shows this count. */
   otherCurrencyProjects: z.number(),
   period: z.object({ key: z.string(), from: isoDateSchema.nullable(), to: isoDateSchema.nullable() }),

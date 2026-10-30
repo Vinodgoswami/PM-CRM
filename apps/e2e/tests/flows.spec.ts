@@ -90,12 +90,15 @@ test('F5 CEO weekly check: quarter view, team, overdue invoices, PDF', async ({ 
   expect(await page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
 });
 
-test('D-021 the Admin lands on a counts-only overview and cannot open projects', async ({ page }) => {
+test('D-022 the Admin lands on the dashboard (figures, counts, no names) and cannot open projects', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('admin@pmcrm.test');
   await page.getByLabel('Password', { exact: true }).fill(SEED_PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^Welcome back,/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'People and work' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Upcoming invoices' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Users' }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Projects' })).toHaveCount(0);
   await page.goto('/projects');
   await expect(page.getByText(/permission|not allowed|access/i).first()).toBeVisible();

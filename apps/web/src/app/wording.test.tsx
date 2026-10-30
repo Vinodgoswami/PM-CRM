@@ -48,9 +48,8 @@ test('the Admin invites Project Managers', async () => {
       'GET /users': { body: users },
     }).fn,
   );
-  renderApp('/settings', sessionFor('ADMIN'));
+  renderApp('/users', sessionFor('ADMIN'));
   const user = userEvent.setup();
-  await user.click(await screen.findByRole('tab', { name: 'Users' }));
   expect(await screen.findByText('Rohan Mehta')).toBeInTheDocument();
   expect(screen.getByText('Project Manager')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: /invite/i }));

@@ -25,6 +25,7 @@
 | D-019 | 2026-10-30 | Dashboard periods add YTD (FY to date) and 2 years (last + this FY), default Quarter; Upcoming bookings (Enquiry/Quoted) on the dashboard; CEO/Admin compare two project managers on /compare                                                                  | Owner request                                                    |
 | D-020 | 2026-10-30 | Multi-currency: totals in the base currency; payments record both amounts at the day's rate (auto-filled from Frankfurter/ECB, editable); projects save their rate when created and confirmed; work with no rate is left out with a note (answers Q-03)        | Owner choice                                                     |
 | D-021 | 2026-10-30 | The Admin manages accounts only: no client, project or money data; sees counts and account events. Reversals, company settings (except name), import and stage jumps move to the CEO; only Project Managers own projects                                       | Owner choice                                                     |
+| D-022 | 2026-10-30 | The Admin gets the dashboard back: every figure and chart, people counts and upcoming-invoice totals, with client/project names left out; Users is a top-bar tab with pending invites (resend, cancel); the invite page says who is invited and as what        | Owner feedback on D-021                                          |
 
 ## Open questions
 

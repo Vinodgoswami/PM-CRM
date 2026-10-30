@@ -5,6 +5,8 @@ import {
   cashInForecast,
   comparableRange,
   fyOf,
+  INVOICE_GROUP_ORDER,
+  invoiceGroup,
   type MetricProject,
   monthlySeries,
   periodRange,
@@ -19,6 +21,7 @@ import { type SessionUser } from '../../common/current-user';
 import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
 import { inBase } from '../fx/to-base';
+import { can } from '@salescrm/auth/permissions';
 import { SettingsService } from '../settings/settings.service';
 
 const j = minorToJson;
@@ -233,8 +236,31 @@ export class DashboardService {
       }));
 
     const aging = agingBuckets(metric, today);
-    return {
+
+    // Unpaid balances by when they fall due (same groups as Upcoming Invoices), totals only.
+    const summary = new Map<string, { count: number; total: bigint }>();
+    for (const p of rows) {
+      if (!BOOKED.includes(p.status)) continue;
+      for (const ms of p.milestones) {
+        const balance = ms.amountMinor - ms.payments.reduce((a, x) => a + x.amountMinor, 0n);
+        if (balance <= 0n) continue;
+        const key = invoiceGroup(isoDate(ms.dueDate), today);
+        const g = summary.get(key) ?? { count: 0, total: 0n };
+        summary.set(key, { count: g.count + 1, total: g.total + balance });
+      }
+    }
+    const upcomingSummary = INVOICE_GROUP_ORDER.filter((k) => summary.has(k)).map((k) => ({
+      key: k,
+      count: summary.get(k)!.count,
+      totalMinor: j(summary.get(k)!.total),
+    }));
+
+    // D-022: a viewer who may not see client or project records (the Admin) gets every figure, but no names.
+    const anonymous = !can(user, 'projects.read');
+    const result: Dashboard = {
       currency: settings.baseCurrency,
+      anonymous,
+      upcomingSummary,
       otherCurrencyProjects: all.length - rows.length,
       period: { key: q.period, from: range.from ?? null, to: range.to ?? null },
       kpis: {
@@ -287,5 +313,8 @@ export class DashboardService {
       upcoming,
       recentPayments,
     };
+    return anonymous
+      ? { ...result, upcoming: [], overdue: [], recentPayments: [], topClients: [], clientRevenue: [], upcomingBookings: [] }
+      : result;
   }
 }

@@ -41,7 +41,7 @@ function Backdrop() {
   );
 }
 
-function WelcomePanel() {
+function WelcomePanel({ greeting }: { greeting: string }) {
   return (
     <div
       data-testid="welcome-panel"
@@ -56,7 +56,7 @@ function WelcomePanel() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5 }}
         >
-          Welcome back!
+          {greeting}
         </motion.h2>
         <motion.p
           className="max-w-xs text-white/80"
@@ -83,7 +83,18 @@ function WelcomePanel() {
 }
 
 /** Shared shell for sign-in, invite acceptance and password reset. */
-export function AuthCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+export function AuthCard({
+  title,
+  description,
+  greeting = 'Welcome back!',
+  children,
+}: {
+  title: string;
+  description?: ReactNode;
+  /** Big words on the green panel: "Welcome back!" to sign in, "Welcome!" for someone new. */
+  greeting?: string;
+  children: ReactNode;
+}) {
   return (
     <MotionConfig reducedMotion="user">
       <Backdrop />
@@ -94,7 +105,7 @@ export function AuthCard({ title, description, children }: { title: string; desc
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] }}
         >
-          <WelcomePanel />
+          <WelcomePanel greeting={greeting} />
           <div className="space-y-6 p-8 sm:p-10">
             <div className="flex items-center gap-2 md:hidden">
               <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">P</span>

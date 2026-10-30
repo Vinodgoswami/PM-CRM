@@ -70,6 +70,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-16 | Done   | feat/profile-photo              | Profile photo: two-column profile (large photo left with change / remove; details and password right); photo shown in the top bar; private storage, JPEG/PNG/WebP up to 2 MB                                                                                                                |
 | P4-17 | Done   | feat/admin-accounts-only        | D-021: Admin = accounts + counts (Overview home, company name, account audit); CEO gains reversals, settings, import, full audit, stage jumps; owners are PMs only; import requires owner_email                                                                                             |
 | P4-18 | Done   | feat/custom-select              | Own dropdown (`Select` in packages/ui on Radix Popover, no react-select): opens below the field, pill style, keyboard + type-ahead, screen-reader roles; all 12 native selects replaced (`OptionSelect` wrapper)                                                                            |
+| P4-19 | Done   | fix/invites-admin-dashboard     | D-022: Admin dashboard (figures, counts, upcoming-invoice totals, no names); Users top-bar tab with pending invites (resend / cancel); invite page shows company, role and email; re-inviting replaces the old link                                                                         |
 
 ## Blockers
 

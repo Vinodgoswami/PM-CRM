@@ -23,6 +23,8 @@ import { downloadCsv } from '../../lib/download';
 import { OWNER } from '../../lib/labels';
 import { UpcomingBookings } from './UpcomingBookings';
 import { OptionSelect } from '../../components/OptionSelect';
+import { AdminCounts } from '../admin/AdminOverviewPage';
+import { UpcomingSummary } from './UpcomingSummary';
 import { useCountUp } from './useCountUp';
 
 const pct = (current: number, previous: number | undefined) =>
@@ -163,6 +165,10 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
   const outstanding = useCountUp(k.outstandingMinor);
   const [series, setSeries] = useState<'collected' | 'booked'>('collected');
   const [drill, setDrill] = useState<string | null>(null);
+  // D-022: the Admin sees every figure but no client or project names, and cannot open the lists behind them.
+  const anon = data.anonymous;
+  const { data: session } = useSession();
+  const showCounts = !!session && can(session.user, 'admin.overview');
   const [qSeries, setQSeries] = useState<'booked' | 'collected'>('booked');
   const bars = data.monthly.map((m) => ({
     key: m.month,
@@ -178,8 +184,32 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
   const agingMax = Math.max(1, ...agingRows.map((r) => r.value));
   const periodText = data.period.from ? `${formatDate(data.period.from)} – ${formatDate(data.period.to)}` : 'All time';
 
+  const agingPanel = (
+    <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-5">
+      <ul className="space-y-3">
+        {agingRows.map((r, i) => (
+          <li key={r.label} className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-text-muted">{r.label}</span>
+              <span className="font-semibold tabular-nums">{money(r.value)}</span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-background">
+              <motion.div
+                className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${(r.value / agingMax) * 100}%` }}
+                transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+
   return (
     <div className="space-y-5">
+      {showCounts && <AdminCounts />}
       <CurrencyNote count={data.otherCurrencyProjects} noun="project" currency={data.currency} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <motion.section
@@ -243,7 +273,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
             currency={data.currency}
             highlightIndex={bars.length - 1}
             label={`Monthly ${series}`}
-            onSelect={setDrill}
+            onSelect={anon ? undefined : setDrill}
           />
           {drill && <DrillDownDialog month={drill} series={series} ownerId={ownerId} onClose={() => setDrill(null)} />}
         </Panel>
@@ -304,156 +334,146 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
         </Panel>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <Panel
-          title="Upcoming dues"
-          subtitle="Next 30 days"
-          className="lg:col-span-7"
-          action={<CornerLink to="/invoices" label="All upcoming invoices" />}
-        >
-          {data.upcoming.length === 0 ? (
-            <p className="text-sm text-text-muted">Nothing due in the next 30 days.</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {data.upcoming.map((u) => (
-                <li key={u.milestoneId} className="flex items-center gap-3 py-2.5">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-primary">
-                    <CalendarClock className="size-4" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <Link to={`/projects/${u.project.id}`} className="block truncate font-medium hover:underline">
-                      M{u.number} {u.title}
-                    </Link>
-                    <p className="truncate text-xs text-text-muted">
-                      {u.client.name} · {u.project.code}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold tabular-nums">{money(u.balanceMinor)}</p>
-                    <p className="text-xs text-text-muted">{formatDate(u.dueDate)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-
-        <Panel title="Due-date calendar" subtitle="Unpaid balances by due day" className="lg:col-span-5">
-          <DueCalendar ownerId={ownerId} currency={data.currency} />
-        </Panel>
-      </div>
-
-      <UpcomingBookings items={data.upcomingBookings} money={money} />
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <Panel
-          title="Overdue milestones"
-          subtitle="Most days overdue first"
-          className="lg:col-span-7"
-          action={<CornerLink to="/invoices" label="Open upcoming invoices" />}
-        >
-          {data.overdue.length === 0 ? (
-            <p className="text-sm text-text-muted">Nothing overdue. </p>
-          ) : (
-            <Table className="text-sm">
-              <THead>
-                <TR>
-                  <TH>Milestone</TH>
-                  <TH>{OWNER}</TH>
-                  <TH className="text-right">Overdue</TH>
-                  <TH className="text-right">Balance</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {data.overdue.map((o) => (
-                  <TR key={o.milestoneId}>
-                    <TD>
-                      <Link to={`/projects/${o.project.id}`} className="font-medium hover:underline">
-                        M{o.number} {o.title}
-                      </Link>
-                      <p className="text-xs text-text-muted">
-                        {o.client.name} · {o.project.code}
-                      </p>
-                    </TD>
-                    <TD>{o.owner.name}</TD>
-                    <TD className="text-right font-semibold text-danger tabular-nums">{o.daysOverdue} days</TD>
-                    <TD className="text-right font-semibold tabular-nums">{money(o.balanceMinor)}</TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-        </Panel>
-
-        <Panel title="Overdue by age" subtitle="Unpaid balance, days past due" className="lg:col-span-5">
-          <ul className="space-y-3">
-            {agingRows.map((r, i) => (
-              <li key={r.label} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">{r.label}</span>
-                  <span className="font-semibold tabular-nums">{money(r.value)}</span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-background">
-                  <motion.div
-                    className={`h-full rounded-full ${i === 3 ? 'bg-danger' : 'bg-primary'}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(r.value / agingMax) * 100}%` }}
-                    transition={{ delay: 0.1 + i * 0.06, duration: 0.6 }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <Panel
-          title="Recent payments"
-          subtitle="Latest money in"
-          className="lg:col-span-7"
-          action={<CornerLink to="/billing" label="Completed billing" />}
-        >
-          {data.recentPayments.length === 0 ? (
-            <p className="text-sm text-text-muted">No payments yet.</p>
-          ) : (
-            <Table className="text-sm">
-              <THead>
-                <TR>
-                  <TH>Client</TH>
-                  <TH>Date</TH>
-                  <TH>Invoice</TH>
-                  <TH className="text-right">Amount</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {data.recentPayments.map((p) => (
-                  <TR key={p.id}>
-                    <TD>
-                      <p className="font-medium">{p.client.name}</p>
-                      <p className="text-xs text-text-muted">{p.project.code}</p>
-                    </TD>
-                    <TD>{formatDate(p.paymentDate)}</TD>
-                    <TD>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span aria-hidden className={`size-1.5 rounded-full ${p.amountMinor < 0 ? 'bg-danger' : 'bg-success'}`} />
-                        {p.invoiceId ?? '—'}
+      {anon ? (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+          <UpcomingSummary items={data.upcomingSummary} money={money} />
+          {agingPanel}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            <Panel
+              title="Upcoming dues"
+              subtitle="Next 30 days"
+              className="lg:col-span-7"
+              action={<CornerLink to="/invoices" label="All upcoming invoices" />}
+            >
+              {data.upcoming.length === 0 ? (
+                <p className="text-sm text-text-muted">Nothing due in the next 30 days.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {data.upcoming.map((u) => (
+                    <li key={u.milestoneId} className="flex items-center gap-3 py-2.5">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-primary">
+                        <CalendarClock className="size-4" aria-hidden />
                       </span>
-                    </TD>
-                    <TD className={`text-right font-semibold tabular-nums ${p.amountMinor < 0 ? 'text-danger' : ''}`}>
-                      {money(p.amountMinor)}
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-        </Panel>
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/projects/${u.project.id}`} className="block truncate font-medium hover:underline">
+                          M{u.number} {u.title}
+                        </Link>
+                        <p className="truncate text-xs text-text-muted">
+                          {u.client.name} · {u.project.code}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold tabular-nums">{money(u.balanceMinor)}</p>
+                        <p className="text-xs text-text-muted">{formatDate(u.dueDate)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
 
-        <Panel title="Revenue by client" subtitle="Collected in the period (track = contracted)" className="lg:col-span-5">
-          <ClientBars data={data.clientRevenue} money={money} />
-        </Panel>
-      </div>
+            <Panel title="Due-date calendar" subtitle="Unpaid balances by due day" className="lg:col-span-5">
+              <DueCalendar ownerId={ownerId} currency={data.currency} />
+            </Panel>
+          </div>
+
+          <UpcomingBookings items={data.upcomingBookings} money={money} />
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            <Panel
+              title="Overdue milestones"
+              subtitle="Most days overdue first"
+              className="lg:col-span-7"
+              action={<CornerLink to="/invoices" label="Open upcoming invoices" />}
+            >
+              {data.overdue.length === 0 ? (
+                <p className="text-sm text-text-muted">Nothing overdue. </p>
+              ) : (
+                <Table className="text-sm">
+                  <THead>
+                    <TR>
+                      <TH>Milestone</TH>
+                      <TH>{OWNER}</TH>
+                      <TH className="text-right">Overdue</TH>
+                      <TH className="text-right">Balance</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {data.overdue.map((o) => (
+                      <TR key={o.milestoneId}>
+                        <TD>
+                          <Link to={`/projects/${o.project.id}`} className="font-medium hover:underline">
+                            M{o.number} {o.title}
+                          </Link>
+                          <p className="text-xs text-text-muted">
+                            {o.client.name} · {o.project.code}
+                          </p>
+                        </TD>
+                        <TD>{o.owner.name}</TD>
+                        <TD className="text-right font-semibold text-danger tabular-nums">{o.daysOverdue} days</TD>
+                        <TD className="text-right font-semibold tabular-nums">{money(o.balanceMinor)}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              )}
+            </Panel>
+
+            {agingPanel}
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            <Panel
+              title="Recent payments"
+              subtitle="Latest money in"
+              className="lg:col-span-7"
+              action={<CornerLink to="/billing" label="Completed billing" />}
+            >
+              {data.recentPayments.length === 0 ? (
+                <p className="text-sm text-text-muted">No payments yet.</p>
+              ) : (
+                <Table className="text-sm">
+                  <THead>
+                    <TR>
+                      <TH>Client</TH>
+                      <TH>Date</TH>
+                      <TH>Invoice</TH>
+                      <TH className="text-right">Amount</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {data.recentPayments.map((p) => (
+                      <TR key={p.id}>
+                        <TD>
+                          <p className="font-medium">{p.client.name}</p>
+                          <p className="text-xs text-text-muted">{p.project.code}</p>
+                        </TD>
+                        <TD>{formatDate(p.paymentDate)}</TD>
+                        <TD>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span aria-hidden className={`size-1.5 rounded-full ${p.amountMinor < 0 ? 'bg-danger' : 'bg-success'}`} />
+                            {p.invoiceId ?? '—'}
+                          </span>
+                        </TD>
+                        <TD className={`text-right font-semibold tabular-nums ${p.amountMinor < 0 ? 'text-danger' : ''}`}>
+                          {money(p.amountMinor)}
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              )}
+            </Panel>
+
+            <Panel title="Revenue by client" subtitle="Collected in the period (track = contracted)" className="lg:col-span-5">
+              <ClientBars data={data.clientRevenue} money={money} />
+            </Panel>
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <Panel title="Projects by stage" subtitle="Current stage · count and value" className="lg:col-span-7">

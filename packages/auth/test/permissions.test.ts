@@ -5,8 +5,9 @@ import { can, manageableRoles, type Permission, PERMISSIONS, type Scope, scopeFo
 const MATRIX: [Permission, Scope, Scope, Scope][] = [
   // D-021: the Admin manages accounts and sees counts only; clients, projects and money belong to the CEO and PMs.
   ['admin.overview', 'all', false, false],
-  ['dashboard.company', false, false, 'all'],
-  ['dashboard.own', false, 'all', 'all'],
+  // D-022: the Admin sees the business figures (names hidden), not client or project records.
+  ['dashboard.company', 'all', false, 'all'],
+  ['dashboard.own', 'all', 'all', 'all'],
   ['invoices.read', false, 'own', 'all'],
   ['billing.read', false, 'own', 'all'],
   ['export', false, 'own', 'all'],
@@ -58,7 +59,7 @@ test('D-018 Admin adds anyone; the CEO adds and manages Project Managers only; P
 
 test('D-021 the Admin sees no client, project or money data at all', () => {
   const admin = { id: 'a1', role: 'ADMIN' as const };
-  for (const p of ['projects.read', 'clients.read', 'invoices.read', 'billing.read', 'dashboard.own', 'audit.business'] as const) {
+  for (const p of ['projects.read', 'clients.read', 'invoices.read', 'billing.read', 'audit.business'] as const) {
     expect(can(admin, p)).toBe(false);
   }
   expect(can(admin, 'users.manage')).toBe(true);

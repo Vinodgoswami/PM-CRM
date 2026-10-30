@@ -18,17 +18,8 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { AppLayout } from './AppLayout';
 import { ComparePage } from '../features/dashboard/ComparePage';
 import { ProfilePage } from '../features/settings/ProfilePage';
-import { AdminOverviewPage } from '../features/admin/AdminOverviewPage';
-import { can } from '@salescrm/auth/permissions';
-import { useSession } from '../features/auth/api';
+import { UsersPage } from '../features/settings/UsersPage';
 import { RequireAuth, RequirePermission } from './guards';
-
-/** D-021: the Admin lands on the counts-only overview; everyone else on the dashboard. */
-function Home() {
-  const { data } = useSession();
-  if (data && can(data.user, 'admin.overview')) return <AdminOverviewPage />;
-  return guarded('dashboard.own', <DashboardPage />);
-}
 
 const guarded = (permission: Permission, element: ReactNode) => <RequirePermission permission={permission}>{element}</RequirePermission>;
 
@@ -43,7 +34,8 @@ export const routes: RouteObject[] = [
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <Home /> },
+      { index: true, element: guarded('dashboard.own', <DashboardPage />) },
+      { path: 'users', element: guarded('users.manage', <UsersPage />) },
       { path: 'compare', element: guarded('dashboard.company', <ComparePage />) },
       { path: 'invoices', element: guarded('invoices.read', <InvoicesPage />) },
       { path: 'projects', element: guarded('projects.read', <ProjectsListPage />) },
@@ -53,7 +45,7 @@ export const routes: RouteObject[] = [
       { path: 'billing', element: guarded('billing.read', <BillingPage />) },
       { path: 'clients', element: guarded('clients.read', <ClientsListPage />) },
       { path: 'clients/:id', element: guarded('clients.read', <ClientDetailPage />) },
-      { path: 'settings', element: guarded('users.manage', <SettingsPage />) },
+      { path: 'settings', element: guarded('settings.company', <SettingsPage />) },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'audit', element: guarded('audit.read', <AuditLogPage />) },
     ],

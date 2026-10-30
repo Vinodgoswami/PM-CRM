@@ -13,8 +13,7 @@ const users = {
 
 test('your own row in the users list has no role change, reset or deactivate; it points to your profile', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /settings': { body: settings }, 'GET /users': { body: users } }).fn);
-  renderApp('/settings', sessionFor('ADMIN'));
-  await userEvent.click(await screen.findByRole('tab', { name: 'Users' }));
+  renderApp('/users', sessionFor('ADMIN'));
   const table = await screen.findByRole('table');
   const mine = (await within(table).findByText('Test User')).closest('tr')!;
   expect(within(mine).queryByRole('combobox')).toBeNull();
