@@ -2,7 +2,7 @@
   "name": "salescrm",
   "private": true,
   "version": "0.1.0",
-  "description": "SalesCRM — project-oriented sales CRM: clients, projects, milestones, billing and CEO revenue dashboard",
+  "description": "SalesCRM \u2014 project-oriented sales CRM: clients, projects, milestones, billing and CEO revenue dashboard",
   "packageManager": "pnpm@11.19.0",
   "engines": {
     "node": ">=22.12"
@@ -34,7 +34,8 @@
     "guard:integrity": "node scripts/guard-integrity.mjs",
     "docs:check": "node scripts/check-documentation.mjs",
     "scan:quality": "pnpm check:obscure && pnpm check:obscure:selftest && pnpm security:check",
-    "verify": "pnpm format:check && pnpm scan:quality && pnpm guard:integrity && pnpm typecheck && pnpm lint && pnpm test"
+    "verify": "pnpm format:check && pnpm scan:quality && pnpm guard:integrity && pnpm typecheck && pnpm lint && pnpm test",
+    "e2e": "pnpm --filter @salescrm/e2e e2e"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",

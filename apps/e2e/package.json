@@ -1,0 +1,19 @@
+{
+  "name": "@salescrm/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "node ../../scripts/with-env.mjs playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@salescrm/eslint-config": "workspace:*",
+    "@salescrm/typescript-config": "workspace:*",
+    "@types/node": "^24.19.2",
+    "eslint": "^9.39.5",
+    "typescript": "~5.9.3"
+  }
+}

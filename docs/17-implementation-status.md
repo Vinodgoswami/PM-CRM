@@ -59,6 +59,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-7  | Done   | feat/dashboard-complete         | Dashboard spec complete: K10 avg days to pay, K12 tile, C2 quarter comparison, C3 year over year, C6 revenue by client (top 10 + Others), C7 new vs upsell, C8 pipeline, T2 overdue table, team win rate / avg deal / 12-month trend |
 | P4-8  | Done   | feat/dashboard-complete         | Dashboard filters in the address (?period=&ownerId=), 12-month trend lines on Booked / Expected cards, Export CSV of the dashboard tables (major units, currency column, formula-safe, UTF-8 BOM)                                    |
 | P4-9  | Done   | feat/dashboard-complete         | Drill-down lists load 100 at a time with “Load more”; abandoned uploads (PENDING > 1 h) are swept hourly with their stored bytes                                                                                                     |
+| P6-1  | Done   | feat/dashboard-complete         | Playwright E2E (apps/e2e): flows F1–F5 against the built API, its own seeded salescrm_e2e database and ports; runs in CI after build                                                                                                 |
 | P6-4  | Done   | feat/dashboard-complete         | CSV import (Settings → Import data): template, preview with problems by line, all-or-nothing import under every entry rule; seed clients now carry nameKey (backfill migration)                                                      |
 
 ## Blockers
