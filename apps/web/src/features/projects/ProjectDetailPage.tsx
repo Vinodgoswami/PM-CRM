@@ -15,7 +15,7 @@ import {
   TabsTrigger,
   toast,
 } from '@salescrm/ui';
-import { AlertTriangle, ChevronDown, Pencil } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Pencil } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { ApiError } from '../../lib/api';
@@ -77,6 +77,7 @@ function ProjectView({ project }: { project: ProjectDetail }) {
         </div>
         {project.canEdit && (
           <div className="flex gap-2">
+            <MarkCompleted project={project} />
             <StatusMenu project={project} />
             <Button asChild variant="outline">
               <Link to={`/projects/${project.id}/edit`}>
@@ -142,6 +143,24 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'da
       <p className="text-sm text-text-muted">{label}</p>
       <p className={`mt-1 text-xl font-semibold tabular-nums ${tone === 'danger' ? 'text-danger' : ''}`}>{value}</p>
     </Card>
+  );
+}
+
+// D-025: hired work is finished with one clear action rather than a pick from the status list.
+function MarkCompleted({ project }: { project: ProjectDetail }) {
+  const change = useChangeStatus(project.id);
+  if (!ALLOWED_TRANSITIONS[project.status as ProjectStatus].includes('COMPLETED')) return null;
+  const complete = () => {
+    if (!window.confirm(`Mark ${project.name} as completed?`)) return;
+    change.mutate('COMPLETED', {
+      onSuccess: () => toast.success('Project completed'),
+      onError: (e) => toast.error(e.message),
+    });
+  };
+  return (
+    <Button onClick={complete} disabled={change.isPending}>
+      <CheckCircle2 className="size-4" /> Mark as completed
+    </Button>
   );
 }
 

@@ -74,6 +74,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-20 | Done   | feat/email                      | D-023: invite / resend / reset emails over SMTP (nodemailer), log transport in development, `emailed` shown on screen with the link still copyable                                                                                                                                          |
 | P4-21 | Done   | fix/email-log-mode              | Log mode (no SMTP set up) no longer reports invites as emailed; the screen says to share the link by hand                                                                                                                                                                                   |
 | P4-22 | Done   | feat/ceo-teams                  | D-024 teams: `managerId` on users and invites, team-scoped Users / invites / owners / assignment for CEOs, Admin "Reports to" column and invite field, no self row, seed PMs report to the demo CEO                                                                                         |
+| P4-23 | Done   | feat/simpler-project-form       | D-025 simpler project form (Active on create, required booking amount, milestone due dates required, no start date / duration), "Mark as completed" on the project page, redesigned invite dialog (email status card, Send invite, copy button that does not wrap)                          |
 
 ## Blockers
 

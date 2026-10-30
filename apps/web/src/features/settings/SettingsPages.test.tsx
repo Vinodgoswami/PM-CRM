@@ -38,7 +38,7 @@ test('inviting a user shows the link to share, with copy', async () => {
   await user.type(screen.getByLabelText('Name'), 'Meera');
   await user.type(screen.getByLabelText('Email'), 'meera@example.com');
   await choose(user, screen.getByLabelText('Role'), 'CEO');
-  await user.click(screen.getByRole('button', { name: 'Create invite link' }));
+  await user.click(screen.getByRole('button', { name: 'Send invite' }));
   expect(await screen.findByDisplayValue('http://localhost:5173/invite/abc')).toBeInTheDocument();
   expect(api.calls.find((c) => c.path === '/users/invite')!.body).toEqual({ name: 'Meera', email: 'meera@example.com', role: 'CEO' });
   await user.click(screen.getByRole('button', { name: 'Copy link' }));

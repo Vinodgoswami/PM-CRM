@@ -202,13 +202,10 @@ export class ProjectsService {
         const ownerId = await this.resolveOwner(tx, user, input.ownerId);
         const milestones = input.milestones.map((m, i) => ({ ...m, number: i + 1 }));
         // PS-4 applies to the initial status too; the PS-1 arrows only govern later changes.
-        if (input.status === 'ACTIVE') {
-          const check = checkTransition('WON', 'ACTIVE', {
-            isAdmin: true,
-            milestones: milestones.map((m) => ({ dueDate: m.dueDate ?? null })),
-            hasPayments: false,
-          });
-          if (!check.ok) throw new RuleViolation(check.rule, check.message);
+        // D-025: hired work is created Active with just a booking amount; milestones can follow, but each one it
+        // has needs a due date (PS-4), since invoices are scheduled by it.
+        if (input.status === 'ACTIVE' && milestones.some((m) => !m.dueDate)) {
+          throw new RuleViolation('PS-4', 'Give every milestone a due date.');
         }
         if (input.parentProjectId) await this.assertParent(tx, user, null, client.id, input.parentProjectId);
         const dates = statusDates('LEAD', input.status, { wonAt: null, closedAt: null }, today);

@@ -65,7 +65,7 @@ test('the CEO creates a project and must choose its project manager', async () =
   const owner = await screen.findByLabelText('Project manager');
   expect(owner).toHaveTextContent('Choose a project manager');
   await user.type(screen.getByLabelText('Project name'), 'Portal');
-  await user.type(screen.getByLabelText('Expected amount'), '50,000');
+  await user.type(screen.getByLabelText('Booking amount'), '50,000');
   await user.click(screen.getByRole('button', { name: 'Create project' }));
   expect(await screen.findByText('Choose the project manager for this project.')).toBeInTheDocument();
   expect(api.calls.some((c) => c.method === 'POST')).toBe(false);

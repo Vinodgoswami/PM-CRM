@@ -14,10 +14,11 @@ test('F1 add a project for a new client', async ({ page }) => {
   await expect(page.getByLabel('New client name')).toHaveValue(client);
   await page.getByLabel('Client email').fill('accounts@e2e.test');
   await page.getByLabel('Project name').fill('E2E Website');
-  await page.getByLabel('Expected amount').fill('1,00,000');
+  await page.getByLabel('Booking amount').fill('1,00,000');
   await page.getByRole('button', { name: 'Add milestone' }).click();
   await page.getByLabel('Milestone 1 task').fill('Design');
   await page.getByLabel('Milestone 1 amount').fill('40,000');
+  await page.getByLabel('Milestone 1 due date').fill('2026-12-15');
   await page.getByRole('button', { name: 'Create project' }).click();
 
   await expect(page).toHaveURL(/\/projects\/[^/]+$/);
