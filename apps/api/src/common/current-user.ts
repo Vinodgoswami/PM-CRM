@@ -7,6 +7,7 @@ export interface SessionUser {
   name: string;
   email: string;
   role: Role;
+  avatarKey: string | null;
   sessionId: string;
 }
 

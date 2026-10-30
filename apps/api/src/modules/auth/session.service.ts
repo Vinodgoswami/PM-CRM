@@ -47,7 +47,7 @@ export class SessionService {
       await this.prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date(now) } });
     }
     const { user } = session;
-    return { id: user.id, name: user.name, email: user.email, role: user.role, sessionId: session.id };
+    return { id: user.id, name: user.name, email: user.email, role: user.role, avatarKey: user.avatarKey, sessionId: session.id };
   }
 
   async revoke(sessionId: string): Promise<void> {

@@ -67,6 +67,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-13 | Done   | feat/profile-self-service       | Profile page (user menu): your details and change password (current password required; other sessions end). Users list has no actions on your own row; Deactivate is light red                                                                                                              |
 | P4-14 | Done   | feat/fx-conversion              | `pnpm db:clear-work --yes`: start fresh (work data and audit history cleared; users and settings kept); used on the owner's local database on 2026-10-30                                                                                                                                    |
 | P4-15 | Done   | feat/fx-conversion              | D-020 currency conversion: GET /fx-rate (cached), payments store rate + base amount (form pre-fills, editable; reversal mirrors), projects save rate on create/confirm, dashboard/billing/invoices/import convert, both amounts shown on payments and invoices, CSV has rate + base columns |
+| P4-16 | Done   | feat/profile-photo              | Profile photo: two-column profile (large photo left with change / remove; details and password right); photo shown in the top bar; private storage, JPEG/PNG/WebP up to 2 MB                                                                                                                |
 
 ## Blockers
 

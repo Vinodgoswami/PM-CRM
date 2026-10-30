@@ -14,6 +14,7 @@ import { AppError, rateLimited, unauthenticated } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { AuthTokensService } from './auth-tokens.service';
+import { avatarUrlFor } from '../users/avatar-url';
 import { SessionService } from './session.service';
 
 const MAX_FAILURES = 5;
@@ -59,14 +60,14 @@ export class AuthService {
     const { token } = await this.sessions.create(user.id, ip, userAgent);
     return {
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
   }
 
   sessionResponse(user: SessionUser, token: string): SessionResponse {
     return {
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
   }
@@ -96,7 +97,7 @@ export class AuthService {
     const { token } = await this.sessions.create(user.id, ip, userAgent);
     return {
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
   }
