@@ -26,12 +26,12 @@ export class MailService {
   private readonly log = new Logger('Mail');
   constructor(@Inject(MAILER) private readonly mailer: Mailer) {}
 
-  /** True when the email was handed to the mail server (or written to the log in development). */
+  /** True only when the email was handed to a real mail server; log mode writes it but returns false. */
   async trySend(mail: Mail): Promise<boolean> {
     if (!this.mailer.enabled) return false;
     try {
       await this.mailer.send(mail);
-      return true;
+      return this.mailer.delivers;
     } catch (e) {
       this.log.error(`Could not send "${mail.subject}" to ${mail.to}: ${(e as Error).message}`);
       return false;

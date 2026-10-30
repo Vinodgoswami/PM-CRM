@@ -12,12 +12,15 @@ export interface Mail {
 /** Sends one email. Implementations: SMTP (any provider), log (development and tests), off. */
 export interface Mailer {
   readonly enabled: boolean;
+  /** True only when send() really delivers to someone's inbox (SMTP), so the screen may say "emailed". */
+  readonly delivers: boolean;
   send(mail: Mail): Promise<void>;
 }
 export const MAILER = Symbol('MAILER');
 
 export class SmtpMailer implements Mailer {
   readonly enabled = true;
+  readonly delivers = true;
   private readonly transport: Transporter;
   constructor(private readonly config: Extract<EmailConfig, { transport: 'smtp' }>) {
     const { host, port, secure, user, pass } = config.smtp;
@@ -31,6 +34,8 @@ export class SmtpMailer implements Mailer {
 /** Writes each email to the server log instead of sending it, and keeps the last ones (tests read `sent`). */
 export class LogMailer implements Mailer {
   readonly enabled = true;
+  /** Never delivered: written to the log. (Tests may set it to stand in for a real server.) */
+  delivers = false;
   readonly sent: Mail[] = [];
   private readonly log = new Logger('Mail');
   async send(mail: Mail): Promise<void> {
@@ -42,6 +47,7 @@ export class LogMailer implements Mailer {
 
 export class OffMailer implements Mailer {
   readonly enabled = false;
+  readonly delivers = false;
   async send(): Promise<void> {}
 }
 

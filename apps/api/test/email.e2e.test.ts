@@ -14,6 +14,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await resetDatabase(prisma);
   outbox.sent.length = 0;
+  outbox.delivers = true; // stands in for a real SMTP server in these tests
   await prisma.setting.upsert({
     where: { id: 1 },
     update: { companyName: 'ChicMic Studios' },
@@ -93,4 +94,15 @@ test('names in the email cannot inject HTML', async () => {
     .expect(201);
   expect(outbox.sent.at(-1)!.html).not.toContain('<img src=x');
   expect(outbox.sent.at(-1)!.html).toContain('&lt;img src=x');
+});
+
+test('in log mode (no SMTP set up) nothing is delivered, so the screen must not say it was emailed', async () => {
+  outbox.delivers = false;
+  const admin = await loginAs(app, prisma, 'ADMIN');
+  const res = await admin.agent
+    .post('/api/v1/users/invite')
+    .set('X-CSRF-Token', admin.csrf)
+    .send({ email: 'z@x.test', name: 'Z', role: 'SALES' });
+  expect(res.body.emailed).toBe(false);
+  expect(outbox.sent.at(-1)!.to).toBe('z@x.test'); // still written to the log for development
 });
