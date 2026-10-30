@@ -192,3 +192,37 @@ test('abandoned uploads are swept after an hour; fresh and confirmed ones stay',
   const left = await prisma.document.findMany({ select: { id: true } });
   expect(left.map((d) => d.id).sort()).toEqual([fresh.body.documentId, done.body.documentId].sort());
 });
+
+test('D-026 an invoice or payment slip is stored against its payment and listed with it', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const project = await agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', csrf)
+    .send({
+      name: 'Paid',
+      expectedAmountMinor: 1000,
+      status: 'ACTIVE',
+      newClient: { name: `C ${Math.random()}` },
+      milestones: [{ title: 'All', amountMinor: 1000, dueDate: '2026-10-01' }],
+    })
+    .expect(201);
+  const other = await newProject(agent, csrf);
+  const payment = await agent
+    .post(`/api/v1/milestones/${project.body.milestones[0].id}/payments`)
+    .set('X-CSRF-Token', csrf)
+    .set('Idempotency-Key', `slip-${Date.now()}`)
+    .send({ paymentDate: '2026-10-05', amountMinor: 1000 })
+    .expect(201);
+
+  // A payment belongs to one project: it cannot be linked from another.
+  expect((await requestUpload(agent, csrf, other, { type: 'INVOICE', paymentId: payment.body.id })).status).toBe(404);
+
+  const slot = await requestUpload(agent, csrf, project.body.id, { name: 'INV-7.pdf', type: 'INVOICE', paymentId: payment.body.id });
+  expect(slot.status).toBe(201);
+  await http().put(pathOf(slot.body.url)).set('Content-Type', 'application/pdf').send(PDF).expect(200);
+  const doc = await agent.post(`/api/v1/documents/${slot.body.documentId}/confirm`).set('X-CSRF-Token', csrf).expect(200);
+  expect(doc.body).toMatchObject({ name: 'INV-7.pdf', type: 'INVOICE', paymentId: payment.body.id });
+
+  const billing = await agent.get(`/api/v1/payments?projectId=${project.body.id}`);
+  expect(billing.body.items[0].documents).toEqual([{ id: slot.body.documentId, name: 'INV-7.pdf' }]);
+});

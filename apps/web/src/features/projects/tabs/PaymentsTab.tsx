@@ -1,12 +1,14 @@
 import { can } from '@salescrm/auth/permissions';
 import { type PaymentDto, type ProjectDetail } from '@salescrm/schemas';
-import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
-import { Pencil, Undo2 } from 'lucide-react';
+import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR, toast } from '@salescrm/ui';
+import { Paperclip, Pencil, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
-import { usePayments } from '../../payments/api';
+import { useAttachSlip, usePayments } from '../../payments/api';
+import { SlipLinks } from '../../payments/SlipLinks';
+import { fileProblem } from '../api';
 import { EditPaymentDialog } from '../../payments/EditPaymentDialog';
 import { BaseAmount } from '../../payments/BaseAmount';
 import { ReverseDialog } from '../../payments/ReverseDialog';
@@ -18,6 +20,17 @@ export function PaymentsTab({ project }: { project: ProjectDetail }) {
   const canReverse = !!session && can(session.user, 'payments.reverse');
   const [editing, setEditing] = useState<PaymentDto | null>(null);
   const [reversing, setReversing] = useState<PaymentDto | null>(null);
+  const attach = useAttachSlip();
+
+  const attachTo = (payment: PaymentDto, file: File | undefined) => {
+    if (!file) return;
+    const problem = fileProblem(file);
+    if (problem) return toast.error(problem);
+    attach.mutate(
+      { file, payment },
+      { onSuccess: () => toast.success(`${file.name} stored with ${payment.milestoneLabel}`), onError: (e) => toast.error(e.message) },
+    );
+  };
 
   if (isPending) return <Skeleton className="h-24 w-full" />;
   if (isError) return <EmptyState title="Could not load payments" />;
@@ -31,6 +44,7 @@ export function PaymentsTab({ project }: { project: ProjectDetail }) {
             <TH>Milestone</TH>
             <TH>Invoice ID</TH>
             <TH className="text-right">Amount</TH>
+            <TH>Invoice / slip</TH>
             <TH>Recorded by</TH>
             <TH />
           </TR>
@@ -50,6 +64,31 @@ export function PaymentsTab({ project }: { project: ProjectDetail }) {
                 <TD className="text-right font-medium tabular-nums">
                   {formatApiMoney(p.amountMinor, p.project.currency)}
                   <BaseAmount payment={p} />
+                </TD>
+                <TD>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <SlipLinks payment={p} />
+                    {canEdit && !reversal && (
+                      <label
+                        title="Attach invoice or slip"
+                        className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-accent focus-within:ring-2 focus-within:ring-primary"
+                      >
+                        <Paperclip className="size-4" aria-hidden />
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.zip"
+                          aria-label={`Attach invoice or slip to ${p.invoiceId ?? p.milestoneLabel}`}
+                          disabled={attach.isPending}
+                          onChange={(e) => {
+                            attachTo(p, e.target.files?.[0]);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    )}
+                    {p.documents.length === 0 && !(canEdit && !reversal) && <span className="text-text-muted">—</span>}
+                  </div>
                 </TD>
                 <TD>{p.createdBy.name}</TD>
                 <TD className="space-x-1 text-right">

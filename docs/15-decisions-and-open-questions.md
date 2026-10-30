@@ -29,6 +29,7 @@
 | D-023 | 2026-10-30 | Invite, resend and reset links are emailed over SMTP (any provider; `EMAIL_TRANSPORT=smtp`), written to the log in development; the link is still shown to copy, and a failed send never blocks the action (supersedes D-010)                                  | Owner request                                                    |
 | D-024 | 2026-10-30 | Teams: each Project Manager reports to one CEO; a CEO sees and manages only their team (users, invites, owners, assignment); the Admin assigns; your own row is never in the Users list                                                                        | Owner request                                                    |
 | D-025 | 2026-10-30 | The project form is for hired work only: projects are created Active with a required booking amount (no status, start date or duration fields); every milestone needs a due date; Active projects are finished with a "Mark as completed" button               | Owner request                                                    |
+| D-026 | 2026-10-31 | An invoice or payment slip can be uploaded in the Mark-as-paid dialog or attached later on the Payments tab; it is stored as an Invoice document of the project linked to that payment, and downloadable from Payments, Completed Billing and Documents        | Owner request                                                    |
 
 ## Open questions
 

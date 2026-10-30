@@ -17,6 +17,7 @@ import { SettingsService } from '../settings/settings.service';
 export const PAYMENT_INCLUDE = {
   createdBy: { select: { id: true, name: true } },
   reversedBy: { select: { id: true } },
+  documents: { where: { status: 'READY' }, select: { id: true, name: true }, orderBy: { createdAt: 'asc' } },
   milestone: {
     select: {
       projectId: true,
@@ -49,6 +50,7 @@ export function toPaymentDto(p: PaymentRow, viewer: SessionUser): PaymentDto {
     canEdit: p.reversesPaymentId === null && can(viewer, 'payments.editMeta', { ownerId: project.ownerId }),
     project: { id: project.id, code: project.code, name: project.name, currency: project.currency },
     client: project.client,
+    documents: p.documents,
   };
 }
 

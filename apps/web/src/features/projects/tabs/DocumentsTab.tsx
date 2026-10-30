@@ -89,7 +89,10 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
             {docs.data.items.map((d) => (
               <TR key={d.id}>
                 <TD className="max-w-64 truncate font-medium">{d.name}</TD>
-                <TD>{TYPE_LABEL[d.type]}</TD>
+                <TD>
+                  {TYPE_LABEL[d.type]}
+                  {d.paymentId && <span className="ml-1 text-xs text-text-muted">· with a payment</span>}
+                </TD>
                 <TD>{size(d.sizeBytes)}</TD>
                 <TD>
                   {formatDate(d.createdAt)} · {d.uploadedBy.name}

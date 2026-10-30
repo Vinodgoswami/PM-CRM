@@ -51,9 +51,17 @@ export class DocumentsService implements OnModuleInit, OnModuleDestroy {
   /** Step 1 of docs/04 § Documents: a PENDING row plus a short-lived signed upload URL. */
   async requestUpload(user: SessionUser, projectId: string, input: RequestUploadInput): Promise<UploadSlot> {
     await this.projects.loadForWrite(projectId, user);
+    if (input.paymentId) {
+      const payment = await this.prisma.payment.findUnique({
+        where: { id: input.paymentId },
+        select: { milestone: { select: { projectId: true } } },
+      });
+      if (payment?.milestone.projectId !== projectId) throw notFound();
+    }
     const doc = await this.prisma.document.create({
       data: {
         projectId,
+        paymentId: input.paymentId ?? null,
         name: input.name,
         type: input.type,
         mimeType: input.mimeType,
@@ -88,7 +96,7 @@ export class DocumentsService implements OnModuleInit, OnModuleDestroy {
         action: 'document.upload',
         entity: 'Project',
         entityId: doc.projectId,
-        after: { documentId: id, name: doc.name, type: doc.type, sizeBytes: doc.sizeBytes },
+        after: { documentId: id, name: doc.name, type: doc.type, sizeBytes: doc.sizeBytes, paymentId: doc.paymentId },
       });
       return updated;
     });
@@ -136,6 +144,7 @@ function toDto(d: {
   type: DocumentDto['type'];
   mimeType: string;
   sizeBytes: number;
+  paymentId: string | null;
   uploadedBy: { id: string; name: string };
   createdAt: Date;
 }): DocumentDto {
@@ -145,6 +154,7 @@ function toDto(d: {
     type: d.type,
     mimeType: d.mimeType,
     sizeBytes: d.sizeBytes,
+    paymentId: d.paymentId,
     uploadedBy: d.uploadedBy,
     createdAt: d.createdAt.toISOString(),
   };

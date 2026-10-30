@@ -48,6 +48,8 @@ export const paymentDtoSchema = z.object({
   canEdit: z.boolean(),
   project: z.object({ id: z.string(), code: z.string(), name: z.string(), currency: z.string() }),
   client: z.object({ id: z.string(), name: z.string() }),
+  /** D-026: invoice or payment-slip files stored with this payment. */
+  documents: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
 });
 export type PaymentDto = z.infer<typeof paymentDtoSchema>;
 

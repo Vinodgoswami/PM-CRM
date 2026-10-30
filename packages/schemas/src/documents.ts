@@ -20,6 +20,8 @@ export const requestUploadSchema = z.object({
   type: documentTypeSchema,
   mimeType: z.enum(ALLOWED_DOCUMENT_MIME_TYPES, { message: 'This file type is not allowed. Use PDF, Office, PNG, JPG or ZIP.' }),
   sizeBytes: z.number().int().min(1).max(MAX_DOCUMENT_BYTES, 'Files can be at most 25 MB'),
+  /** D-026: the payment this invoice or slip belongs to (a payment of the same project). */
+  paymentId: z.string().optional(),
 });
 export type RequestUploadInput = z.infer<typeof requestUploadSchema>;
 
@@ -32,6 +34,7 @@ export const documentDtoSchema = z.object({
   type: documentTypeSchema,
   mimeType: z.string(),
   sizeBytes: z.number(),
+  paymentId: z.string().nullable().default(null),
   uploadedBy: z.object({ id: z.string(), name: z.string() }),
   createdAt: z.string(),
 });

@@ -1,5 +1,7 @@
 import {
+  ALLOWED_DOCUMENT_MIME_TYPES,
   type CreateProjectInput,
+  MAX_DOCUMENT_BYTES,
   type MilestoneInput,
   documentDtoSchema,
   projectDetailSchema,
@@ -103,19 +105,29 @@ export function useDocuments(id: string) {
 }
 
 /** docs/04 § Documents: request a signed slot, upload the bytes directly, then confirm. */
+export async function uploadDocument(projectId: string, file: File, type: RequestUploadInput['type'], paymentId?: string) {
+  const slot = await apiFetch(`/projects/${projectId}/documents/upload-url`, {
+    method: 'POST',
+    body: { name: file.name, type, mimeType: file.type, sizeBytes: file.size, ...(paymentId ? { paymentId } : {}) },
+    schema: uploadSlotSchema,
+  });
+  const put = await fetch(slot.url, { method: 'PUT', headers: slot.headers, body: file });
+  if (!put.ok) throw new ApiError(put.status, 'UPLOAD_FAILED', 'The upload failed. Please try again.');
+  return apiFetch(`/documents/${slot.documentId}/confirm`, { method: 'POST', schema: documentDtoSchema });
+}
+
+/** The same checks the server makes (docs/11 § Files), so a bad file is refused before anything is saved. */
+export function fileProblem(file: File): string | null {
+  if (!(ALLOWED_DOCUMENT_MIME_TYPES as readonly string[]).includes(file.type))
+    return 'This file type is not allowed. Use PDF, Office, PNG, JPG or ZIP.';
+  if (file.size > MAX_DOCUMENT_BYTES) return 'Files can be at most 25 MB';
+  return null;
+}
+
 export function useUploadDocument(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, type }: { file: File; type: RequestUploadInput['type'] }) => {
-      const slot = await apiFetch(`/projects/${id}/documents/upload-url`, {
-        method: 'POST',
-        body: { name: file.name, type, mimeType: file.type, sizeBytes: file.size },
-        schema: uploadSlotSchema,
-      });
-      const put = await fetch(slot.url, { method: 'PUT', headers: slot.headers, body: file });
-      if (!put.ok) throw new ApiError(put.status, 'UPLOAD_FAILED', 'The upload failed. Please try again.');
-      return apiFetch(`/documents/${slot.documentId}/confirm`, { method: 'POST', schema: documentDtoSchema });
-    },
+    mutationFn: ({ file, type }: { file: File; type: RequestUploadInput['type'] }) => uploadDocument(id, file, type),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: projectKeys.documents(id) });
       void qc.invalidateQueries({ queryKey: projectKeys.activity(id) });

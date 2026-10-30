@@ -254,6 +254,8 @@ model Payment {
   createdBy         User      @relation(fields: [createdById], references: [id])
   createdAt         DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
+  /// D-026: invoices or payment slips stored against this payment.
+  documents         Document[]
 
   @@index([paymentDate])
   @@index([milestoneId])
@@ -263,6 +265,9 @@ model Document {
   id           String         @id @default(cuid(2))
   projectId    String
   project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// D-026: set when the file is the invoice or payment slip for one payment of this project.
+  paymentId    String?
+  payment      Payment?       @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   name         String
   type         DocumentType
   storageKey   String         @unique
@@ -275,6 +280,7 @@ model Document {
   createdAt    DateTime       @default(now()) @db.Timestamptz(3)
 
   @@index([projectId])
+  @@index([paymentId])
 }
 
 model AuditLog {

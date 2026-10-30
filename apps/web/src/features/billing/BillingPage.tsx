@@ -11,6 +11,7 @@ import { useClientOptions, useOwners } from '../filters/api';
 import { FilterSelect } from '../filters/FilterSelect';
 import { usePayments } from '../payments/api';
 import { EditPaymentDialog } from '../payments/EditPaymentDialog';
+import { SlipLinks } from '../payments/SlipLinks';
 import { OWNER } from '../../lib/labels';
 import { BaseAmount } from '../payments/BaseAmount';
 import { useSettings } from '../settings/api';
@@ -171,7 +172,12 @@ export function BillingPage() {
                       {reversal && <span className="ml-2 text-xs">Reversal{p.note ? ` · ${p.note}` : ''}</span>}
                       {p.reversedById && <span className="ml-2 text-xs text-text-muted">(reversed)</span>}
                     </TD>
-                    <TD>{p.invoiceId ?? '—'}</TD>
+                    <TD>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {p.invoiceId ?? '—'}
+                        <SlipLinks payment={p} />
+                      </div>
+                    </TD>
                     <TD className="text-right font-medium tabular-nums">
                       {formatApiMoney(p.amountMinor, p.project.currency)}
                       <BaseAmount payment={p} />
