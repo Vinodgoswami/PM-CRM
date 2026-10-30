@@ -1,7 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { csrfTokenFor, hashPassword, verifyPassword } from '@salescrm/auth';
 import { type AppConfig } from '@salescrm/config';
-import { type AcceptInviteInput, type LoginInput, type ResetPasswordInput, type SessionResponse } from '@salescrm/schemas';
+import {
+  type AcceptInviteInput,
+  type ChangePasswordInput,
+  type LoginInput,
+  type ResetPasswordInput,
+  type SessionResponse,
+} from '@salescrm/schemas';
 import { APP_CONFIG } from '../../config.module';
 import { type SessionUser } from '../../common/current-user';
 import { AppError, rateLimited, unauthenticated } from '../../common/errors';
@@ -105,6 +111,20 @@ export class AuthService {
       // Anyone holding an old session (or the old password) is locked out.
       await tx.session.deleteMany({ where: { userId: reset.userId } });
       await this.audit.record(tx, { actorId: reset.userId, action: 'user.reset_password', entity: 'User', entityId: reset.userId });
+    });
+  }
+
+  /** Profile: needs the current password; every other session of this user ends, this one stays. */
+  async changePassword(user: SessionUser, input: ChangePasswordInput): Promise<void> {
+    const row = await this.prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+    if (!row?.passwordHash || !(await verifyPassword(row.passwordHash, input.currentPassword))) {
+      throw new AppError(400, 'VALIDATION_FAILED', 'Your current password is not correct.');
+    }
+    const passwordHash = await hashPassword(input.newPassword);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
+      await tx.session.deleteMany({ where: { userId: user.id, id: { not: user.sessionId } } });
+      await this.audit.record(tx, { actorId: user.id, action: 'user.change_password', entity: 'User', entityId: user.id });
     });
   }
 }

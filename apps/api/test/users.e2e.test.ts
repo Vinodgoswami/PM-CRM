@@ -102,15 +102,14 @@ test('role change ends sessions and the new role applies on next login', async (
   expect(again.body.user.role).toBe('CEO');
 });
 
-test('the last active admin cannot demote or deactivate themself', async () => {
+test('an admin cannot demote or deactivate themself; another admin can be demoted while one remains', async () => {
   const admin = await loginAs(app, prisma, 'ADMIN');
   for (const body of [{ role: 'SALES' }, { active: false }]) {
     const res = await admin.agent.patch(`/api/v1/users/${admin.user.id}`).set('X-CSRF-Token', admin.csrf).send(body);
-    expect(res.status).toBe(409);
-    expect(res.body.error.code).toBe('LAST_ADMIN');
+    expect(res.status).toBe(400);
   }
-  await createUser(prisma, { role: 'ADMIN' });
-  const ok = await admin.agent.patch(`/api/v1/users/${admin.user.id}`).set('X-CSRF-Token', admin.csrf).send({ role: 'SALES' });
+  const other = await createUser(prisma, { role: 'ADMIN' });
+  const ok = await admin.agent.patch(`/api/v1/users/${other.id}`).set('X-CSRF-Token', admin.csrf).send({ role: 'SALES' });
   expect(ok.status).toBe(200);
 });
 
@@ -199,4 +198,41 @@ test('D-018 a CEO-issued link can never create anything but a Project Manager', 
     .post('/api/v1/auth/invite/accept')
     .send({ token: tokenFrom(link.body.url), name: 'X', password: NEW_PASSWORD });
   expect(res.status).toBe(400);
+});
+
+test('anyone changes their own password from their profile; other sessions end, this one stays', async () => {
+  const me = await loginAs(app, prisma, 'ADMIN');
+  const otherDevice = request.agent(app.getHttpServer());
+  await otherDevice.post('/api/v1/auth/login').send({ email: me.user.email, password: TEST_PASSWORD }).expect(200);
+
+  const wrong = await me.agent
+    .post('/api/v1/auth/password/change')
+    .set('X-CSRF-Token', me.csrf)
+    .send({ currentPassword: 'not-my-password', newPassword: NEW_PASSWORD });
+  expect(wrong.status).toBe(400);
+  expect(wrong.body.error.message).toBe('Your current password is not correct.');
+
+  const ok = await me.agent
+    .post('/api/v1/auth/password/change')
+    .set('X-CSRF-Token', me.csrf)
+    .send({ currentPassword: TEST_PASSWORD, newPassword: NEW_PASSWORD });
+  expect(ok.status).toBe(204);
+  expect((await me.agent.get('/api/v1/auth/session')).status).toBe(200);
+  expect((await otherDevice.get('/api/v1/auth/session')).status).toBe(401);
+  expect((await http().post('/api/v1/auth/login').send({ email: me.user.email, password: TEST_PASSWORD })).status).toBe(401);
+  expect((await http().post('/api/v1/auth/login').send({ email: me.user.email, password: NEW_PASSWORD })).status).toBe(200);
+  expect(await prisma.auditLog.count({ where: { action: 'user.change_password', entityId: me.user.id } })).toBe(1);
+});
+
+test('nobody changes their own role, deactivates or resets themselves from the users list', async () => {
+  const { agent, csrf, user } = await loginAs(app, prisma, 'ADMIN');
+  await createUser(prisma, { role: 'ADMIN' }); // so the last-admin rule is not what stops it
+  for (const res of [
+    await agent.patch(`/api/v1/users/${user.id}`).set('X-CSRF-Token', csrf).send({ active: false }),
+    await agent.patch(`/api/v1/users/${user.id}`).set('X-CSRF-Token', csrf).send({ role: 'SALES' }),
+    await agent.post(`/api/v1/users/${user.id}/reset-link`).set('X-CSRF-Token', csrf),
+  ]) {
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe('Manage your own account from your profile.');
+  }
 });

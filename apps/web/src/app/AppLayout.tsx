@@ -1,5 +1,5 @@
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Toaster } from '@salescrm/ui';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, UserRound, X } from 'lucide-react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
@@ -100,6 +100,9 @@ export function AppLayout() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => navigate('/profile')}>
+                  <UserRound className="size-4" /> Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => logout.mutate(undefined, { onSettled: () => navigate('/login', { replace: true }) })}>
                   <LogOut className="size-4" /> Sign out
                 </DropdownMenuItem>

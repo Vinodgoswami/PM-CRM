@@ -60,6 +60,9 @@ change `projects.read` for SALES to `own` and filter lists, search and the clien
   Project Manager links. Demoting or deactivating an Admin or CEO revokes every unused link they issued.
 - Concurrent role changes are serialised (admin rows are locked), so the last-admin rule holds even under races.
 - At least one active ADMIN must always exist (cannot demote/deactivate the last one).
+- Nobody changes their own role, deactivates themselves or sends themselves a reset link from the users list; your own
+  account lives on **Profile** (user menu), where you change your password with your current one. That ends every
+  other session of yours and keeps this one.
 - Sessions: httpOnly, Secure, SameSite=Lax cookie; 12 h idle timeout, 7-day absolute. Changing role or deactivating
   a user ends their sessions.
 - Login rate limit: 5 failed attempts / 15 min per email + IP.
