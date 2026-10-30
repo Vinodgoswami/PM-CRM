@@ -15,6 +15,7 @@ test('valid env produces typed config with defaults', () => {
     logLevel: 'info',
     storage: { driver: 'local', localDir: './uploads' },
     fx: { provider: 'frankfurter' },
+    email: { transport: 'log', from: 'Project Management CRM <no-reply@localhost>' },
   });
 });
 
@@ -84,4 +85,24 @@ test('FX_PROVIDER picks where exchange rates come from (D-020)', () => {
   expect(loadConfig({ ...valid, FX_PROVIDER: 'fixed' }).fx).toEqual({ provider: 'fixed' });
   expect(loadConfig({ ...valid, FX_PROVIDER: 'off' }).fx).toEqual({ provider: 'off' });
   expect(() => loadConfig({ ...valid, FX_PROVIDER: 'random' })).toThrow(/FX_PROVIDER/);
+});
+
+test('email goes through SMTP when configured; log by default; SMTP needs a host and a from address', () => {
+  const smtp = loadConfig({
+    ...valid,
+    EMAIL_TRANSPORT: 'smtp',
+    EMAIL_FROM: 'ChicMic CRM <crm@chicmic.test>',
+    SMTP_HOST: 'smtp.example.com',
+    SMTP_PORT: '465',
+    SMTP_SECURE: 'true',
+    SMTP_USER: 'crm@chicmic.test',
+    SMTP_PASS: 'app-password',
+  });
+  expect(smtp.email).toEqual({
+    transport: 'smtp',
+    from: 'ChicMic CRM <crm@chicmic.test>',
+    smtp: { host: 'smtp.example.com', port: 465, secure: true, user: 'crm@chicmic.test', pass: 'app-password' },
+  });
+  expect(() => loadConfig({ ...valid, EMAIL_TRANSPORT: 'smtp' })).toThrow(/SMTP_HOST/);
+  expect(loadConfig({ ...valid, EMAIL_TRANSPORT: 'off' }).email.transport).toBe('off');
 });

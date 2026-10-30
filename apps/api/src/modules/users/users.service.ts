@@ -8,6 +8,7 @@ import { AppError, conflict, forbidden, notFound } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { AuthTokensService } from '../auth/auth-tokens.service';
 import { type Prisma } from '@salescrm/database';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.module';
 
 const ROLE_NAME: Record<Role, string> = { ADMIN: 'Admin', CEO: 'CEO', SALES: 'Project Manager' };
@@ -23,7 +24,15 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly tokens: AuthTokensService,
+    private readonly mail: MailService,
   ) {}
+
+  /** Emails an invite after it is saved; the link is returned either way, with `emailed` saying which. */
+  private async emailInvite(actor: SessionUser, to: string, name: string | null, role: Role, link: { url: string; expiresAt: Date }) {
+    const company = (await this.prisma.setting.findUnique({ where: { id: 1 }, select: { companyName: true } }))?.companyName ?? '';
+    const emailed = await this.mail.trySend(this.mail.invite({ to, name, role, company, invitedBy: actor.name, ...link }));
+    return { url: link.url, expiresAt: link.expiresAt.toISOString(), emailed };
+  }
 
   async list(): Promise<{ items: UserListItem[] }> {
     const users = await this.prisma.user.findMany({ orderBy: [{ active: 'desc' }, { name: 'asc' }] });
@@ -40,7 +49,7 @@ export class UsersService {
   }
 
   async invite(actor: SessionUser, input: InviteUserInput): Promise<LinkResponse> {
-    return this.prisma.$transaction(async (tx) => {
+    const link = await this.prisma.$transaction(async (tx) => {
       if (!manageableRoles(actor.role).includes(input.role)) throw forbidden(`You cannot add a ${ROLE_NAME[input.role]}.`);
       // Any existing account, active or not, is managed via PATCH /users/:id instead of a second invite.
       if (await tx.user.findUnique({ where: { email: input.email } })) {
@@ -56,8 +65,9 @@ export class UsersService {
         entityId: link.id,
         after: { email: input.email, role: input.role },
       });
-      return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+      return link;
     });
+    return this.emailInvite(actor, input.email, input.name, input.role, link);
   }
 
   async update(actor: SessionUser, id: string, input: UpdateUserInput): Promise<UserListItem> {
@@ -101,15 +111,17 @@ export class UsersService {
   }
 
   async resetLink(actor: SessionUser, id: string): Promise<LinkResponse> {
-    return this.prisma.$transaction(async (tx) => {
+    const { user, link } = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw notFound();
       if (id === actor.id) throw notYourself();
       assertManages(actor, user.role);
       const link = await this.tokens.issue(tx, 'RESET', { email: user.email, userId: user.id, createdById: actor.id });
       await this.audit.record(tx, { actorId: actor.id, action: 'user.reset_link', entity: 'User', entityId: id });
-      return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+      return { user, link };
     });
+    const emailed = await this.mail.trySend(this.mail.reset({ to: user.email, name: user.name, ...link }));
+    return { url: link.url, expiresAt: link.expiresAt.toISOString(), emailed };
   }
 
   /** Invites not yet accepted (and not expired), for roles the viewer may manage. */
@@ -140,7 +152,7 @@ export class UsersService {
 
   /** A fresh link for a pending invite; the old link stops working. */
   async resendInvite(actor: SessionUser, id: string): Promise<LinkResponse> {
-    return this.prisma.$transaction(async (tx) => {
+    const { old, link } = await this.prisma.$transaction(async (tx) => {
       const old = await this.pendingInvite(tx, actor, id);
       await tx.authToken.update({ where: { id }, data: { usedAt: new Date() } });
       const link = await this.tokens.issue(tx, 'INVITE', {
@@ -156,8 +168,9 @@ export class UsersService {
         entityId: link.id,
         after: { email: old.email },
       });
-      return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+      return { old, link };
     });
+    return this.emailInvite(actor, old.email, old.name, old.role!, link);
   }
 
   async cancelInvite(actor: SessionUser, id: string): Promise<void> {

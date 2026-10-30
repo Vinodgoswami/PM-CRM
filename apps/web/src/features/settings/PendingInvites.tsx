@@ -48,8 +48,7 @@ export function PendingInvites() {
       <div>
         <h2 className="font-bold">Pending invites</h2>
         <p className="text-sm text-text-muted">
-          Not signed up yet. No email is sent yet: copy the link and share it yourself. Resending makes a new link and the old one stops
-          working.
+          Not signed up yet. Resend emails a new link (and shows it to copy); the old link stops working.
         </p>
       </div>
       <Table>
@@ -102,7 +101,9 @@ export function PendingInvites() {
           <LinkPanel
             url={link.link.url}
             expiresAt={link.link.expiresAt}
-            note="Share this link with them; the previous link no longer works."
+            note="The previous link no longer works."
+            emailed={link.link.emailed}
+            to={link.email}
           />
           <Button size="sm" variant="outline" onClick={() => setLink(null)}>
             Done

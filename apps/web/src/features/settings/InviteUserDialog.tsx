@@ -28,7 +28,7 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
         <DialogDescription>They set their own password from the link. Nothing is emailed; share the link yourself.</DialogDescription>
         {link ? (
           <div className="mt-4 space-y-4">
-            <LinkPanel url={link.url} expiresAt={link.expiresAt} note="Works once." />
+            <LinkPanel url={link.url} expiresAt={link.expiresAt} note="Works once." emailed={link.emailed} to={email} />
             <div className="flex justify-end">
               <Button onClick={onClose}>Done</Button>
             </div>

@@ -14,6 +14,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     logLevel: 'silent',
     storage: { driver: 'local', localDir: path.join(os.tmpdir(), 'salescrm-test-uploads') },
     fx: { provider: 'fixed' },
+    email: { transport: 'log', from: 'Project Management CRM <no-reply@test>' },
     ...overrides,
   };
 }
