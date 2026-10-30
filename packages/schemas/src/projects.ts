@@ -59,6 +59,8 @@ export const updateProjectSchema = z.object({
     .regex(/^[A-Z]{3}$/)
     .optional(),
   tags: z.array(text(40).min(1)).max(20).optional(),
+  /** D-027: move the project to another client billed in the same currency. */
+  clientId: z.string().min(1).optional(),
   /** Optimistic concurrency: the `updatedAt` the client last saw. */
   updatedAt: z.string().min(1),
 });
@@ -108,6 +110,11 @@ export const projectListItemSchema = z.object({
   nextDueDate: isoDateSchema.nullable(),
   hasOverdue: z.boolean(),
   parentProjectId: z.string().nullable(),
+  /** The initial booking; contract value = this + extra work (upsell entries). */
+  expectedAmountMinor: z.number().default(0),
+  milestoneCount: z.number().default(0),
+  /** Milestones paid in full. */
+  paidMilestoneCount: z.number().default(0),
 });
 export type ProjectListItem = z.infer<typeof projectListItemSchema>;
 
@@ -121,7 +128,20 @@ export const projectDetailSchema = projectListItemSchema.extend({
   expectedAmountMinor: z.number(),
   tags: z.array(z.string()),
   parent: z.object({ id: z.string(), code: z.string(), name: z.string() }).nullable(),
-  upsellProjects: z.array(z.object({ id: z.string(), code: z.string(), name: z.string(), status: projectStatusSchema })),
+  /** D-028: 1 for an original project that has phases, 2.. for its phases (by code), null for a standalone project. */
+  phase: z.number().nullable().default(null),
+  upsellProjects: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string(),
+      name: z.string(),
+      status: projectStatusSchema,
+      phase: z.number().default(0),
+      expectedAmountMinor: z.number().default(0),
+      contractValueMinor: z.number().default(0),
+      collectedMinor: z.number().default(0),
+    }),
+  ),
   upsellEntries: z.array(z.object({ id: z.string(), amountMinor: z.number(), date: isoDateSchema, note: z.string().nullable() })),
   milestones: z.array(
     z.object({

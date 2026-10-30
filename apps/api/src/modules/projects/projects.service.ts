@@ -43,8 +43,11 @@ const DETAIL_INCLUDE = {
     select: { id: true, number: true, title: true, amountMinor: true, dueDate: true, payments: { select: { amountMinor: true } } },
     orderBy: { number: 'asc' },
   },
-  parentProject: { select: { id: true, code: true, name: true } },
-  upsellProjects: { select: { id: true, code: true, name: true, status: true }, orderBy: { code: 'asc' } },
+  parentProject: { select: { id: true, code: true, name: true, upsellProjects: { select: { id: true }, orderBy: { code: 'asc' } } } },
+  upsellProjects: {
+    select: { id: true, code: true, name: true, status: true, expectedAmountMinor: true, ...PROJECT_MONEY_INCLUDE },
+    orderBy: { code: 'asc' },
+  },
 } satisfies Prisma.ProjectInclude;
 
 type ListRow = Prisma.ProjectGetPayload<{ include: typeof LIST_INCLUDE }>;
@@ -70,6 +73,9 @@ function toListItem(p: ListRow, today: IsoDate): ProjectListItem {
     nextDueDate: t.nextDueDate,
     hasOverdue: t.hasOverdue,
     parentProjectId: p.parentProjectId,
+    expectedAmountMinor: minorToJson(p.expectedAmountMinor),
+    milestoneCount: p.milestones.length,
+    paidMilestoneCount: p.milestones.filter((m) => paidOf(m) >= m.amountMinor).length,
   };
 }
 
@@ -111,8 +117,22 @@ export class ProjectsService {
       closedAt: isoDate(p.closedAt),
       expectedAmountMinor: minorToJson(p.expectedAmountMinor),
       tags: p.tags,
-      parent: p.parentProject,
-      upsellProjects: p.upsellProjects,
+      parent: p.parentProject && { id: p.parentProject.id, code: p.parentProject.code, name: p.parentProject.name },
+      // D-028: the original project is Phase 1; its extra-work projects are Phase 2, 3, … in code order.
+      phase: p.parentProject ? p.parentProject.upsellProjects.findIndex((u) => u.id === p.id) + 2 : p.upsellProjects.length > 0 ? 1 : null,
+      upsellProjects: p.upsellProjects.map((u, i) => {
+        const ut = totalsFor(u, today);
+        return {
+          id: u.id,
+          code: u.code,
+          name: u.name,
+          status: u.status,
+          phase: i + 2,
+          expectedAmountMinor: minorToJson(u.expectedAmountMinor),
+          contractValueMinor: minorToJson(ut.contractValueMinor),
+          collectedMinor: minorToJson(ut.collectedMinor),
+        };
+      }),
       upsellEntries: p.upsellEntries.map((u) => ({
         id: u.id,
         amountMinor: minorToJson(u.amountMinor),
@@ -290,6 +310,7 @@ export class ProjectsService {
       if (input.currency && input.currency !== before.currency && before.milestones.length > 0) {
         throw new RuleViolation('M-3', 'The currency cannot change once the project has milestones.');
       }
+      if (input.clientId && input.clientId !== before.clientId) await this.assertClientMove(tx, before, input.clientId);
       const startDate = input.startDate !== undefined ? input.startDate : isoDate(before.startDate);
       const durationValue = input.durationValue !== undefined ? input.durationValue : before.durationValue;
       const durationUnit = input.durationUnit !== undefined ? input.durationUnit : before.durationUnit;
@@ -300,6 +321,7 @@ export class ProjectsService {
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.tags !== undefined ? { tags: input.tags } : {}),
+          ...(input.clientId !== undefined ? { clientId: input.clientId } : {}),
           ...(input.currency !== undefined && input.currency !== before.currency ? { currency: input.currency, ...fx } : {}),
           ...(input.expectedAmountMinor !== undefined ? { expectedAmountMinor: minorFromJson(input.expectedAmountMinor) } : {}),
           startDate: toDate(startDate),
@@ -312,6 +334,7 @@ export class ProjectsService {
       const after = await tx.project.findUniqueOrThrow({ where: { id } });
       const pick = (p: typeof after) => ({
         name: p.name,
+        clientId: p.clientId,
         description: p.description,
         tags: p.tags,
         currency: p.currency,
@@ -324,6 +347,21 @@ export class ProjectsService {
       if (diff) await this.audit.record(tx, { actorId: user.id, action: 'project.update', entity: 'Project', entityId: id, ...diff });
     });
     return this.get(id, user);
+  }
+
+  /** D-027: a project may move to another active client billed in its currency; extra-work links stay within one client (U-2). */
+  private async assertClientMove(
+    tx: Prisma.TransactionClient,
+    project: { id: string; currency: string; parentProjectId: string | null },
+    clientId: string,
+  ) {
+    const client = await tx.client.findUnique({ where: { id: clientId }, select: { currency: true, archivedAt: true } });
+    if (!client || client.archivedAt) throw notFound();
+    if (client.currency !== project.currency) {
+      throw new RuleViolation('M-3', `Choose a client billed in ${project.currency}; this one is billed in ${client.currency}.`);
+    }
+    const linked = project.parentProjectId || (await tx.project.count({ where: { parentProjectId: project.id } })) > 0;
+    if (linked) throw new RuleViolation('U-2', 'This project is linked to extra work, so it stays with its client.');
   }
 
   async changeStatus(user: SessionUser, id: string, to: ProjectStatus): Promise<ProjectDetail> {

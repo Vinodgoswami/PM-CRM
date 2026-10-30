@@ -1,6 +1,21 @@
 import { can } from '@salescrm/auth/permissions';
 import { type ProjectDetail } from '@salescrm/schemas';
-import { Button, Input, Table, TBody, TD, TH, THead, TR, toast } from '@salescrm/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  Input,
+  Label,
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+  toast,
+} from '@salescrm/ui';
 import { ArrowDown, ArrowUp, BadgeCheck, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
@@ -9,7 +24,7 @@ import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { MarkPaidDialog, type MarkPaidTarget } from '../../payments/MarkPaidDialog';
 import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
-import { useAddMilestone, useDeleteMilestone, useReorderMilestones, useUpdateMilestone } from '../api';
+import { useAddMilestone, useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
 import { MoneyInput } from '../MoneyInput';
 
 type Milestone = ProjectDetail['milestones'][number];
@@ -221,16 +236,27 @@ function AddMilestone({ project }: { project: ProjectDetail }) {
 
 function EditRow({ project, milestone, onDone }: { project: ProjectDetail; milestone: Milestone; onDone: () => void }) {
   const update = useUpdateMilestone(project.id);
+  const reset = useResetMilestone();
   const [title, setTitle] = useState(milestone.title);
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: milestone.amountMinor, error: null });
   const [due, setDue] = useState(milestone.dueDate ?? '');
+  const [confirming, setConfirming] = useState(false);
+  const [reason, setReason] = useState('');
+  const money = (m: number) => formatApiMoney(m, project.currency);
+
+  const save = (minor: number) =>
+    update.mutate(
+      { milestoneId: milestone.id, title, amountMinor: minor, dueDate: due || null },
+      { onSuccess: onDone, onError: (e) => toast.error(e.message) },
+    );
+
   return (
     <TR className="bg-accent/40">
       <TD className="font-medium">M{milestone.number}</TD>
       <TD>
         <Input aria-label={`M${milestone.number} task`} value={title} onChange={(e) => setTitle(e.target.value)} />
       </TD>
-      <TD>
+      <TD className="min-w-40">
         <MoneyInput
           aria-label={`M${milestone.number} amount`}
           currency={project.currency}
@@ -244,13 +270,12 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
       <TD colSpan={4} className="space-x-2 text-right">
         <Button
           size="sm"
-          disabled={update.isPending}
+          disabled={update.isPending || reset.isPending}
           onClick={() => {
             if (amount.minor === null) return toast.error(amount.error ?? 'Enter an amount');
-            update.mutate(
-              { milestoneId: milestone.id, title, amountMinor: amount.minor, dueDate: due || null },
-              { onSuccess: onDone, onError: (e) => toast.error(e.message) },
-            );
+            // D-027: a paid milestone's amount changes only after its payments are reset (reversed, kept in history).
+            if (amount.minor !== milestone.amountMinor && milestone.paidMinor > 0) return setConfirming(true);
+            save(amount.minor);
           }}
         >
           Save
@@ -258,6 +283,54 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
         <Button size="sm" variant="ghost" onClick={onDone}>
           Cancel
         </Button>
+        {confirming && (
+          <Dialog open onOpenChange={(o) => !o && setConfirming(false)}>
+            <DialogContent>
+              <DialogTitle>Reset paid milestone?</DialogTitle>
+              <DialogDescription>
+                M{milestone.number} {milestone.title} has {money(milestone.paidMinor)} paid. Saving the new amount reverses those payments:
+                they stay in the payment history as reversals and the milestone becomes unpaid, so record the payment again afterwards if it
+                still stands.
+              </DialogDescription>
+              <form
+                noValidate
+                className="mt-4 space-y-4 text-left"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!reason.trim()) return toast.error('Give a reason for the reset');
+                  reset.mutate(
+                    { milestoneId: milestone.id, reason: reason.trim() },
+                    {
+                      onSuccess: () => {
+                        setConfirming(false);
+                        save(amount.minor!);
+                      },
+                      onError: (e) => toast.error(e.message),
+                    },
+                  );
+                }}
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="reset-reason">Reason</Label>
+                  <Input
+                    id="reset-reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g. Scope reduced after client review"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 border-t border-border pt-4">
+                  <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
+                    Keep payments
+                  </Button>
+                  <Button type="submit" variant="danger" disabled={reset.isPending}>
+                    Reset and save
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </TD>
     </TR>
   );

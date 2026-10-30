@@ -247,3 +247,40 @@ test('opening the Milestones tab with ?edit= starts that milestone in edit mode'
   renderApp('/projects/p1?tab=milestones&edit=m1', sessionFor('SALES'));
   expect(await screen.findByLabelText('M1 task')).toBeInTheDocument();
 });
+
+test('D-027 changing the amount of a paid milestone asks to reset its payments first', async () => {
+  const api = stubApi({
+    ...routes,
+    'POST /milestones/m1/reset-payments': { body: { reversed: 1 } },
+    'PATCH /milestones/m1': { body: detail() },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=milestones&edit=m1', sessionFor('SALES'));
+  const user = userEvent.setup();
+  const amount = await screen.findByLabelText('M1 amount');
+  await user.clear(amount);
+  await user.type(amount, '80,000');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Reset paid milestone?' });
+  expect(api.calls.some((c) => c.method === 'PATCH')).toBe(false);
+  await user.type(within(dialog).getByLabelText('Reason'), 'Scope cut');
+  await user.click(within(dialog).getByRole('button', { name: 'Reset and save' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'PATCH')).toBe(true));
+  const paths = api.calls.map((c) => `${c.method} ${c.path}`);
+  expect(paths.indexOf('POST /milestones/m1/reset-payments')).toBeLessThan(paths.indexOf('PATCH /milestones/m1'));
+  expect(api.calls.find((c) => c.path === '/milestones/m1/reset-payments')!.body).toEqual({ reason: 'Scope cut' });
+  expect(api.calls.find((c) => c.method === 'PATCH')!.body).toMatchObject({ amountMinor: 8000000 });
+});
+
+test('D-027 renaming a paid milestone needs no reset', async () => {
+  const api = stubApi({ ...routes, 'PATCH /milestones/m1': { body: detail() } });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=milestones&edit=m1', sessionFor('SALES'));
+  const user = userEvent.setup();
+  const task = await screen.findByLabelText('M1 task');
+  await user.type(task, ' v2');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'PATCH')).toBe(true));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(api.calls.some((c) => c.path.endsWith('/reset-payments'))).toBe(false);
+});

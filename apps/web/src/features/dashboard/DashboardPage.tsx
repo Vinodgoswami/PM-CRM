@@ -296,9 +296,11 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
         </Panel>
       </div>
 
+      <BookingSplit totalMinor={k.bookedMinor} upsellMinor={k.upsellMinor} money={money} />
+
       <section aria-label="Key figures" className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Kpi
-          label="Contracted"
+          label="Total booking"
           value={money(k.bookedMinor)}
           delta={pct(k.bookedMinor, data.previous?.bookedMinor)}
           spark={data.monthly.map((x) => x.bookedMinor)}
@@ -307,7 +309,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
         <Kpi label="Due next 30 days" value={money(k.dueNext30Minor)} />
         <Kpi label="Not yet confirmed" value={money(k.pipelineMinor)} hint="Enquiries and quotes" />
         <Kpi
-          label="Extra work share"
+          label="Upsell share"
           value={k.bookedMinor > 0 ? `${Math.round((k.upsellMinor * 100) / k.bookedMinor)}%` : '—'}
           hint={money(k.upsellMinor)}
         />
@@ -486,6 +488,44 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
 
       {data.team && <TeamTable team={data.team} currency={data.currency} />}
     </div>
+  );
+}
+
+/** D-028: total booking = initial booking (first phase of each project) + upsell (later phases and extra work). */
+function BookingSplit({ totalMinor, upsellMinor, money }: { totalMinor: number; upsellMinor: number; money: (m: number) => string }) {
+  const initialMinor = totalMinor - upsellMinor;
+  const share = (m: number) => (totalMinor > 0 ? `${(m * 100) / totalMinor}%` : '0%');
+  const parts = [
+    { label: 'Initial booking', value: initialMinor, dot: 'bg-primary' },
+    { label: 'Upsell', value: upsellMinor, dot: 'bg-warning' },
+  ];
+  return (
+    <section aria-label="Booking split" className="rounded-xl bg-surface p-4 shadow-card">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        {parts.map((p, i) => (
+          <div key={p.label} className="flex items-end gap-8">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs text-text-muted">
+                <span className={`size-2 rounded-full ${p.dot}`} aria-hidden />
+                {p.label}
+              </p>
+              <p className="text-lg font-bold tabular-nums">{money(p.value)}</p>
+            </div>
+            <span className="pb-1 text-lg text-text-muted" aria-hidden>
+              {i === 0 ? '+' : '='}
+            </span>
+          </div>
+        ))}
+        <div>
+          <p className="text-xs text-text-muted">Total booking</p>
+          <p className="text-lg font-extrabold tabular-nums">{money(totalMinor)}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-accent" aria-hidden>
+        <span className="bg-primary" style={{ width: share(initialMinor) }} />
+        <span className="bg-warning" style={{ width: share(upsellMinor) }} />
+      </div>
+    </section>
   );
 }
 

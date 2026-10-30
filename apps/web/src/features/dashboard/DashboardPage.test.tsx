@@ -72,3 +72,12 @@ test('K11 win rate is a dash when nothing was won or lost', async () => {
   const collected = await screen.findByRole('region', { name: 'Collected' });
   expect(within(collected).getByText('Confirmation rate').nextElementSibling).toHaveTextContent('—');
 });
+
+test('D-028 the dashboard splits total booking into initial booking and upsell', async () => {
+  vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);
+  renderApp('/', sessionFor('CEO'));
+  const split = await screen.findByRole('region', { name: 'Booking split' });
+  expect(split).toHaveTextContent('Initial booking₹2,25,00,000.00');
+  expect(split).toHaveTextContent('Upsell₹25,00,000.00');
+  expect(split).toHaveTextContent('Total booking₹2,50,00,000.00');
+});

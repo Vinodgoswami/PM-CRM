@@ -63,7 +63,7 @@ test('F4 add an extra work amount to a confirmed project', async ({ page }) => {
   await signIn(page, 'pm1');
   await page.goto('/invoices');
   await page.locator('a[href^="/projects/"]').first().click();
-  await page.getByRole('tab', { name: 'Extra work' }).click();
+  await page.getByRole('tab', { name: 'Phases & upsell' }).click();
   await page.getByLabel('Amount').fill('25,000');
   const note = uniq('E2E extra pages');
   await page.getByLabel('Note').fill(note);

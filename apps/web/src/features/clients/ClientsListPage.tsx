@@ -1,12 +1,13 @@
 import { can } from '@salescrm/auth/permissions';
 import { Badge, Button, EmptyState, Input, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
-import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ChevronRight, Plus } from 'lucide-react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
 import { useClients } from './api';
 import { ClientFormDialog } from './ClientFormDialog';
+import { ClientProjects } from './ClientProjects';
 
 export function ClientsListPage() {
   const { data: session } = useSession();
@@ -14,6 +15,7 @@ export function ClientsListPage() {
   const [debounced, setDebounced] = useState('');
   const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 250);
     return () => clearTimeout(t);
@@ -58,6 +60,7 @@ export function ClientsListPage() {
         <Table>
           <THead>
             <TR>
+              <TH className="w-10" />
               <TH>Name</TH>
               <TH>Company</TH>
               <TH>Primary email</TH>
@@ -69,26 +72,47 @@ export function ClientsListPage() {
           </THead>
           <TBody>
             {data.items.map((c) => (
-              <TR key={c.id}>
-                <TD>
-                  <Link to={`/clients/${c.id}`} className="font-medium text-primary hover:underline">
-                    {c.name}
-                  </Link>
-                  {c.archived && (
-                    <Badge className="ml-2" tone="neutral">
-                      Archived
-                    </Badge>
-                  )}
-                </TD>
-                <TD>{c.company ?? '—'}</TD>
-                <TD>{c.primaryEmail ?? '—'}</TD>
-                <TD className="text-right tabular-nums">{c.projects}</TD>
-                <TD className="text-right tabular-nums">{formatApiMoney(c.bookedMinor, c.currency)}</TD>
-                <TD className="text-right tabular-nums text-success">{formatApiMoney(c.collectedMinor, c.currency)}</TD>
-                <TD className={`text-right tabular-nums ${c.outstandingMinor > 0 ? 'font-medium text-danger' : ''}`}>
-                  {formatApiMoney(c.outstandingMinor, c.currency)}
-                </TD>
-              </TR>
+              <Fragment key={c.id}>
+                <TR className={open === c.id ? 'bg-accent/40' : undefined}>
+                  <TD>
+                    <button
+                      type="button"
+                      aria-expanded={open === c.id}
+                      aria-label={`${open === c.id ? 'Hide' : 'Show'} projects for ${c.name}`}
+                      disabled={c.projects === 0}
+                      onClick={() => setOpen(open === c.id ? null : c.id)}
+                      className="grid size-7 place-items-center rounded-md text-text-muted hover:bg-accent disabled:opacity-30"
+                    >
+                      <ChevronRight className={`size-4 transition-transform ${open === c.id ? 'rotate-90' : ''}`} />
+                    </button>
+                  </TD>
+                  <TD>
+                    <Link to={`/clients/${c.id}`} className="font-medium text-primary hover:underline">
+                      {c.name}
+                    </Link>
+                    {c.archived && (
+                      <Badge className="ml-2" tone="neutral">
+                        Archived
+                      </Badge>
+                    )}
+                  </TD>
+                  <TD>{c.company ?? '—'}</TD>
+                  <TD>{c.primaryEmail ?? '—'}</TD>
+                  <TD className="text-right tabular-nums">{c.projects}</TD>
+                  <TD className="text-right tabular-nums">{formatApiMoney(c.bookedMinor, c.currency)}</TD>
+                  <TD className="text-right tabular-nums text-success">{formatApiMoney(c.collectedMinor, c.currency)}</TD>
+                  <TD className={`text-right tabular-nums ${c.outstandingMinor > 0 ? 'font-medium text-danger' : ''}`}>
+                    {formatApiMoney(c.outstandingMinor, c.currency)}
+                  </TD>
+                </TR>
+                {open === c.id && (
+                  <TR>
+                    <TD colSpan={8} className="bg-accent/20">
+                      <ClientProjects clientId={c.id} clientName={c.name} />
+                    </TD>
+                  </TR>
+                )}
+              </Fragment>
             ))}
           </TBody>
         </Table>

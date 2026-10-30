@@ -4,6 +4,9 @@ import { Button, Card, EmptyState, Input, Label, Skeleton, toast } from '@salesc
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Pencil } from 'lucide-react';
+import { ClientFormDialog } from '../clients/ClientFormDialog';
+import { MilestonesTab } from './tabs/MilestonesTab';
 import { z } from 'zod';
 import { ApiError, apiFetch } from '../../lib/api';
 import { useSession } from '../auth/api';
@@ -68,7 +71,7 @@ function CreateProject() {
       setClient({ clientId: presetClient, name: preset.data.name, currency: preset.data.currency });
   }, [presetClient, preset.data, client]);
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(params.get('name') ?? '');
   const [description, setDescription] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
@@ -142,7 +145,7 @@ function CreateProject() {
         <Link to="/projects" className="text-sm text-text-muted hover:underline">
           ← Projects
         </Link>
-        <h1 className="text-2xl font-semibold">{parentProjectId ? 'New upsell project' : 'New project'}</h1>
+        <h1 className="text-2xl font-semibold">{parentProjectId ? 'New phase' : 'New project'}</h1>
       </div>
       <form onSubmit={submit} noValidate className="space-y-6">
         <Card className="space-y-4">
@@ -237,6 +240,15 @@ function EditForm({ project }: { project: ProjectDetail }) {
   const navigate = useNavigate();
   const update = useUpdateProject(project.id);
   const [name, setName] = useState(project.name);
+  // D-027: the project may move to another existing client billed in its currency.
+  const [client, setClient] = useState<ClientChoice>({
+    clientId: project.client.id,
+    name: project.client.name,
+    currency: project.currency,
+  });
+  const clientId = client && 'clientId' in client ? client.clientId : null;
+  const clientDetail = useClient(clientId ?? '');
+  const [editingClient, setEditingClient] = useState(false);
   const [description, setDescription] = useState(project.description);
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({
     minor: project.expectedAmountMinor,
@@ -249,11 +261,15 @@ function EditForm({ project }: { project: ProjectDetail }) {
     const parsed = updateProjectSchema.safeParse({
       name,
       description,
+      ...(clientId && clientId !== project.client.id ? { clientId } : {}),
       expectedAmountMinor: expected.minor ?? undefined,
       updatedAt: project.updatedAt,
     });
     const found: Errors = parsed.success ? {} : issuesToErrors(parsed.error.issues);
     if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter the booking amount';
+    if (!clientId) found.clientId = 'Choose a client';
+    else if (client && 'currency' in client && client.currency !== project.currency)
+      found.clientId = `Choose a client billed in ${project.currency}; ${client.name} is billed in ${client.currency}.`;
     setErrors(found);
     if (!parsed.success || Object.keys(found).length) return;
     update.mutate(parsed.data, {
@@ -277,6 +293,23 @@ function EditForm({ project }: { project: ProjectDetail }) {
         <Card className="space-y-4">
           <Field id="name" label="Project name" error={errors.name}>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field id="client" label="Client" error={errors.clientId}>
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <ClientCombobox id="client" value={client} onChange={setClient} invalid={!!errors.clientId} allowNew={false} />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!clientDetail.data}
+                aria-label="Edit client details"
+                onClick={() => setEditingClient(true)}
+              >
+                <Pencil className="size-4" /> Edit client
+              </Button>
+            </div>
+            <p className="text-xs text-text-muted">Editing the client changes its name and contact on every one of its projects.</p>
           </Field>
           <Field id="description" label="Description">
             <textarea
@@ -307,6 +340,16 @@ function EditForm({ project }: { project: ProjectDetail }) {
           </div>
         </Card>
       </form>
+      <Card className="space-y-3">
+        <div>
+          <h2 className="font-medium">Milestones</h2>
+          <p className="text-sm text-text-muted">
+            Changes here save at once. Changing the amount of a paid milestone resets its payments after you confirm.
+          </p>
+        </div>
+        <MilestonesTab project={project} />
+      </Card>
+      {editingClient && clientDetail.data && <ClientFormDialog open onOpenChange={setEditingClient} client={clientDetail.data} />}
     </section>
   );
 }

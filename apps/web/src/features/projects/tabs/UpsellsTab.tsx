@@ -1,11 +1,12 @@
 import { type ProjectDetail } from '@salescrm/schemas';
 import { Button, Input, Label, Table, TBody, TD, TH, THead, TR, toast } from '@salescrm/ui';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useAddUpsell, useProjects, useRemoveUpsell, useSetParent } from '../api';
+import { StatusBadge } from '../StatusBadge';
 import { OptionSelect } from '../../../components/OptionSelect';
 import { MoneyInput } from '../MoneyInput';
 
@@ -16,8 +17,9 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
   const remove = useRemoveUpsell(project.id);
   return (
     <div className="space-y-8">
+      <Phases project={project} />
       <section className="space-y-3">
-        <h2 className="font-medium">Extra work amounts</h2>
+        <h2 className="font-medium">Upsell amounts on this project</h2>
         {project.upsellEntries.length === 0 ? (
           <p className="text-sm text-text-muted">No extra work added yet.</p>
         ) : (
@@ -52,18 +54,107 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Extra work for another project</h2>
+        <h2 className="font-medium">Part of another project</h2>
         {project.canEdit ? (
           <ParentPicker project={project} />
         ) : (
           <p className="text-sm">{project.parent ? `${project.parent.code} ${project.parent.name}` : 'Not linked'}</p>
         )}
-        {project.canEdit && (
-          <Button asChild variant="outline">
-            <Link to={`/projects/new?client=${project.client.id}&parent=${project.id}`}>Create extra-work project</Link>
-          </Button>
-        )}
       </section>
+    </div>
+  );
+}
+
+/** D-028: the original project is Phase 1; upsell work is added as Phase 2, 3, … with its own booking and milestones. */
+function Phases({ project }: { project: ProjectDetail }) {
+  const money = (m: number) => formatApiMoney(m, project.currency);
+  if (project.parent) {
+    return (
+      <section className="rounded-lg border border-border bg-accent/40 p-4 text-sm">
+        <Link to={`/projects/${project.parent.id}`} className="font-medium text-primary hover:underline">
+          Phase {project.phase} of {project.parent.code} {project.parent.name}
+        </Link>
+        <p className="mt-1 text-text-muted">Its booking counts as upsell. Open the original project to see every phase together.</p>
+      </section>
+    );
+  }
+  const entriesMinor = project.upsellEntries.reduce((s, u) => s + u.amountMinor, 0);
+  const phasesMinor = project.upsellProjects.reduce((s, u) => s + u.contractValueMinor, 0);
+  const initial = project.expectedAmountMinor;
+  const upsell = entriesMinor + phasesMinor;
+  const total = initial + upsell;
+  const nextPhase = project.upsellProjects.length + 2;
+  const share = (m: number) => (total > 0 ? `${(m * 100) / total}%` : '0%');
+  return (
+    <section className="space-y-4">
+      <div aria-label="Booking split" role="region" className="space-y-3 rounded-lg border border-border p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Figure label="Initial booking" value={money(initial)} dot="bg-primary" />
+          <Figure label="Upsell" value={money(upsell)} dot="bg-warning" />
+          <Figure label="Total booking" value={money(total)} strong />
+        </div>
+        <div className="flex h-2 overflow-hidden rounded-full bg-accent" aria-hidden>
+          <span className="bg-primary" style={{ width: share(initial) }} />
+          <span className="bg-warning" style={{ width: share(upsell) }} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-medium">Phases</h2>
+          {project.canEdit && project.wonAt && (
+            <Button asChild variant="outline" size="sm">
+              <Link
+                to={`/projects/new?${new URLSearchParams({ client: project.client.id, parent: project.id, name: `${project.name} – Phase ${nextPhase}` })}`}
+              >
+                <Plus className="size-4" /> Add Phase {nextPhase}
+              </Link>
+            </Button>
+          )}
+        </div>
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          <li className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
+            <span>
+              <span className="font-medium">Phase 1</span> · {project.name} <span className="text-text-muted">(this project)</span>
+            </span>
+            <span className="tabular-nums">{money(initial)}</span>
+          </li>
+          {project.upsellProjects.map((u) => (
+            <li key={u.id}>
+              <Link
+                to={`/projects/${u.id}`}
+                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-accent"
+              >
+                <span className="flex items-center gap-2">
+                  <span>
+                    <span className="font-medium">Phase {u.phase}</span> · {u.name}{' '}
+                    <span className="text-xs text-text-muted">{u.code}</span>
+                  </span>
+                  <StatusBadge status={u.status} />
+                </span>
+                <span className="text-right tabular-nums">
+                  {money(u.contractValueMinor)}
+                  <span className="block text-xs text-text-muted">{money(u.collectedMinor)} received</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {project.upsellProjects.length === 0 && (
+          <p className="text-sm text-text-muted">When the client hires more work, add it as Phase 2 with its own booking and milestones.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Figure({ label, value, dot, strong }: { label: string; value: string; dot?: string; strong?: boolean }) {
+  return (
+    <div>
+      <p className="flex items-center gap-1.5 text-xs text-text-muted">
+        {dot && <span className={`size-2 rounded-full ${dot}`} aria-hidden />}
+        {label}
+      </p>
+      <p className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'font-medium'}`}>{value}</p>
     </div>
   );
 }

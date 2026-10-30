@@ -29,7 +29,7 @@ test('number cards carry a 12-month trend line', async () => {
   vi.stubGlobal('fetch', stubApi(routes).fn);
   renderApp('/', sessionFor('CEO'));
   const kpis = await screen.findByRole('region', { name: 'Key figures' });
-  expect(within(kpis).getByRole('img', { name: 'Contracted, last 12 months' })).toBeInTheDocument();
+  expect(within(kpis).getByRole('img', { name: 'Total booking, last 12 months' })).toBeInTheDocument();
 });
 
 test('Export CSV downloads the dashboard data', async () => {

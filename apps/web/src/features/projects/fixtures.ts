@@ -15,6 +15,9 @@ export const listItem = (over: Partial<ProjectListItem> = {}): ProjectListItem =
   nextDueDate: '2026-11-15',
   hasOverdue: true,
   parentProjectId: null,
+  expectedAmountMinor: 10000000,
+  milestoneCount: 1,
+  paidMilestoneCount: 0,
   ...over,
 });
 
@@ -29,6 +32,7 @@ export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   expectedAmountMinor: 10000000,
   tags: [],
   parent: null,
+  phase: null,
   upsellProjects: [],
   upsellEntries: [{ id: 'u1', amountMinor: 2500000, date: '2026-10-01', note: 'Extra pages' }],
   milestones: [
