@@ -31,7 +31,7 @@ Each card: value, delta vs comparison (▲/▼ with %), 12-point sparkline, clic
 | K8  | Upsell revenue      | Upsell part of K1 (upsell entries ∈ P + expectedAmount of projects with a parent won ∈ P), and % of K1                                      | Projects (upsells)    |
 | K9  | Collection rate     | Σ paid on milestones due ∈ P ÷ K3                                                                                                           | Invoices (P)          |
 | K10 | Avg days to pay     | mean(`paymentDate − dueDate`) over payments ∈ P whose milestone has a due date                                                              | Completed Billing     |
-| K11 | Win rate            | count(wonAt ∈ P) ÷ count(wonAt ∈ P or LOST with closedAt ∈ P)                                                                               | Projects              |
+| K11 | Win rate            | count(wonAt ∈ P, not LOST) ÷ (that + count(LOST with closedAt ∈ P)); won-then-lost is a loss; null if both 0                                | Projects              |
 | K12 | Average deal size   | Σ expectedAmount of projects won ∈ P ÷ count(projects won ∈ P)                                                                              | Projects              |
 
 ## Charts

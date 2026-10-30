@@ -71,3 +71,15 @@ test('an unknown period is rejected', async () => {
   const { agent } = await loginAs(app, prisma, 'ADMIN');
   expect((await agent.get('/api/v1/dashboard?period=FOREVER')).status).toBe(400);
 });
+
+test('K11 win rate counts projects won and lost in the period', async () => {
+  const rep = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(rep.agent, rep.csrf, 'Acme', 100000);
+  const lead = await rep.agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', rep.csrf)
+    .send({ name: 'Lost deal', expectedAmountMinor: 50000, status: 'LEAD', newClient: { name: 'Zenith' } });
+  await rep.agent.post(`/api/v1/projects/${lead.body.id}/status`).set('X-CSRF-Token', rep.csrf).send({ status: 'LOST' }).expect(200);
+  const res = await rep.agent.get('/api/v1/dashboard?period=THIS_FY');
+  expect(res.body.kpis.winRate).toBeCloseTo(0.5);
+});

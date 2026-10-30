@@ -16,6 +16,7 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
     dueNext30Minor: 150000000,
     pipelineMinor: 800000000,
     wonCount: 12,
+    winRate: 0.6,
     avgDealMinor: 187500000,
   },
   previous: { bookedMinor: 2000000000, collectedMinor: 1000000000 },

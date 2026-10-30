@@ -226,9 +226,13 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
                 <p className="text-white/70">Booked</p>
                 <p className="font-bold">{money(k.bookedMinor)}</p>
               </div>
-              <div className="text-right">
+              <div className="text-center">
                 <p className="text-white/70">Projects won</p>
                 <p className="font-bold">{k.wonCount}</p>
+              </div>
+              <div className="text-right" title="Won ÷ (won + lost) in this period">
+                <p className="text-white/70">Win rate</p>
+                <p className="font-bold">{k.winRate === null ? '—' : `${Math.round(k.winRate * 100)}%`}</p>
               </div>
             </div>
           </div>

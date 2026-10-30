@@ -42,3 +42,18 @@ test('other-currency projects are called out, not silently mixed in', async () =
   renderApp('/', sessionFor('CEO'));
   expect(await screen.findByText(/2 projects in other currencies are not included/)).toBeInTheDocument();
 });
+
+test('K11 win rate shows in the headline card', async () => {
+  vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);
+  renderApp('/', sessionFor('CEO'));
+  const collected = await screen.findByRole('region', { name: 'Collected' });
+  expect(within(collected).getByText('Win rate').nextElementSibling).toHaveTextContent('60%');
+});
+
+test('K11 win rate is a dash when nothing was won or lost', async () => {
+  const base = dashboard();
+  vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard({ kpis: { ...base.kpis, winRate: null } }) } }).fn);
+  renderApp('/', sessionFor('CEO'));
+  const collected = await screen.findByRole('region', { name: 'Collected' });
+  expect(within(collected).getByText('Win rate').nextElementSibling).toHaveTextContent('—');
+});
