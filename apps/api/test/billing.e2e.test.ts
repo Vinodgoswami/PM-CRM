@@ -86,8 +86,11 @@ test('CSV export has exact amounts and the same scope', async () => {
   expect(res.status).toBe(200);
   expect(res.headers['content-type']).toContain('text/csv');
   const [header, row] = res.text.trim().split('\n');
-  expect(header).toBe('Date,Client,Project code,Project,Milestone,Invoice ID,Amount,Currency,Recorded by,Reversal of');
-  expect(row).toMatch(/^2026-04-10,"Acme, Inc",PRJ-0001,"Project Acme, Inc",M1,INV-\d+,12345\.67,INR,[^,]+,$/);
+  expect(header).toBe(
+    'Date,Client,Project code,Project,Milestone,Invoice ID,Amount,Currency,Rate,Base amount,Base currency,Recorded by,Reversal of',
+  );
+  // D-020: both amounts on every payment (same currency: rate 1).
+  expect(row).toMatch(/^2026-04-10,"Acme, Inc",PRJ-0001,"Project Acme, Inc",M1,INV-\d+,12345\.67,INR,1,12345\.67,INR,[^,]+,$/);
 });
 
 test('each payment says whether the viewer may edit its details', async () => {

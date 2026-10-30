@@ -105,6 +105,7 @@ export function InvoicesPage() {
                 <Row
                   key={i.milestoneId}
                   item={i}
+                  base={data.currency}
                   onPay={() =>
                     setPaying({
                       milestoneId: i.milestoneId,
@@ -125,7 +126,7 @@ export function InvoicesPage() {
   );
 }
 
-function Row({ item, onPay }: { item: InvoiceItem; onPay: () => void }) {
+function Row({ item, base, onPay }: { item: InvoiceItem; base: string; onPay: () => void }) {
   return (
     <li className="grid items-center gap-2 px-5 py-3 sm:grid-cols-[1fr_auto_auto_auto]">
       <div className="min-w-0">
@@ -144,7 +145,12 @@ function Row({ item, onPay }: { item: InvoiceItem; onPay: () => void }) {
       </div>
       <div className="flex items-center gap-2 sm:justify-end">
         <MilestoneStatusBadge status={item.status} />
-        <span className="font-semibold tabular-nums">{formatApiMoney(item.balanceMinor, item.currency)}</span>
+        <span className="text-right">
+          <span className="block font-semibold tabular-nums">{formatApiMoney(item.balanceMinor, item.currency)}</span>
+          {item.currency !== base && item.baseBalanceMinor !== null && (
+            <span className="block text-xs text-text-muted tabular-nums">≈ {formatApiMoney(item.baseBalanceMinor, base)}</span>
+          )}
+        </span>
       </div>
       <div className="sm:text-right">
         {item.canPay && (

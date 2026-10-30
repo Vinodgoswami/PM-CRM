@@ -52,8 +52,8 @@ export class BillingService {
   async list(user: SessionUser, q: BillingQuery): Promise<BillingPage> {
     const where = this.where(user, q);
     const { baseCurrency } = await this.settings.get();
-    // M-4: the total is in the base currency; other-currency payments are listed in their own currency but not summed.
-    const baseOnly: Prisma.PaymentWhereInput = { AND: [where, { milestone: { project: { currency: baseCurrency } } }] };
+    // D-020: the total adds each payment's base-currency amount; a payment with no recorded rate is listed, not summed.
+    const baseOnly: Prisma.PaymentWhereInput = { AND: [where, { baseCurrency, baseAmountMinor: { not: null } }] };
     const [rows, total, sum, baseCount] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
         where,
@@ -63,7 +63,7 @@ export class BillingService {
         take: q.pageSize,
       }),
       this.prisma.payment.count({ where }),
-      this.prisma.payment.aggregate({ where: baseOnly, _sum: { amountMinor: true } }),
+      this.prisma.payment.aggregate({ where: baseOnly, _sum: { baseAmountMinor: true } }),
       this.prisma.payment.count({ where: baseOnly }),
     ]);
     return {
@@ -71,7 +71,7 @@ export class BillingService {
       page: q.page,
       pageSize: q.pageSize,
       total,
-      totalMinor: minorToJson(sum._sum.amountMinor ?? 0n),
+      totalMinor: minorToJson(sum._sum.baseAmountMinor ?? 0n),
       otherCurrencyPayments: total - baseCount,
     };
   }
@@ -91,6 +91,9 @@ export class BillingService {
       'Invoice ID',
       'Amount',
       'Currency',
+      'Rate',
+      'Base amount',
+      'Base currency',
       'Recorded by',
       'Reversal of',
     ];
@@ -105,6 +108,9 @@ export class BillingService {
         p.invoiceId ?? '',
         majorUnits(p.amountMinor, project.currency),
         project.currency,
+        p.fxRate?.toString() ?? '',
+        p.baseAmountMinor === null || !p.baseCurrency ? '' : majorUnits(p.baseAmountMinor, p.baseCurrency),
+        p.baseCurrency ?? '',
         p.createdBy.name,
         p.reversesPaymentId ?? '',
       ]

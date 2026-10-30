@@ -3,11 +3,12 @@ import { can } from '@salescrm/auth/permissions';
 import { changedFields, checkPayment } from '@salescrm/core';
 import { Prisma } from '@salescrm/database';
 import { type CreatePaymentInput, type PaymentDto, type UpdatePaymentMetaInput } from '@salescrm/schemas';
-import { minorFromJson, minorToJson } from '@salescrm/types';
+import { convertMinor, minorFromJson, minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
 import { AppError, conflict, notFound, RuleViolation } from '../../common/errors';
 import { assertCanAccess } from '../../common/ownership';
 import { AuditService } from '../audit/audit.service';
+import { FxService } from '../fx/fx.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
 import { ProjectsService } from '../projects/projects.service';
@@ -37,6 +38,9 @@ export function toPaymentDto(p: PaymentRow, viewer: SessionUser): PaymentDto {
     invoiceId: p.invoiceId,
     paymentDate: isoDate(p.paymentDate)!,
     amountMinor: minorToJson(p.amountMinor),
+    baseCurrency: p.baseCurrency,
+    fxRate: p.fxRate?.toString() ?? null,
+    baseAmountMinor: p.baseAmountMinor === null ? null : minorToJson(p.baseAmountMinor),
     reversesPaymentId: p.reversesPaymentId,
     reversedById: p.reversedBy?.id ?? null,
     note: p.note,
@@ -58,7 +62,15 @@ export class PaymentsService {
     private readonly projects: ProjectsService,
     private readonly audit: AuditService,
     private readonly settings: SettingsService,
+    private readonly fx: FxService,
   ) {}
+
+  /** D-020: the rate for a payment in `currency` on `date` (typed, or looked up before any lock is taken). */
+  private async rateFor(currency: string, date: string, typed: string | undefined) {
+    const base = (await this.settings.get()).baseCurrency;
+    if (currency === base) return { base, rate: '1' };
+    return { base, rate: typed ?? (await this.fx.get(currency, base, date)).rate };
+  }
 
   private async byKey(user: SessionUser, key: string, milestoneId: string): Promise<PaymentDto | null> {
     const existing = await this.prisma.payment.findUnique({ where: { idempotencyKey: key }, include: PAYMENT_INCLUDE });
@@ -76,6 +88,13 @@ export class PaymentsService {
     if (replay) return { payment: replay, created: false };
 
     const today = await this.settings.today();
+    // The rate may need a network call, so it is settled before the transaction (and its row lock) starts.
+    const target = await this.prisma.milestone.findUnique({
+      where: { id: milestoneId },
+      select: { project: { select: { currency: true } } },
+    });
+    if (!target) throw notFound();
+    const fx = await this.rateFor(target.project.currency, input.paymentDate, input.fxRate);
     try {
       const payment = await this.prisma.$transaction(async (tx) => {
         // Serialise payments on one milestone: two parallel "Mark as paid" must not both fit in the same balance.
@@ -110,6 +129,9 @@ export class PaymentsService {
             invoiceId: input.invoiceId || null,
             paymentDate: toDate(input.paymentDate),
             amountMinor,
+            baseCurrency: fx.base,
+            fxRate: fx.rate,
+            baseAmountMinor: convertMinor(amountMinor, fx.rate, project.currency, fx.base),
             note: input.note || null,
             idempotencyKey: key,
             createdById: user.id,
@@ -153,9 +175,14 @@ export class PaymentsService {
       const before = await this.loadPayment(tx, user, id);
       assertCanAccess(user, 'payments.editMeta', before.milestone.project.ownerId, 'write');
       if (input.paymentDate && input.paymentDate > today) throw new RuleViolation('P-6', 'The payment date cannot be in the future.');
+      const currency = before.milestone.project.currency;
+      const base = before.baseCurrency ?? (await this.settings.get()).baseCurrency;
       const after = await tx.payment.update({
         where: { id },
         data: {
+          ...(input.fxRate !== undefined
+            ? { baseCurrency: base, fxRate: input.fxRate, baseAmountMinor: convertMinor(before.amountMinor, input.fxRate, currency, base) }
+            : {}),
           ...(input.milestoneLabel !== undefined ? { milestoneLabel: input.milestoneLabel } : {}),
           ...(input.invoiceId !== undefined ? { invoiceId: input.invoiceId || null } : {}),
           ...(input.paymentDate !== undefined ? { paymentDate: toDate(input.paymentDate) } : {}),
@@ -168,6 +195,7 @@ export class PaymentsService {
         invoiceId: p.invoiceId,
         paymentDate: isoDate(p.paymentDate),
         note: p.note,
+        fxRate: p.fxRate?.toString() ?? null,
       });
       const diff = changedFields(pick(before), pick(after));
       if (diff) {
@@ -199,6 +227,10 @@ export class PaymentsService {
             invoiceId: original.invoiceId,
             paymentDate: toDate(today),
             amountMinor: -original.amountMinor,
+            // Mirrors the original in both currencies, so the base totals cancel exactly.
+            baseCurrency: original.baseCurrency,
+            fxRate: original.fxRate,
+            baseAmountMinor: original.baseAmountMinor === null ? null : -original.baseAmountMinor,
             reversesPaymentId: original.id,
             note: reason,
             createdById: user.id,

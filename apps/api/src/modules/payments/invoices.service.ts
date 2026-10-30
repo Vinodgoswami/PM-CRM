@@ -7,6 +7,8 @@ import { type SessionUser } from '../../common/current-user';
 import { ownerWhere } from '../../common/ownership';
 import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
+import { convertMinor } from '@salescrm/types';
+import { projectRate } from '../fx/to-base';
 import { SettingsService } from '../settings/settings.service';
 
 const DAY = 86_400_000;
@@ -40,6 +42,8 @@ export class InvoicesService {
             code: true,
             name: true,
             currency: true,
+            fxRate: true,
+            fxBaseCurrency: true,
             ownerId: true,
             client: { select: { id: true, name: true } },
             owner: { select: { id: true, name: true } },
@@ -58,8 +62,11 @@ export class InvoicesService {
       const due = isoDate(m.dueDate);
       const key = invoiceGroup(due, today);
       const group = groups.get(key) ?? { totalMinor: 0n, items: [] };
-      // M-4: listed in its own currency, summed only when it is the base currency.
-      if (m.project.currency === settings.baseCurrency) group.totalMinor += balance;
+      // D-020: listed in its own currency, summed in the base currency at the project's saved rate (M-4 when none).
+      const rate = projectRate(m.project, settings.baseCurrency);
+      const conv = (x: bigint) => convertMinor(x, rate!, m.project.currency, settings.baseCurrency);
+      const baseBalance = rate ? conv(m.amountMinor) - conv(paid) : null;
+      if (baseBalance !== null) group.totalMinor += baseBalance;
       else otherCurrencyItems += 1;
       group.items.push({
         milestoneId: m.id,
@@ -67,6 +74,7 @@ export class InvoicesService {
         title: m.title,
         amountMinor: minorToJson(m.amountMinor),
         balanceMinor: minorToJson(balance),
+        baseBalanceMinor: baseBalance === null ? null : minorToJson(baseBalance),
         dueDate: due,
         daysFromToday: due ? daysBetween(today, due) : null,
         status: milestoneStatus({ amountMinor: m.amountMinor, paidMinor: paid, dueDate: due }, today, settings.dueSoonDays),

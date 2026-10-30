@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { FxModule } from './modules/fx/fx.module';
 import { HealthController } from './modules/health/health.controller';
 import { ImportsModule } from './modules/imports/imports.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -31,6 +32,7 @@ export class AppModule {
         AuthModule,
         AuditModule,
         SettingsModule,
+        FxModule,
         UsersModule,
         ClientsModule,
         ProjectsModule,

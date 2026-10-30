@@ -48,26 +48,27 @@ const pay = (agent: Agent, csrf: string, milestoneId: string, amount: number) =>
     .set('Idempotency-Key', `p3-review-${++k}-${Date.now()}`)
     .send({ paymentDate: today(), amountMinor: amount });
 
-test('M-4 other-currency work stays out of base-currency totals, with a count for the note', async () => {
+test('D-020 other-currency work is converted at its rates; only work with no rate stays out (M-4 note)', async () => {
   const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
   const inr = await project(agent, csrf, { client: 'Acme' });
+  // Test rates: 1 USD = 84 INR; there is no EUR rate, so EUR work cannot be converted.
   const usd = await project(agent, csrf, { client: 'Globex', currency: 'USD', amount: 1000000 });
+  const eur = await project(agent, csrf, { client: 'Initech', currency: 'EUR', amount: 1000000 });
   await pay(agent, csrf, inr.milestones[0]!.id, 40000).expect(201);
   await pay(agent, csrf, usd.milestones[0]!.id, 500000).expect(201);
+  expect((await pay(agent, csrf, eur.milestones[0]!.id, 500000)).status).toBe(400); // no rate: it must be typed
 
   const dash = (await agent.get('/api/v1/dashboard?period=THIS_FY')).body;
-  expect(dash.kpis).toMatchObject({ bookedMinor: 100000, collectedMinor: 40000, outstandingMinor: 60000 });
+  // ₹1,000 + $10,000 × 84 = ₹1,000 + ₹8,40,000.
+  expect(dash.kpis).toMatchObject({ bookedMinor: 100000 + 84000000, collectedMinor: 40000 + 42000000 });
   expect(dash.otherCurrencyProjects).toBe(1);
 
   const billing = (await agent.get('/api/v1/payments')).body;
-  expect(billing.totalMinor).toBe(40000);
-  expect(billing.total).toBe(2); // listed, each in its own currency
-  expect(billing.otherCurrencyPayments).toBe(1);
+  expect(billing.totalMinor).toBe(40000 + 42000000);
+  expect(billing.otherCurrencyPayments).toBe(0);
 
   const invoices = (await agent.get('/api/v1/invoices')).body;
-  const totals = invoices.groups.reduce((s: number, g: { totalMinor: number }) => s + g.totalMinor, 0);
-  expect(totals).toBe(60000);
-  expect(invoices.otherCurrencyItems).toBe(1);
+  expect(invoices.otherCurrencyItems).toBe(1); // the EUR milestone, listed but not summed
 });
 
 test('P-8 payments are only recorded on booked work', async () => {

@@ -13,6 +13,8 @@ export const invoiceItemSchema = z.object({
   title: z.string(),
   amountMinor: minorSchema,
   balanceMinor: minorSchema,
+  /** D-020: the balance in the company's base currency at the project's saved rate (null when it has none). */
+  baseBalanceMinor: minorSchema.nullable().default(null),
   dueDate: isoDateSchema.nullable(),
   daysFromToday: z.number().nullable(),
   status: z.enum(['PAID', 'OVERDUE', 'PARTIALLY_PAID', 'DUE_SOON', 'SCHEDULED', 'UNSCHEDULED']),

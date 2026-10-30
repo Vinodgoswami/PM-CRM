@@ -15,7 +15,12 @@ export interface MetricProject {
   expectedAmountMinor: bigint;
   isUpsell: boolean;
   upsellEntries: { amountMinor: bigint; date: IsoDate }[];
-  milestones: { amountMinor: bigint; dueDate: IsoDate | null; payments: { amountMinor: bigint; paymentDate: IsoDate }[] }[];
+  milestones: {
+    amountMinor: bigint;
+    dueDate: IsoDate | null;
+    /** `amountMinor` settles the balance; `collectedMinor` (D-020) is what actually came in, when it differs (FX). */
+    payments: { amountMinor: bigint; paymentDate: IsoDate; collectedMinor?: bigint }[];
+  }[];
 }
 
 export interface MetricRange {
@@ -98,7 +103,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
       const paid = paidOf(m);
       const balance = m.amountMinor - paid;
       // Money actually received always counts; expected / owed only for booked work.
-      collectedMinor += sum(m.payments.filter((x) => inRange(x.paymentDate, range)).map((x) => x.amountMinor));
+      collectedMinor += sum(m.payments.filter((x) => inRange(x.paymentDate, range)).map((x) => x.collectedMinor ?? x.amountMinor));
       // K10 ignores reversals (negative rows) so a corrected payment is not counted twice.
       for (const x of m.payments) {
         if (m.dueDate && x.amountMinor > 0n && inRange(x.paymentDate, range)) {

@@ -27,6 +27,7 @@ import { AuditService } from '../audit/audit.service';
 import { ClientsService } from '../clients/clients.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { SettingsService } from '../settings/settings.service';
+import { FxService } from '../fx/fx.service';
 import { isoDate, PROJECT_MONEY_INCLUDE, totalsFor } from './project-money';
 
 const LIST_INCLUDE = {
@@ -88,7 +89,15 @@ export class ProjectsService {
     private readonly audit: AuditService,
     private readonly clients: ClientsService,
     private readonly settings: SettingsService,
+    private readonly fx: FxService,
   ) {}
+
+  /** D-020: the rate fields to save on a project in `currency` today (null rate when none is available). */
+  private async fxFields(currency: string, today: IsoDate) {
+    const base = (await this.settings.get()).baseCurrency;
+    const found = await this.fx.find(currency, base, today);
+    return { fxRate: found?.rate ?? null, fxRateDate: found ? toDate(found.date) : null, fxBaseCurrency: found ? base : null };
+  }
 
   toDetail(p: DetailRow, user: SessionUser, today: IsoDate, dueSoonDays: number): ProjectDetail {
     const t = totalsFor(p, today);
@@ -170,6 +179,12 @@ export class ProjectsService {
 
   async create(user: SessionUser, input: CreateProjectInput): Promise<ProjectDetail> {
     const today = await this.settings.today();
+    // The project's currency is the input's, else its client's, else (a new client) the base currency.
+    const base = (await this.settings.get()).baseCurrency;
+    const clientCurrency = input.clientId
+      ? (await this.prisma.client.findUnique({ where: { id: input.clientId }, select: { currency: true } }))?.currency
+      : undefined;
+    const fx = await this.fxFields(input.currency ?? clientCurrency ?? base, today);
     try {
       const id = await this.prisma.$transaction(async (tx) => {
         let clientId = input.clientId;
@@ -214,6 +229,7 @@ export class ProjectsService {
             endDate: toDate(endDateFor(input.startDate ?? null, input.durationValue ?? null, input.durationUnit ?? null)),
             expectedAmountMinor: minorFromJson(input.expectedAmountMinor),
             currency: input.currency ?? client.currency,
+            ...fx,
             wonAt: toDate(dates.wonAt),
             tags: input.tags,
             parentProjectId: input.parentProjectId ?? null,
@@ -263,6 +279,8 @@ export class ProjectsService {
   }
 
   async update(user: SessionUser, id: string, input: UpdateProjectInput): Promise<ProjectDetail> {
+    // A new currency needs a new rate (D-020); looked up before the transaction.
+    const fx = input.currency ? await this.fxFields(input.currency, await this.settings.today()) : null;
     await this.prisma.$transaction(async (tx) => {
       const before = await this.loadForWrite(id, user, tx);
       if (before.updatedAt.toISOString() !== input.updatedAt) {
@@ -281,7 +299,7 @@ export class ProjectsService {
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.tags !== undefined ? { tags: input.tags } : {}),
-          ...(input.currency !== undefined ? { currency: input.currency } : {}),
+          ...(input.currency !== undefined && input.currency !== before.currency ? { currency: input.currency, ...fx } : {}),
           ...(input.expectedAmountMinor !== undefined ? { expectedAmountMinor: minorFromJson(input.expectedAmountMinor) } : {}),
           startDate: toDate(startDate),
           durationValue,
@@ -309,6 +327,10 @@ export class ProjectsService {
 
   async changeStatus(user: SessionUser, id: string, to: ProjectStatus): Promise<ProjectDetail> {
     const today = await this.settings.today();
+    // Confirming fixes the converted contract value at that day's rate (looked up before the transaction).
+    const current = await this.prisma.project.findUnique({ where: { id }, select: { currency: true, wonAt: true } });
+    const confirming = !!current && !current.wonAt && ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'].includes(to);
+    const fx = confirming ? await this.fxFields(current.currency, today) : null;
     await this.prisma.$transaction(async (tx) => {
       const p = await this.loadForWrite(id, user, tx);
       const check = checkTransition(p.status, to, {
@@ -318,7 +340,16 @@ export class ProjectsService {
       });
       if (!check.ok) throw new RuleViolation(check.rule, check.message);
       const dates = statusDates(p.status, to, { wonAt: isoDate(p.wonAt), closedAt: isoDate(p.closedAt) }, today);
-      await tx.project.update({ where: { id }, data: { status: to, wonAt: toDate(dates.wonAt), closedAt: toDate(dates.closedAt) } });
+      await tx.project.update({
+        where: { id },
+        data: {
+          status: to,
+          wonAt: toDate(dates.wonAt),
+          closedAt: toDate(dates.closedAt),
+          // Keep an older rate if today's cannot be found.
+          ...(fx?.fxRate ? fx : {}),
+        },
+      });
       await this.audit.record(tx, {
         actorId: user.id,
         action: 'project.status',

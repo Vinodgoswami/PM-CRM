@@ -67,7 +67,7 @@ test('any error imports nothing; an unknown owner email is an error', async () =
   const res = await agent.post('/api/v1/imports').set('X-CSRF-Token', csrf).send({ csv: bad });
   expect(res.status).toBe(400);
   expect(res.body.error.details.errors).toEqual([
-    { line: 5, message: 'owner_email "nobody@x.test" is not an active Admin or Sales user.' },
+    { line: 5, message: 'owner_email "nobody@x.test" is not an active Admin or Project Manager.' },
   ]);
   expect(await prisma.project.count()).toBe(0);
   expect(await prisma.client.count()).toBe(0);
@@ -97,4 +97,32 @@ test('a file well over the default 100 kB body limit can be previewed', async ()
   const res = await agent.post('/api/v1/imports/preview').set('X-CSRF-Token', csrf).send({ csv: big });
   expect(res.status).toBe(200);
   expect(res.body.projects).toBe(2500);
+});
+
+test('D-020 imported payments record both amounts: the fx_rate column or the day’s rate; missing rates are problems', async () => {
+  await prisma.setting.upsert({ where: { id: 1 }, update: { baseCurrency: 'USD' }, create: { id: 1, baseCurrency: 'USD' } });
+  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const head = `${HEADER},fx_rate`;
+  const rows = [
+    head,
+    'Acme,,Website,ACTIVE,"1,00,000",INR,2026-01-10,,,Design,40000,2026-02-01,40000,2026-02-05,INV-1,0.0105',
+    'Acme,,Website,,,,,,,Build,60000,2026-05-01,25000,2026-05-03,INV-2,',
+  ];
+  const ok = await agent
+    .post('/api/v1/imports')
+    .set('X-CSRF-Token', csrf)
+    .send({ csv: rows.join('\n') });
+  expect(ok.status).toBe(201);
+  const pays = await prisma.payment.findMany({ orderBy: { paymentDate: 'asc' } });
+  expect(pays.map((p) => [p.fxRate?.toString(), Number(p.baseAmountMinor), p.baseCurrency])).toEqual([
+    ['0.0105', 42000, 'USD'],
+    ['0.012', 30000, 'USD'],
+  ]);
+  expect((await prisma.project.findFirstOrThrow()).fxRate?.toString()).toBe('0.012');
+
+  const eur = [head, 'Initech,,Audit,WON,1000,EUR,2026-01-10,,,M,1000,2026-02-01,500,2026-02-05,,'].join('\n');
+  const preview = await agent.post('/api/v1/imports/preview').set('X-CSRF-Token', csrf).send({ csv: eur });
+  expect(preview.body.errors).toEqual([
+    { line: 2, message: 'No exchange rate for EUR → USD on 2026-02-05. Add it in the fx_rate column.' },
+  ]);
 });

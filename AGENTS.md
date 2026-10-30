@@ -24,6 +24,8 @@ Status: docs **approved 2026-10-29** (D-009 in [docs/15](docs/15-decisions-and-o
 ## Commands
 
 - `pnpm verify` — format check, scanners, integrity guard, typecheck, lint, tests.
+- `pnpm db:clear-work --yes` — start fresh: deletes clients, projects, payments, documents and audit history; keeps
+  users and company settings (local databases only).
 - `pnpm build && pnpm e2e` — Playwright flows F1–F5 (docs/08) in a real browser; starts its own API (:4100) and web
   (:5190) against a separate `salescrm_e2e` database that it migrates and re-seeds each run (needs `pnpm db:local`).
 - `pnpm check:obscure` / `pnpm security:check` / `pnpm guard:integrity` / `pnpm docs:check` — individual gates.

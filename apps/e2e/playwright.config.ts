@@ -34,6 +34,7 @@ export default defineConfig({
         WEB_ORIGIN: `http://localhost:${WEB_PORT}`,
         SEED_PASSWORD,
         STORAGE_DRIVER: 'local',
+        FX_PROVIDER: 'fixed',
         STORAGE_LOCAL_DIR: './.e2e-uploads',
         LOG_LEVEL: 'warn',
       },

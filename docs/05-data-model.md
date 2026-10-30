@@ -135,6 +135,10 @@ erDiagram
 
 Status is **derived**, never stored (rules in [06](06-business-rules.md#milestone-status)).
 
+Projects also carry `fxRate`, `fxRateDate`, `fxBaseCurrency` (D-020): the rate saved when the project is created and
+again when it is confirmed. Daily rates fetched from the rate service are cached in `FxRate (date, from, to, rate,
+source)`.
+
 ### Payment (Completed Billing row)
 
 | Field             | Type            | Editable after save | Notes                                                                           |
@@ -144,6 +148,9 @@ Status is **derived**, never stored (rules in [06](06-business-rules.md#mileston
 | invoiceId         | string?         | **yes**             | From your invoicing tool                                                        |
 | paymentDate       | date            | **yes**             | Defaults to today                                                               |
 | amountMinor       | bigint          | **no**              | Positive; negative only for a reversal                                          |
+| baseCurrency      | string?         | via rate            | Company base currency when recorded (D-020)                                     |
+| fxRate            | decimal(20,10)? | **yes**             | Base units per 1 project-currency unit; editing it recomputes `baseAmountMinor` |
+| baseAmountMinor   | bigint?         | via rate            | Same money in the base currency; a reversal mirrors it negated                  |
 | reversesPaymentId | FK Payment?     | no                  | Set on reversal rows                                                            |
 | idempotencyKey    | string?, unique | no                  | Key sent by the Mark-as-paid dialog; a retried request returns the same payment |
 | note              | text?           | yes                 |                                                                                 |

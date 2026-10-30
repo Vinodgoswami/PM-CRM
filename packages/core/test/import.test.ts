@@ -59,8 +59,8 @@ test('rows group into projects, milestones and payments with exact money and bot
       amountMinor: 5000000n,
       dueDate: '2026-06-01',
       payments: [
-        { amountMinor: 2000050n, paymentDate: '2026-06-05', invoiceId: 'INV-1' },
-        { amountMinor: 1000000n, paymentDate: '2026-06-20', invoiceId: 'INV-2' },
+        { amountMinor: 2000050n, paymentDate: '2026-06-05', invoiceId: 'INV-1', fxRate: null },
+        { amountMinor: 1000000n, paymentDate: '2026-06-20', invoiceId: 'INV-2', fxRate: null },
       ],
     },
     { title: 'Build', amountMinor: 7500000n, dueDate: '2026-09-01', payments: [] },
@@ -185,5 +185,42 @@ test('stages may be written as on screen (Enquiry, Quoted, Confirmed, On hold, C
     ['ON_HOLD', '2026-05-01'],
     ['LOST', null],
     ['WON', '2026-05-01'],
+  ]);
+});
+
+test('D-020 an optional fx_rate column gives a payment its rate; a bad rate is reported', () => {
+  const plan = parseImport(
+    csv(
+      row({
+        client: 'A',
+        project: 'P',
+        status: 'WON',
+        expected_amount: '100',
+        confirmed_date: '2026-01-01',
+        milestone: 'M',
+        milestone_amount: '100',
+        paid_amount: '40',
+        paid_date: '2026-02-01',
+        fx_rate: '0.0119',
+      }),
+      row({ client: 'A', project: 'P', milestone: 'M', paid_amount: '10', paid_date: '2026-03-01' }),
+      row({
+        client: 'B',
+        project: 'Q',
+        status: 'WON',
+        expected_amount: '100',
+        confirmed_date: '2026-01-01',
+        milestone: 'M',
+        milestone_amount: '100',
+        paid_amount: '40',
+        paid_date: '2026-02-01',
+        fx_rate: 'abc',
+      }),
+    ),
+    OPTS,
+  );
+  expect(plan.projects[0]!.milestones[0]!.payments.map((p) => p.fxRate)).toEqual(['0.0119', null]);
+  expect(plan.errors).toEqual([
+    { line: 4, message: 'fx_rate: "abc" is not a valid rate (expected a positive rate like 0.0119 or 84.15).' },
   ]);
 });
