@@ -1,4 +1,5 @@
 import { motion, MotionConfig } from 'motion/react';
+import { APP_NAME } from '../../lib/brand';
 import { type ReactNode } from 'react';
 
 /** Hatched bars with one highlighted bar, echoing the dashboard chart style (decorative only). */
@@ -42,13 +43,12 @@ function Backdrop() {
 
 function WelcomePanel() {
   return (
-    <div className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-contrast md:flex">
+    <div
+      data-testid="welcome-panel"
+      className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-contrast md:flex"
+    >
       <div aria-hidden className="absolute -top-20 -right-20 size-72 rounded-full bg-white/10" />
       <div aria-hidden className="absolute -bottom-24 -left-16 size-64 rounded-full bg-white/5" />
-      <div className="relative flex items-center gap-2">
-        <span className="grid size-9 place-items-center rounded-full bg-white text-sm font-bold text-primary">S</span>
-        <span className="font-bold tracking-tight">SalesCRM</span>
-      </div>
       <div className="relative space-y-4">
         <motion.h2
           className="text-4xl leading-tight font-extrabold"
@@ -97,8 +97,8 @@ export function AuthCard({ title, description, children }: { title: string; desc
           <WelcomePanel />
           <div className="space-y-6 p-8 sm:p-10">
             <div className="flex items-center gap-2 md:hidden">
-              <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">S</span>
-              <span className="font-bold tracking-tight">SalesCRM</span>
+              <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">P</span>
+              <span className="font-bold tracking-tight">{APP_NAME}</span>
             </div>
             <motion.div
               className="space-y-1"

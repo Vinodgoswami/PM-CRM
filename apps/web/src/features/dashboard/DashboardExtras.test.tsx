@@ -127,5 +127,5 @@ test('Export PDF opens the print dialog for the current view', async () => {
   renderApp('/', sessionFor('CEO'));
   await userEvent.click(await screen.findByRole('button', { name: 'Export PDF' }));
   expect(print).toHaveBeenCalledOnce();
-  expect(screen.getByTestId('print-header')).toHaveTextContent(/SalesCRM dashboard · Year/);
+  expect(screen.getByTestId('print-header')).toHaveTextContent(/Project Management CRM dashboard · Year/);
 });

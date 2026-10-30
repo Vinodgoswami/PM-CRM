@@ -19,6 +19,7 @@
 | D-013 | 2026-10-29 | Theme: white surfaces + green accent, Quixotic-style layout (top pill navigation, rounded cards, striped bar charts) | Owner choice between two references                              |
 | D-014 | 2026-10-29 | Light theme only (no dark mode); animated split-card login with a green welcome panel                                | Owner request with login reference                               |
 | D-015 | 2026-10-29 | Dashboard PDF export via browser print ("Save as PDF") with print styles, not a server-side headless browser         | No Chromium on the server; same data and permissions as the page |
+| D-016 | 2026-10-30 | Product name in the UI is “Project Management CRM” (code and package names stay `salescrm`)                          | Owner request                                                    |
 
 ## Open questions
 
