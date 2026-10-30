@@ -8,6 +8,7 @@ const P = (over: Partial<MetricProject>): MetricProject => ({
   clientId: 'c1',
   status: 'ACTIVE',
   wonAt: '2026-05-10',
+  closedAt: null,
   expectedAmountMinor: 100000n,
   isUpsell: false,
   upsellEntries: [],
@@ -86,4 +87,25 @@ test('K12 average deal = expected amount of projects won ÷ projects won', () =>
   );
   expect(s.wonExpectedMinor).toBe(120000n);
   expect(s.wonCount).toBe(2);
+});
+
+test('K11 win rate = won in period ÷ (won in period + lost in period)', () => {
+  const deals = [
+    P({ id: 'w1', wonAt: '2026-05-01' }),
+    P({ id: 'w2', status: 'COMPLETED', wonAt: '2026-06-01', closedAt: '2026-09-01' }),
+    P({ id: 'w3', wonAt: '2026-07-01' }),
+    P({ id: 'l1', status: 'LOST', wonAt: null, closedAt: '2026-08-01' }),
+    P({ id: 'old', status: 'LOST', wonAt: null, closedAt: '2025-08-01' }),
+    P({ id: 'open', status: 'PROPOSAL', wonAt: null }),
+  ];
+  expect(summarise(deals, FY, TODAY).winRate).toBeCloseTo(3 / 4);
+});
+
+test('K11 a project won and later lost counts as a loss, not a win', () => {
+  const deals = [P({ id: 'w', wonAt: '2026-05-01' }), P({ id: 'wl', status: 'LOST', wonAt: '2026-05-02', closedAt: '2026-07-01' })];
+  expect(summarise(deals, FY, TODAY).winRate).toBeCloseTo(1 / 2);
+});
+
+test('K11 is null when nothing was won or lost in the period', () => {
+  expect(summarise([P({ status: 'PROPOSAL', wonAt: null })], FY, TODAY).winRate).toBeNull();
 });

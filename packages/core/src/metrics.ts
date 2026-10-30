@@ -10,6 +10,8 @@ export interface MetricProject {
   clientId: string;
   status: 'LEAD' | 'PROPOSAL' | 'WON' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'LOST';
   wonAt: IsoDate | null;
+  /** Set on COMPLETED / LOST (PS-2); K11 counts a loss on this date. */
+  closedAt: IsoDate | null;
   expectedAmountMinor: bigint;
   isUpsell: boolean;
   upsellEntries: { amountMinor: bigint; date: IsoDate }[];
@@ -50,6 +52,8 @@ export interface Summary {
   /** K12 numerator: expected amount of every project won in the period (upsell projects included). */
   wonExpectedMinor: bigint;
   lostCount: number;
+  /** K11: won ÷ (won + lost) in the period; a project won and later lost is a loss. Null when neither happened. */
+  winRate: number | null;
 }
 
 export function summarise(projects: MetricProject[], range: MetricRange, today: IsoDate): Summary {
@@ -65,10 +69,15 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
   let pipelineMinor = 0n;
   let wonCount = 0;
   let wonExpectedMinor = 0n;
+  let wins = 0;
+  let losses = 0;
   const in30 = addDays(today, 30);
 
   for (const p of projects) {
     if (p.status === 'LEAD' || p.status === 'PROPOSAL') pipelineMinor += p.expectedAmountMinor;
+    if (p.status === 'LOST') {
+      if (inRange(p.closedAt, range)) losses += 1;
+    } else if (inRange(p.wonAt, range)) wins += 1;
     // K1 / K8: a project is booked on wonAt; upsell entries on their own date (only on booked projects).
     if (booked(p) && inRange(p.wonAt, range)) {
       bookedMinor += p.expectedAmountMinor;
@@ -115,6 +124,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
     wonCount,
     wonExpectedMinor,
     lostCount,
+    winRate: wins + losses > 0 ? wins / (wins + losses) : null,
   };
 }
 

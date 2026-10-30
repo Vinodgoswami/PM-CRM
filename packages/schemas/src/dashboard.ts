@@ -20,6 +20,8 @@ const kpis = z.object({
   dueNext30Minor: minorSchema,
   pipelineMinor: minorSchema,
   wonCount: z.number(),
+  /** K11: won ÷ (won + lost) in the period; null when neither happened. */
+  winRate: z.number().nullable(),
   avgDealMinor: minorSchema.nullable(),
 });
 
