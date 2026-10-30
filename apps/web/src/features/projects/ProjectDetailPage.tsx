@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   FileText,
   Flag,
   History,
@@ -28,7 +29,7 @@ import {
   Pencil,
   Wallet,
 } from 'lucide-react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { ApiError } from '../../lib/api';
 import { formatApiMoney } from '../../lib/money';
@@ -73,20 +74,33 @@ function ProjectView({ project }: { project: ProjectDetail }) {
   const money = (minor: number) => formatApiMoney(minor, project.currency);
   return (
     <section className="space-y-6">
-      <BackButton />
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-sm text-text-muted">
-            {project.code} ·{' '}
-            <Link to={`/clients/${project.client.id}`} className="hover:underline">
-              {project.client.name}
-            </Link>{' '}
-            · Owner {project.owner.name}
-          </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="icon" className="size-8 rounded-full">
+              <Link to="/projects" aria-label="Back to Projects">
+                <ArrowLeft className="size-4" />
+              </Link>
+            </Button>
+            <nav aria-label="Breadcrumb">
+              <ol className="flex flex-wrap items-center gap-1 text-sm text-text-muted">
+                <Crumb to="/projects">Projects</Crumb>
+                <Crumb to={`/clients/${project.client.id}`}>{project.client.name}</Crumb>
+                {project.parent && <Crumb to={`/projects/${project.parent.id}`}>{`${project.parent.code} ${project.parent.name}`}</Crumb>}
+                <li>
+                  <span aria-current="page" className="font-medium text-text">
+                    {project.code} {project.name}
+                  </span>
+                </li>
+              </ol>
+            </nav>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold">{project.name}</h1>
             <StatusBadge status={project.status} />
+            {project.phase && <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium">Phase {project.phase}</span>}
           </div>
+          <p className="text-sm text-text-muted">Owner {project.owner.name}</p>
         </div>
         {project.canEdit && (
           <div className="flex gap-2">
@@ -189,7 +203,6 @@ function MarkCompleted({ project }: { project: ProjectDetail }) {
   );
 }
 
-/** Back to where the user came from (clients, invoices, a phase…), or to Projects when the page was opened directly. */
 /** A small count beside a tab label; hidden at zero. Not part of the tab's accessible name. */
 function Count({ n }: { n: number }) {
   if (n === 0) return null;
@@ -200,19 +213,14 @@ function Count({ n }: { n: number }) {
   );
 }
 
-function BackButton() {
-  const navigate = useNavigate();
-  const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+function Crumb({ to, children }: { to: string; children: string }) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 -mb-4 text-text-muted"
-      aria-label="Back"
-      onClick={() => (canGoBack ? navigate(-1) : navigate('/projects'))}
-    >
-      <ArrowLeft className="size-4" /> Back
-    </Button>
+    <li className="flex items-center gap-1">
+      <Link to={to} className="hover:text-text hover:underline">
+        {children}
+      </Link>
+      <ChevronRight className="size-3.5" aria-hidden />
+    </li>
   );
 }
 
