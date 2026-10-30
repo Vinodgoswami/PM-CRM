@@ -2,7 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import { type PrismaClient } from '@salescrm/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
-import { createTestApp, createUser, loginAs, resetDatabase, TEST_PASSWORD } from './harness';
+import { createTestApp, createUser, joinTeam, loginAs, resetDatabase, TEST_PASSWORD } from './harness';
 
 let app: INestApplication;
 let prisma: PrismaClient;
@@ -82,7 +82,7 @@ test('admin lists users without password hashes', async () => {
   await createUser(prisma, { role: 'CEO' });
   const res = await agent.get('/api/v1/users');
   expect(res.status).toBe(200);
-  expect(res.body.items).toHaveLength(2);
+  expect(res.body.items).toHaveLength(1); // everyone but yourself (D-024)
   expect(JSON.stringify(res.body)).not.toContain('passwordHash');
 });
 
@@ -149,6 +149,8 @@ test('D-018 the CEO invites and manages Project Managers, and nobody else', asyn
 
   const pm = await createUser(prisma, { role: 'SALES' });
   const admin = await createUser(prisma, { role: 'ADMIN' });
+  const me = (await agent.get('/api/v1/auth/session')).body.user.id as string;
+  await joinTeam(prisma, pm.id, me);
   expect((await agent.get('/api/v1/users')).status).toBe(200);
   expect((await agent.post(`/api/v1/users/${pm.id}/reset-link`).set('X-CSRF-Token', csrf)).status).toBe(201);
   expect((await agent.patch(`/api/v1/users/${pm.id}`).set('X-CSRF-Token', csrf).send({ active: false })).status).toBe(200);

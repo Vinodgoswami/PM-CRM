@@ -1,7 +1,7 @@
 import { type INestApplication } from '@nestjs/common';
 import { type PrismaClient } from '@salescrm/database';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
-import { createTestApp, createUser, loginAs, resetDatabase } from './harness';
+import { createTestApp, createUser, joinTeam, loginAs, resetDatabase } from './harness';
 
 // D-021: the Admin manages accounts and sees counts only; the CEO and project managers own the business data.
 let app: INestApplication;
@@ -19,6 +19,7 @@ afterAll(async () => {
 async function someWork() {
   const pm = await createUser(prisma, { role: 'SALES' });
   const ceo = await loginAs(app, prisma, 'CEO');
+  await joinTeam(prisma, pm.id, ceo.user.id);
   const p = await ceo.agent
     .post('/api/v1/projects')
     .set('X-CSRF-Token', ceo.csrf)

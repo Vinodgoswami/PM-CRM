@@ -56,3 +56,8 @@ export async function loginAs(
   if (res.status !== 200) throw new Error(`login failed: ${res.status} ${JSON.stringify(res.body)}`);
   return { agent, user, csrf: res.body.csrfToken as string };
 }
+
+/** D-024: puts a project manager on a CEO's team (a CEO manages and assigns work only within their team). */
+export async function joinTeam(prisma: PrismaClient, pmId: string, ceoId: string): Promise<void> {
+  await prisma.user.update({ where: { id: pmId }, data: { managerId: ceoId } });
+}

@@ -18,8 +18,8 @@ export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   @Get()
-  list(): Promise<{ items: UserListItem[] }> {
-    return this.users.list();
+  list(@CurrentUser() actor: SessionUser): Promise<{ items: UserListItem[] }> {
+    return this.users.list(actor);
   }
 
   @Get('invites')

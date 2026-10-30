@@ -16,6 +16,12 @@ project records — on the dashboard they get every figure and chart, the people
 but lists naming clients or projects are left out (D-022); the audit log shows them account events only. Someone with access to
 the server or database can still see everything; this boundary is inside the app.
 
+**Teams (D-024):** every Project Manager reports to one CEO (`User.managerId`). A PM invited by a CEO joins that
+CEO's team; the Admin chooses the CEO when inviting a PM and can move PMs between CEOs ("Reports to" on Users). A CEO's
+Users page, pending invites, project-owner picker and dashboard "Project manager" filter show only their own team, and a
+CEO can manage (reset, deactivate) and assign projects to their own team only. Nobody sees their own row on Users; it
+is on Profile.
+
 ## Permission matrix
 
 | Permission key      | Capability                                                                        | ADMIN        | SALES        | CEO     |

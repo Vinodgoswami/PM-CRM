@@ -14,6 +14,38 @@ import { PrismaService } from '../prisma/prisma.module';
 const ROLE_NAME: Record<Role, string> = { ADMIN: 'Admin', CEO: 'CEO', SALES: 'Project Manager' };
 /** Your own role, status and password are managed from your profile, never from the users list. */
 const notYourself = () => new AppError(400, 'VALIDATION_FAILED', 'Manage your own account from your profile.');
+type ItemRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  lastLoginAt: Date | null;
+  manager: { id: string; name: string } | null;
+};
+const toItem = (u: ItemRow): UserListItem => ({
+  id: u.id,
+  name: u.name,
+  email: u.email,
+  role: u.role,
+  active: u.active,
+  lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
+  manager: u.manager,
+});
+
+/** D-024: the id of an active CEO, or a 400. */
+async function activeCeo(tx: Prisma.TransactionClient, id: string): Promise<string> {
+  const ceo = await tx.user.findUnique({ where: { id }, select: { role: true, active: true } });
+  if (!ceo || ceo.role !== 'CEO' || !ceo.active) throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active CEO.');
+  return id;
+}
+
+/** Role check plus D-024's team check: a CEO manages only the project managers who report to them. */
+const assertManagesUser = (actor: SessionUser, user: { role: Role; managerId: string | null }) => {
+  assertManages(actor, user.role);
+  if (actor.role === 'CEO' && user.managerId !== actor.id) throw forbidden('This project manager reports to another CEO.');
+};
+
 const assertManages = (actor: SessionUser, role: Role) => {
   if (!manageableRoles(actor.role).includes(role)) throw forbidden(`Only an Admin can manage ${ROLE_NAME[role]} accounts.`);
 };
@@ -34,18 +66,17 @@ export class UsersService {
     return { url: link.url, expiresAt: link.expiresAt.toISOString(), emailed };
   }
 
-  async list(): Promise<{ items: UserListItem[] }> {
-    const users = await this.prisma.user.findMany({ orderBy: [{ active: 'desc' }, { name: 'asc' }] });
-    return {
-      items: users.map((u) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        active: u.active,
-        lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
-      })),
-    };
+  /**
+   * D-024: everyone except yourself (your account is on Profile). A CEO sees only the project managers who report
+   * to them; the Admin sees everyone.
+   */
+  async list(actor: SessionUser): Promise<{ items: UserListItem[] }> {
+    const users = await this.prisma.user.findMany({
+      where: { id: { not: actor.id }, ...(actor.role === 'CEO' ? { role: 'SALES', managerId: actor.id } : {}) },
+      include: { manager: { select: { id: true, name: true } } },
+      orderBy: [{ active: 'desc' }, { name: 'asc' }],
+    });
+    return { items: users.map(toItem) };
   }
 
   async invite(actor: SessionUser, input: InviteUserInput): Promise<LinkResponse> {
@@ -57,7 +88,16 @@ export class UsersService {
       }
       // A new invite for the same email replaces any pending one, so only the latest link works.
       await tx.authToken.updateMany({ where: { kind: 'INVITE', email: input.email, usedAt: null }, data: { usedAt: new Date() } });
-      const link = await this.tokens.issue(tx, 'INVITE', { ...input, createdById: actor.id });
+      // D-024: a project manager joins a team — the inviting CEO's, or the one the Admin chose.
+      const managerId =
+        input.role !== 'SALES' ? null : actor.role === 'CEO' ? actor.id : input.managerId ? await activeCeo(tx, input.managerId) : null;
+      const link = await this.tokens.issue(tx, 'INVITE', {
+        email: input.email,
+        name: input.name,
+        role: input.role,
+        createdById: actor.id,
+        managerId,
+      });
       await this.audit.record(tx, {
         actorId: actor.id,
         action: 'user.invite',
@@ -80,7 +120,7 @@ export class UsersService {
       if (id === actor.id) throw notYourself();
       const role = input.role ?? user.role;
       const active = input.active ?? user.active;
-      assertManages(actor, user.role);
+      assertManagesUser(actor, user);
       assertManages(actor, role);
 
       const losesAdmin = user.role === 'ADMIN' && user.active && (role !== 'ADMIN' || !active);
@@ -88,8 +128,19 @@ export class UsersService {
         throw conflict('LAST_ADMIN', 'At least one active admin must remain');
       }
 
-      const updated = await tx.user.update({ where: { id }, data: { role, active } });
-      const diff = changedFields({ role: user.role, active: user.active }, { role, active });
+      // D-024: only the Admin moves a project manager between teams; the new manager must be an active CEO.
+      let managerId = user.managerId;
+      if (input.managerId !== undefined) {
+        if (actor.role !== 'ADMIN') throw forbidden('Only the Admin can change who a project manager reports to.');
+        managerId = input.managerId === null ? null : await activeCeo(tx, input.managerId);
+      }
+      if (role !== 'SALES') managerId = null;
+      const updated = await tx.user.update({
+        where: { id },
+        data: { role, active, managerId },
+        include: { manager: { select: { id: true, name: true } } },
+      });
+      const diff = changedFields({ role: user.role, active: user.active, managerId: user.managerId }, { role, active, managerId });
       if (diff) {
         await this.audit.record(tx, { actorId: actor.id, action: 'user.update', entity: 'User', entityId: id, ...diff });
         // A changed role or a deactivation takes effect immediately: end every session of that user.
@@ -99,14 +150,7 @@ export class UsersService {
         const losesAuthority = user.role !== 'SALES' && user.active && (role !== user.role || !active);
         if (losesAuthority) await this.tokens.revokeIssuedBy(tx, id);
       }
-      return {
-        id: updated.id,
-        name: updated.name,
-        email: updated.email,
-        role: updated.role,
-        active: updated.active,
-        lastLoginAt: updated.lastLoginAt?.toISOString() ?? null,
-      };
+      return toItem(updated);
     });
   }
 
@@ -115,7 +159,7 @@ export class UsersService {
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw notFound();
       if (id === actor.id) throw notYourself();
-      assertManages(actor, user.role);
+      assertManagesUser(actor, user);
       const link = await this.tokens.issue(tx, 'RESET', { email: user.email, userId: user.id, createdById: actor.id });
       await this.audit.record(tx, { actorId: actor.id, action: 'user.reset_link', entity: 'User', entityId: id });
       return { user, link };
@@ -127,7 +171,13 @@ export class UsersService {
   /** Invites not yet accepted (and not expired), for roles the viewer may manage. */
   async listInvites(actor: SessionUser) {
     const rows = await this.prisma.authToken.findMany({
-      where: { kind: 'INVITE', usedAt: null, expiresAt: { gt: new Date() }, role: { in: manageableRoles(actor.role) } },
+      where: {
+        kind: 'INVITE',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+        role: { in: manageableRoles(actor.role) },
+        ...(actor.role === 'CEO' ? { managerId: actor.id } : {}),
+      },
       include: { createdBy: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -147,6 +197,7 @@ export class UsersService {
     const row = await tx.authToken.findUnique({ where: { id } });
     if (!row || row.kind !== 'INVITE' || row.usedAt || !row.role) throw notFound();
     assertManages(actor, row.role);
+    if (actor.role === 'CEO' && row.managerId !== actor.id) throw forbidden('This invite belongs to another team.');
     return row;
   }
 
@@ -160,6 +211,7 @@ export class UsersService {
         ...(old.name ? { name: old.name } : {}),
         role: old.role!,
         createdById: actor.id,
+        managerId: old.managerId,
       });
       await this.audit.record(tx, {
         actorId: actor.id,

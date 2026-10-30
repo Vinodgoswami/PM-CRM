@@ -30,7 +30,7 @@ export function useUsers() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...input }: { id: string; role?: Role; active?: boolean }) =>
+    mutationFn: ({ id, ...input }: { id: string; role?: Role; active?: boolean; managerId?: string | null }) =>
       apiFetch(`/users/${id}`, { method: 'PATCH', body: input, schema: userListItemSchema }),
     onSettled: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });

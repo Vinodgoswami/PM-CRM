@@ -92,3 +92,10 @@ test('C-2 seeded clients carry their name key, so the app and imports recognise 
   expect(clients.length).toBeGreaterThan(0);
   for (const c of clients) expect(c.nameKey).toBe(c.name.trim().toLowerCase());
 });
+
+test('D-024 seeded project managers report to the seeded CEO', async () => {
+  const ceo = await prisma.user.findFirstOrThrow({ where: { role: 'CEO' } });
+  const pms = await prisma.user.findMany({ where: { role: 'SALES' } });
+  expect(pms.length).toBeGreaterThan(0);
+  for (const pm of pms) expect(pm.managerId).toBe(ceo.id);
+});

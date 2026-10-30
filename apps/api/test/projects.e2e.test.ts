@@ -3,7 +3,7 @@ import { type PrismaClient } from '@salescrm/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { runSeed } from '../scripts/seed';
-import { createTestApp, createUser, loginAs, resetDatabase } from './harness';
+import { createTestApp, createUser, joinTeam, loginAs, resetDatabase } from './harness';
 
 let app: INestApplication;
 let prisma: PrismaClient;
@@ -96,6 +96,7 @@ test('owner: SALES always owns what they create; the CEO assigns a project manag
   expect(mine.body.owner.id).toBe(sales.user.id);
 
   const admin = await loginAs(app, prisma, 'CEO');
+  await joinTeam(prisma, rep.id, admin.user.id);
   const assigned = await post(admin.agent, admin.csrf, '/projects', { ...base, clientId: cid, ownerId: rep.id });
   expect(assigned.body.owner.id).toBe(rep.id);
 });
@@ -226,6 +227,7 @@ test('list filters, computed sort and overdue flag', async () => {
 test('D-018 the CEO creates a project for a chosen project manager, and must choose one', async () => {
   const pm = await createUser(prisma, { role: 'SALES' });
   const ceo = await loginAs(app, prisma, 'CEO');
+  await joinTeam(prisma, pm.id, ceo.user.id);
   const missing = await post(ceo.agent, ceo.csrf, '/projects', { ...base, newClient: { name: 'X' } });
   expect(missing.status).toBe(400);
   expect(missing.body.error.message).toBe('Choose the project manager for this project.');
@@ -250,6 +252,7 @@ test('the CEO reassigns the owner, audited (D-021)', async () => {
   const p = await post(sales.agent, sales.csrf, '/projects', { ...base, clientId: await clientId(sales.agent, sales.csrf) });
   const rep = await createUser(prisma, { role: 'SALES' });
   const admin = await loginAs(app, prisma, 'CEO');
+  await joinTeam(prisma, rep.id, admin.user.id);
   const res = await admin.agent.patch(`/api/v1/projects/${p.body.id}/owner`).set('X-CSRF-Token', admin.csrf).send({ ownerId: rep.id });
   expect(res.status).toBe(200);
   expect(res.body.owner.id).toBe(rep.id);

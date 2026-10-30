@@ -276,6 +276,9 @@ export class ProjectsService {
     // D-021: projects belong to project managers only.
     if (!owner || !owner.active || owner.role !== 'SALES')
       throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active Project Manager as owner.');
+    // D-024: a CEO assigns projects within their own team.
+    if (user.role === 'CEO' && owner.managerId !== user.id)
+      throw new AppError(400, 'VALIDATION_FAILED', 'Choose a project manager from your team.');
     return owner.id;
   }
 
