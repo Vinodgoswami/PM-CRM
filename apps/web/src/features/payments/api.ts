@@ -2,10 +2,14 @@ import { billingPageSchema, type CreatePaymentInput, paymentDtoSchema, type Upda
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
 
+export const paymentsQuery = (search: string) => ({
+  queryKey: ['payments', search],
+  queryFn: () => apiFetch(`/payments${search ? `?${search}` : ''}`, { schema: billingPageSchema }),
+});
+
 export function usePayments(search: string, enabled = true) {
   return useQuery({
-    queryKey: ['payments', search],
-    queryFn: () => apiFetch(`/payments${search ? `?${search}` : ''}`, { schema: billingPageSchema }),
+    ...paymentsQuery(search),
     placeholderData: keepPreviousData,
     enabled,
   });

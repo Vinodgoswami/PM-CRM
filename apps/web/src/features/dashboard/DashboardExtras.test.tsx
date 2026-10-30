@@ -129,3 +129,25 @@ test('Export PDF opens the print dialog for the current view', async () => {
   expect(print).toHaveBeenCalledOnce();
   expect(screen.getByTestId('print-header')).toHaveTextContent(/Project Management CRM dashboard · Year/);
 });
+
+test('a drill-down with more than 100 payments offers Load more', async () => {
+  const page = (n: number) => ({
+    items: [{ ...payment, id: `pay-p${n}`, invoiceId: `INV-P${n}` }],
+    page: n,
+    pageSize: 100,
+    total: 150,
+    totalMinor: 5000000,
+    otherCurrencyPayments: 0,
+  });
+  const api = stubApi({ ...routes, 'GET /payments': ({ url }) => ({ body: page(Number(url.searchParams.get('page') ?? 1)) }) });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/', sessionFor('CEO'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: /^Dec: / }));
+  const dialog = await screen.findByRole('dialog');
+  expect(await within(dialog).findByText('INV-P1')).toBeInTheDocument();
+  expect(within(dialog).getByText('Showing 1 of 150')).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Load more' }));
+  expect(await within(dialog).findByText('INV-P2')).toBeInTheDocument();
+  expect(within(dialog).getByText('INV-P1')).toBeInTheDocument();
+});

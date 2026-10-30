@@ -58,16 +58,13 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-6  | Done   | feat/rebrand-pm-crm             | Product renamed in the UI to Project Management CRM (D-016); login welcome panel starts with “Welcome back!”                                                                                                                         |
 | P4-7  | Done   | feat/dashboard-complete         | Dashboard spec complete: K10 avg days to pay, K12 tile, C2 quarter comparison, C3 year over year, C6 revenue by client (top 10 + Others), C7 new vs upsell, C8 pipeline, T2 overdue table, team win rate / avg deal / 12-month trend |
 | P4-8  | Done   | feat/dashboard-complete         | Dashboard filters in the address (?period=&ownerId=), 12-month trend lines on Booked / Expected cards, Export CSV of the dashboard tables (major units, currency column, formula-safe, UTF-8 BOM)                                    |
+| P4-9  | Done   | feat/dashboard-complete         | Drill-down lists load 100 at a time with “Load more”; abandoned uploads (PENDING > 1 h) are swept hourly with their stored bytes                                                                                                     |
 
 ## Blockers
 
 - None. Open questions have provisional defaults ([15](15-decisions-and-open-questions.md)).
 
 ## Known gaps
-
-- Dashboard: drill-down lists cap at 100 rows.
-
-- Abandoned uploads leave PENDING document rows (hidden from lists); no cleanup job yet.
 
 - GitHub repository not created yet; branch protection pending (P6-3).
 - No remote yet; local `main` holds the initial commit, work continues on `development`.

@@ -25,10 +25,14 @@ export const projectKeys = {
 
 const listSchema = z.object({ items: z.array(projectListItemSchema), page: z.number(), pageSize: z.number(), total: z.number() });
 
+export const projectsQuery = (search: string) => ({
+  queryKey: projectKeys.list(search),
+  queryFn: () => apiFetch(`/projects${search ? `?${search}` : ''}`, { schema: listSchema }),
+});
+
 export function useProjects(search: string, enabled = true) {
   return useQuery({
-    queryKey: projectKeys.list(search),
-    queryFn: () => apiFetch(`/projects${search ? `?${search}` : ''}`, { schema: listSchema }),
+    ...projectsQuery(search),
     placeholderData: keepPreviousData,
     enabled,
   });
