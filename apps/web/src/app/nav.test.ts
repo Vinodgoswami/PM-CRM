@@ -12,6 +12,6 @@ test('SALES sees no settings or audit log', () => {
   expect(labels('SALES')).toEqual(['Dashboard', 'Upcoming Invoices', 'Projects', 'Completed Billing', 'Clients']);
 });
 
-test('CEO sees the audit log but not settings', () => {
-  expect(labels('CEO')).toEqual(['Dashboard', 'Upcoming Invoices', 'Projects', 'Completed Billing', 'Clients', 'Audit log']);
+test('CEO sees Settings (to manage Project Managers, D-018) and the audit log', () => {
+  expect(labels('CEO')).toEqual(['Dashboard', 'Upcoming Invoices', 'Projects', 'Completed Billing', 'Clients', 'Settings', 'Audit log']);
 });

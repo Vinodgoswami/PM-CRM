@@ -21,6 +21,7 @@ import { useSession } from '../auth/api';
 import { useResetLink, useUpdateUser, useUsers } from './api';
 import { InviteUserDialog } from './InviteUserDialog';
 import { ROLE_LABEL } from '../../lib/labels';
+import { manageableRoles } from '@salescrm/auth/permissions';
 import { LinkPanel } from './LinkPanel';
 
 export function UsersPanel() {
@@ -32,6 +33,7 @@ export function UsersPanel() {
   const [resetFor, setResetFor] = useState<{ user: UserListItem; link: LinkResponse } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const mine = session ? manageableRoles(session.user.role) : [];
   const change = (u: UserListItem, patch: { role?: Role; active?: boolean }, question: string) => {
     if (!window.confirm(question)) return;
     setError(null);
@@ -76,40 +78,49 @@ export function UsersPanel() {
                 </TD>
                 <TD>{u.email}</TD>
                 <TD>
-                  <select
-                    aria-label={`Role for ${u.name}`}
-                    className="h-8 rounded-md border border-border bg-surface px-2 text-sm"
-                    value={u.role}
-                    onChange={(e) =>
-                      change(u, { role: e.target.value as Role }, `Change ${u.name}'s role to ${ROLE_LABEL[e.target.value as Role]}?`)
-                    }
-                  >
-                    {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_LABEL[r]}
-                      </option>
-                    ))}
-                  </select>
+                  {/* D-018: only accounts you may manage get controls; a CEO manages Project Managers only. */}
+                  {!mine.includes(u.role) || mine.length < 2 ? (
+                    ROLE_LABEL[u.role]
+                  ) : (
+                    <select
+                      aria-label={`Role for ${u.name}`}
+                      className="h-8 rounded-md border border-border bg-surface px-2 text-sm"
+                      value={u.role}
+                      onChange={(e) =>
+                        change(u, { role: e.target.value as Role }, `Change ${u.name}'s role to ${ROLE_LABEL[e.target.value as Role]}?`)
+                      }
+                    >
+                      {mine.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </TD>
                 <TD>{u.active ? <Badge tone="success">Active</Badge> : <Badge>Deactivated</Badge>}</TD>
                 <TD>{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN') : 'Never'}</TD>
                 <TD className="space-x-1 text-right">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      reset.mutate(u.id, { onSuccess: (link) => setResetFor({ user: u, link }), onError: (e) => setError(e.message) })
-                    }
-                  >
-                    <KeyRound className="size-4" /> Reset link
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => change(u, { active: !u.active }, `${u.active ? 'Deactivate' : 'Reactivate'} ${u.name}?`)}
-                  >
-                    {u.active ? 'Deactivate' : 'Reactivate'}
-                  </Button>
+                  {mine.includes(u.role) && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          reset.mutate(u.id, { onSuccess: (link) => setResetFor({ user: u, link }), onError: (e) => setError(e.message) })
+                        }
+                      >
+                        <KeyRound className="size-4" /> Reset link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => change(u, { active: !u.active }, `${u.active ? 'Deactivate' : 'Reactivate'} ${u.name}?`)}
+                      >
+                        {u.active ? 'Deactivate' : 'Reactivate'}
+                      </Button>
+                    </>
+                  )}
                 </TD>
               </TR>
             ))}

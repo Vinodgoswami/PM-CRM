@@ -103,5 +103,8 @@ test('each payment says whether the viewer may edit its details', async () => {
   expect(rows.find((r) => !r.reversesPaymentId)!.canEdit).toBe(true);
 
   const ceo = await loginAs(app, prisma, 'CEO');
-  expect(((await ceo.agent.get('/api/v1/payments')).body.items as { canEdit: boolean }[]).every((r) => !r.canEdit)).toBe(true);
+  // D-018: the CEO may correct details like any project's owner; reversal rows stay locked for everyone.
+  const seen = (await ceo.agent.get('/api/v1/payments')).body.items as { reversesPaymentId: string | null; canEdit: boolean }[];
+  expect(seen.find((r) => !r.reversesPaymentId)!.canEdit).toBe(true);
+  expect(seen.find((r) => r.reversesPaymentId)!.canEdit).toBe(false);
 });

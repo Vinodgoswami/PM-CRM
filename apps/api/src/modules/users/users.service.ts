@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { manageableRoles } from '@salescrm/auth/permissions';
 import { changedFields } from '@salescrm/core';
 import { type InviteUserInput, type LinkResponse, type UpdateUserInput, type UserListItem } from '@salescrm/schemas';
+import { type Role } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
-import { conflict, notFound } from '../../common/errors';
+import { conflict, forbidden, notFound } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { AuthTokensService } from '../auth/auth-tokens.service';
 import { PrismaService } from '../prisma/prisma.module';
+
+const ROLE_NAME: Record<Role, string> = { ADMIN: 'Admin', CEO: 'CEO', SALES: 'Project Manager' };
+const assertManages = (actor: SessionUser, role: Role) => {
+  if (!manageableRoles(actor.role).includes(role)) throw forbidden(`Only an Admin can manage ${ROLE_NAME[role]} accounts.`);
+};
 
 @Injectable()
 export class UsersService {
@@ -31,6 +38,7 @@ export class UsersService {
 
   async invite(actor: SessionUser, input: InviteUserInput): Promise<LinkResponse> {
     return this.prisma.$transaction(async (tx) => {
+      if (!manageableRoles(actor.role).includes(input.role)) throw forbidden(`You cannot add a ${ROLE_NAME[input.role]}.`);
       // Any existing account, active or not, is managed via PATCH /users/:id instead of a second invite.
       if (await tx.user.findUnique({ where: { email: input.email } })) {
         throw conflict('CONFLICT', 'A user with this email already exists');
@@ -56,6 +64,8 @@ export class UsersService {
       if (!user) throw notFound();
       const role = input.role ?? user.role;
       const active = input.active ?? user.active;
+      assertManages(actor, user.role);
+      assertManages(actor, role);
 
       const losesAdmin = user.role === 'ADMIN' && user.active && (role !== 'ADMIN' || !active);
       if (losesAdmin && (await tx.user.count({ where: { role: 'ADMIN', active: true, id: { not: id } } })) === 0) {
@@ -69,7 +79,9 @@ export class UsersService {
         // A changed role or a deactivation takes effect immediately: end every session of that user.
         await tx.session.deleteMany({ where: { userId: id } });
         // Links an admin issued die with their admin rights.
-        if (losesAdmin) await this.tokens.revokeIssuedBy(tx, id);
+        // Anyone who could issue links (Admin, CEO) and loses that role or is deactivated: their unused links die.
+        const losesAuthority = user.role !== 'SALES' && user.active && (role !== user.role || !active);
+        if (losesAuthority) await this.tokens.revokeIssuedBy(tx, id);
       }
       return {
         id: updated.id,
@@ -86,6 +98,7 @@ export class UsersService {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id } });
       if (!user) throw notFound();
+      assertManages(actor, user.role);
       const link = await this.tokens.issue(tx, 'RESET', { email: user.email, userId: user.id, createdById: actor.id });
       await this.audit.record(tx, { actorId: actor.id, action: 'user.reset_link', entity: 'User', entityId: id });
       return { url: link.url, expiresAt: link.expiresAt.toISOString() };

@@ -89,12 +89,12 @@ test('archiving asks for confirmation first', async () => {
   expect(confirm).toHaveBeenCalledTimes(2);
 });
 
-test('CEO sees clients without any write controls', async () => {
+test('the CEO can add and edit clients (D-018)', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /clients': list([acme]), 'GET /clients/c1': { body: detail } }).fn);
   renderApp('/clients', sessionFor('CEO'));
   await screen.findByText('Acme');
-  expect(screen.queryByRole('button', { name: 'New client' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'New client' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('link', { name: 'Acme' }));
   await screen.findByRole('heading', { name: 'Acme' });
-  expect(screen.queryByRole('button', { name: /edit|archive|add contact/i })).toBeNull();
+  expect(screen.getAllByRole('button', { name: /edit|archive|add contact/i }).length).toBeGreaterThan(0);
 });

@@ -15,18 +15,27 @@ export const PERMISSIONS = {
   // Q-01 provisional default: Sales may view every project, edit only their own.
   'projects.read': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
   'clients.read': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
-  'projects.write': { ADMIN: 'all', SALES: 'own', CEO: false },
-  'clients.write': { ADMIN: 'all', SALES: 'all', CEO: false },
-  'payments.create': { ADMIN: 'all', SALES: 'own', CEO: false },
-  'payments.editMeta': { ADMIN: 'all', SALES: 'own', CEO: false },
+  // D-018: the CEO works on any project alongside the project managers.
+  'projects.write': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
+  'clients.write': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
+  'payments.create': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
+  'payments.editMeta': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
   'payments.reverse': { ADMIN: 'all', SALES: false, CEO: false },
-  'projects.reassign': { ADMIN: 'all', SALES: false, CEO: false },
-  'users.manage': { ADMIN: 'all', SALES: false, CEO: false },
+  'projects.reassign': { ADMIN: 'all', SALES: false, CEO: 'all' },
+  // Which accounts each role may add or manage is narrowed by manageableRoles().
+  'users.manage': { ADMIN: 'all', SALES: false, CEO: 'all' },
   'settings.manage': { ADMIN: 'all', SALES: false, CEO: false },
   'audit.read': { ADMIN: 'all', SALES: false, CEO: 'all' },
 } as const satisfies Record<string, Record<Role, Scope>>;
 
 export type Permission = keyof typeof PERMISSIONS;
+
+/** D-018: the Admin adds anyone (including CEOs); the CEO adds and manages Project Managers (SALES) only. */
+export function manageableRoles(role: Role): Role[] {
+  if (role === 'ADMIN') return ['ADMIN', 'CEO', 'SALES'];
+  if (role === 'CEO') return ['SALES'];
+  return [];
+}
 
 export function scopeFor(role: Role, permission: Permission): Scope {
   return PERMISSIONS[permission][role];

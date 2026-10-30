@@ -12,6 +12,7 @@ import { useSettings } from '../settings/api';
 import { useCreateProject, useProject, useUpdateProject } from './api';
 import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
+import { OWNER } from '../../lib/labels';
 import { MoneyInput } from './MoneyInput';
 
 const selectClass = 'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm';
@@ -47,14 +48,16 @@ function useOwnerOptions() {
     queryFn: () => apiFetch('/users', { schema: z.object({ items: z.array(userListItemSchema) }) }),
     enabled: isAdmin,
   });
-  return { isAdmin, owners: (users.data?.items ?? []).filter((u) => u.active && u.role !== 'CEO'), me: session?.user.id };
+  // D-018: the CEO does not own projects; they choose the project manager who does.
+  const mustChoose = session?.user.role === 'CEO';
+  return { isAdmin, mustChoose, owners: (users.data?.items ?? []).filter((u) => u.active && u.role !== 'CEO'), me: session?.user.id };
 }
 
 function CreateProject() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const create = useCreateProject();
-  const { isAdmin, owners, me } = useOwnerOptions();
+  const { isAdmin, mustChoose, owners, me } = useOwnerOptions();
 
   const presetClient = params.get('client');
   const preset = useClient(presetClient ?? '');
@@ -108,6 +111,7 @@ function CreateProject() {
     // Zod skips the object-level client refine while other fields fail, so check it here as well.
     if (!client) found.clientId = 'Choose an existing client or add a new one';
     if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter an amount';
+    if (mustChoose && !ownerId) found.ownerId = 'Choose the project manager for this project.';
     rows.forEach((r, i) => {
       if (r.amountMinor === null) found[`milestones.${i}.amountMinor`] = r.amountError ?? 'Enter an amount';
     });
@@ -194,8 +198,15 @@ function CreateProject() {
               </select>
             </Field>
             {isAdmin && (
-              <Field id="owner" label="Owner">
-                <select id="owner" className={selectClass} value={ownerId || me} onChange={(e) => setOwnerId(e.target.value)}>
+              <Field id="owner" label={OWNER} error={errors.ownerId}>
+                <select
+                  id="owner"
+                  className={selectClass}
+                  value={mustChoose ? ownerId : ownerId || me}
+                  onChange={(e) => setOwnerId(e.target.value)}
+                  aria-invalid={!!errors.ownerId || undefined}
+                >
+                  {mustChoose && <option value="">Choose a project manager</option>}
                   {owners.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}

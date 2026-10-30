@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Projects', path: '/projects', permission: 'projects.read', icon: FolderKanban },
   { label: 'Completed Billing', path: '/billing', permission: 'billing.read', icon: BadgeIndianRupee },
   { label: 'Clients', path: '/clients', permission: 'clients.read', icon: Building2 },
-  { label: 'Settings', path: '/settings', permission: 'settings.manage', icon: Settings },
+  { label: 'Settings', path: '/settings', permission: 'users.manage', icon: Settings },
   { label: 'Audit log', path: '/audit', permission: 'audit.read', icon: ScrollText },
 ];
 
