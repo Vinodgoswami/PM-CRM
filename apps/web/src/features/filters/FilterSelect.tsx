@@ -1,4 +1,5 @@
 import { type ReactNode, useId } from 'react';
+import { OptionSelect } from '../../components/OptionSelect';
 
 /** Labelled pill-style select used in page filter bars. */
 export function FilterSelect({
@@ -14,16 +15,11 @@ export function FilterSelect({
 }) {
   const id = useId();
   return (
-    <label htmlFor={id} className="flex flex-col gap-1 text-xs text-text-muted">
-      {label}
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-10 rounded-full border border-border bg-surface px-4 text-sm text-text"
-      >
+    <div className="flex flex-col gap-1 text-xs text-text-muted">
+      <label htmlFor={id}>{label}</label>
+      <OptionSelect id={id} value={value} onValueChange={onChange}>
         {children}
-      </select>
-    </label>
+      </OptionSelect>
+    </div>
   );
 }

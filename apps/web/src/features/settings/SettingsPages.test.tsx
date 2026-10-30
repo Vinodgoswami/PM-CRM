@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
 
 const settings = { companyName: 'Acme CRM', baseCurrency: 'INR', fyStartMonth: 4, timezone: 'Asia/Kolkata', dueSoonDays: 7 };
 const users = {
@@ -38,7 +38,7 @@ test('inviting a user shows the link to share, with copy', async () => {
   await user.click(await screen.findByRole('button', { name: 'Invite user' }));
   await user.type(screen.getByLabelText('Name'), 'Meera');
   await user.type(screen.getByLabelText('Email'), 'meera@example.com');
-  await user.selectOptions(screen.getByLabelText('Role'), 'CEO');
+  await choose(user, screen.getByLabelText('Role'), 'CEO');
   await user.click(screen.getByRole('button', { name: 'Create invite link' }));
   expect(await screen.findByDisplayValue('http://localhost:5173/invite/abc')).toBeInTheDocument();
   expect(api.calls.find((c) => c.path === '/users/invite')!.body).toEqual({ name: 'Meera', email: 'meera@example.com', role: 'CEO' });
@@ -58,7 +58,7 @@ test('a refused role change shows the server explanation', async () => {
   renderApp('/settings', sessionFor('ADMIN'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Users' }));
-  await user.selectOptions(await screen.findByLabelText('Role for Rohan'), 'CEO');
+  await choose(user, await screen.findByLabelText('Role for Rohan'), 'CEO');
   expect(await screen.findByText('At least one active admin must remain')).toBeInTheDocument();
 });
 
@@ -87,7 +87,7 @@ test('audit log filters by entity and pages through results', async () => {
   renderApp('/audit', sessionFor('CEO'));
   const user = userEvent.setup();
   expect(await screen.findByText('status: Enquiry → Quoted')).toBeInTheDocument();
-  await user.selectOptions(screen.getByLabelText('Entity'), 'Project');
+  await choose(user, screen.getByLabelText('Entity'), 'Project');
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('entity')).toBe('Project'));
   await user.click(screen.getByRole('button', { name: 'Next' }));
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('page')).toBe('2'));

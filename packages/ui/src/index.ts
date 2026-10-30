@@ -8,6 +8,7 @@ export * from './components/empty-state';
 export * from './components/input';
 export * from './components/label';
 export * from './components/popover';
+export * from './components/select';
 export * from './components/skeleton';
 export * from './components/sonner';
 export * from './components/table';

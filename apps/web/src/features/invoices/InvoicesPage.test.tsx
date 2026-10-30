@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
 
 const item = (over: object) => ({
   milestoneId: 'm1',
@@ -114,11 +114,12 @@ test('client and salesperson filters reach the API; the salesperson list does no
   renderApp('/invoices', sessionFor('CEO'));
   const user = userEvent.setup();
   await screen.findByRole('region', { name: /Overdue/ });
-  await user.selectOptions(screen.getByLabelText('Client'), 'c1');
-  await user.selectOptions(await screen.findByLabelText('Project manager'), 'u2');
+  await choose(user, screen.getByLabelText('Client'), 'c1');
+  await choose(user, await screen.findByLabelText('Project manager'), 'u2');
   await waitFor(() => {
     const q = api.calls.filter((c) => c.path === '/invoices').at(-1)!.url.searchParams;
     expect([q.get('clientId'), q.get('ownerId')]).toEqual(['c1', 'u2']);
   });
-  expect(within(screen.getByLabelText('Project manager')).getAllByRole('option')).toHaveLength(3);
+  await user.click(screen.getByLabelText('Project manager'));
+  expect(within(await screen.findByRole('listbox')).getAllByRole('option')).toHaveLength(3);
 });

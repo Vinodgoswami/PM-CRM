@@ -22,6 +22,7 @@ import { APP_NAME } from '../../lib/brand';
 import { downloadCsv } from '../../lib/download';
 import { OWNER } from '../../lib/labels';
 import { UpcomingBookings } from './UpcomingBookings';
+import { OptionSelect } from '../../components/OptionSelect';
 import { useCountUp } from './useCountUp';
 
 const pct = (current: number, previous: number | undefined) =>
@@ -90,11 +91,11 @@ export function DashboardPage() {
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <PeriodPicker value={period} onChange={setPeriod} />
           {showOwners && (
-            <select
+            <OptionSelect
               aria-label={OWNER}
               className="h-10 rounded-full border border-border bg-surface px-4 text-sm"
               value={ownerId}
-              onChange={(e) => setOwnerId(e.target.value)}
+              onValueChange={(v) => setOwnerId(v)}
             >
               <option value="">Whole team</option>
               {owners.map((o) => (
@@ -102,7 +103,7 @@ export function DashboardPage() {
                   {o.name}
                 </option>
               ))}
-            </select>
+            </OptionSelect>
           )}
           {showOwners && (
             <Button asChild variant="outline">

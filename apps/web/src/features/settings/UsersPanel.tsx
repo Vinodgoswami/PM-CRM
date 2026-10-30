@@ -23,6 +23,7 @@ import { InviteUserDialog } from './InviteUserDialog';
 import { ROLE_LABEL } from '../../lib/labels';
 import { manageableRoles } from '@salescrm/auth/permissions';
 import { Link } from 'react-router';
+import { OptionSelect } from '../../components/OptionSelect';
 import { LinkPanel } from './LinkPanel';
 
 export function UsersPanel() {
@@ -87,20 +88,18 @@ export function UsersPanel() {
                     {!manage || mine.length < 2 ? (
                       ROLE_LABEL[u.role]
                     ) : (
-                      <select
+                      <OptionSelect
                         aria-label={`Role for ${u.name}`}
                         className="h-8 rounded-md border border-border bg-surface px-2 text-sm"
                         value={u.role}
-                        onChange={(e) =>
-                          change(u, { role: e.target.value as Role }, `Change ${u.name}'s role to ${ROLE_LABEL[e.target.value as Role]}?`)
-                        }
+                        onValueChange={(v) => change(u, { role: v as Role }, `Change ${u.name}'s role to ${ROLE_LABEL[v as Role]}?`)}
                       >
                         {mine.map((r) => (
                           <option key={r} value={r}>
                             {ROLE_LABEL[r]}
                           </option>
                         ))}
-                      </select>
+                      </OptionSelect>
                     )}
                   </TD>
                   <TD>{u.active ? <Badge tone="success">Active</Badge> : <Badge>Deactivated</Badge>}</TD>

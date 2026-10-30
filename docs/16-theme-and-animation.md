@@ -46,3 +46,9 @@ fade); durations come from tokens only.
 - Links/screenshots/videos, and what to take from each (colour, layout, motion, typography).
 - Light/dark preference, brand colours, logo, font licences.
 - Any signature effects (glassmorphism, gradients, 3D, Lottie) and where they belong.
+
+## Dropdowns
+
+All dropdowns use our own `Select` (packages/ui): a labelled pill button whose list always opens **below** it, as wide
+as the button, with the current choice ticked. Never a native `<select>` (on macOS its menu covers the field) and no
+third-party select library. Wrap `<option>` children with `OptionSelect` (apps/web) for drop-in use.

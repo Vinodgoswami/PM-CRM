@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
 import { dashboard } from './fixture';
 
 const owners = {
@@ -43,8 +43,8 @@ test('changing a person or the period updates the address', async () => {
   const { router } = renderApp('/compare?a=u2&b=u3', sessionFor('CEO'));
   const user = userEvent.setup();
   const second = await screen.findByLabelText('Second project manager');
-  await within(second).findByRole('option', { name: 'Priya Shah' });
-  await user.selectOptions(second, 'u4');
+  await waitFor(() => expect(second).toHaveTextContent('Meera Iyer')); // people loaded
+  await choose(user, second, 'u4');
   await user.click(screen.getByRole('radio', { name: 'Month' }));
   expect(new URLSearchParams(router.state.location.search).get('b')).toBe('u4');
   expect(new URLSearchParams(router.state.location.search).get('period')).toBe('THIS_MONTH');
