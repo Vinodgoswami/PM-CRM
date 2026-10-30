@@ -143,3 +143,89 @@ test('P-8 no Mark as paid on work that is not won yet', async () => {
   await screen.findByText('Design');
   expect(screen.queryByRole('button', { name: /mark .* as paid/i })).toBeNull();
 });
+
+const slipRoutes = {
+  'POST /projects/p1/documents/upload-url': {
+    status: 201,
+    body: { documentId: 'd9', url: '/api/v1/storage/local/slip', headers: { 'Content-Type': 'application/pdf' } },
+  },
+  'PUT /storage/local/slip': { body: { ok: true } },
+  'POST /documents/d9/confirm': {
+    body: {
+      id: 'd9',
+      name: 'INV-200.pdf',
+      type: 'INVOICE',
+      mimeType: 'application/pdf',
+      sizeBytes: 4,
+      paymentId: 'pay2',
+      uploadedBy: { id: 'u1', name: 'Test User' },
+      createdAt: '2026-10-29T10:00:00.000Z',
+    },
+  },
+};
+
+test('D-026 an invoice or payment slip chosen in the dialog is stored with the new payment', async () => {
+  const api = stubApi({ ...routes, ...slipRoutes, 'POST /milestones/m1/payments': { status: 201, body: { ...payment, id: 'pay2' } } });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1', sessionFor('SALES'));
+  const user = await openMarkPaid();
+  const dialog = await screen.findByRole('dialog');
+  await user.upload(
+    within(dialog).getByLabelText('Invoice or payment slip'),
+    new File(['%PDF'], 'INV-200.pdf', { type: 'application/pdf' }),
+  );
+  expect(within(dialog).getByText('INV-200.pdf')).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Save payment' }));
+  await waitFor(() => expect(api.calls.some((c) => c.path === '/documents/d9/confirm')).toBe(true));
+  const paths = api.calls.map((c) => c.path);
+  expect(paths.indexOf('/milestones/m1/payments')).toBeLessThan(paths.indexOf('/projects/p1/documents/upload-url'));
+  expect(api.calls.find((c) => c.path === '/projects/p1/documents/upload-url')!.body).toMatchObject({
+    name: 'INV-200.pdf',
+    type: 'INVOICE',
+    paymentId: 'pay2',
+  });
+});
+
+test('D-026 a file type that cannot be stored is refused before saving', async () => {
+  const api = stubApi(routes);
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1', sessionFor('SALES'));
+  const user = userEvent.setup({ applyAccept: false });
+  await screen.findByRole('heading', { name: 'Website Redesign' });
+  await user.click(screen.getByRole('tab', { name: 'Milestones' }));
+  await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  const dialog = await screen.findByRole('dialog');
+  await user.upload(
+    within(dialog).getByLabelText('Invoice or payment slip'),
+    new File(['x'], 'run.exe', { type: 'application/x-msdownload' }),
+  );
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('Use PDF, Office, PNG, JPG or ZIP');
+  expect(api.calls.filter((c) => c.method === 'POST')).toHaveLength(0);
+});
+
+test('D-026 the Payments tab lists stored slips and lets you attach one later', async () => {
+  const api = stubApi({
+    ...routes,
+    ...slipRoutes,
+    'GET /payments': {
+      body: {
+        items: [{ ...payment, id: 'pay2', documents: [{ id: 'd1', name: 'Receipt.png' }] }],
+        page: 1,
+        pageSize: 100,
+        total: 1,
+        totalMinor: 5000000,
+        otherCurrencyPayments: 0,
+      },
+    },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=payments', sessionFor('SALES'));
+  expect(await screen.findByRole('button', { name: 'Download Receipt.png' })).toBeInTheDocument();
+  await userEvent.upload(
+    screen.getByLabelText('Attach invoice or slip to INV-9'),
+    new File(['%PDF'], 'INV-200.pdf', { type: 'application/pdf' }),
+  );
+  await waitFor(() =>
+    expect(api.calls.find((c) => c.path === '/projects/p1/documents/upload-url')?.body).toMatchObject({ paymentId: 'pay2' }),
+  );
+});

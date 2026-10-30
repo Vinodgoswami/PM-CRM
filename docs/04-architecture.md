@@ -93,6 +93,10 @@ flowchart LR
 2. Browser uploads directly to the bucket. 3. Web confirms → API stores metadata (name, size, mime, key).
 3. Download = API returns a signed GET URL (60 s). The bucket is never public.
 
+D-026: an invoice or payment slip uses the same flow with `type: INVOICE` and the `paymentId` of a payment of the
+same project (from the Mark-as-paid dialog, or later from the Payments tab). Payments list their files as
+`documents: [{ id, name }]`; the file also appears on the project's Documents tab.
+
 Drivers: `STORAGE_DRIVER=local` (development) stores files under `STORAGE_LOCAL_DIR` and serves HMAC-signed
 `/api/v1/storage/local/:token` URLs with the same TTLs; `STORAGE_DRIVER=s3` (required in production) uses S3 / R2
 presigned URLs. The bucket's CORS must allow `PUT` from the web origin with the `Content-Type` header.

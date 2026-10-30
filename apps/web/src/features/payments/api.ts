@@ -1,6 +1,7 @@
 import { billingPageSchema, type CreatePaymentInput, paymentDtoSchema, type UpdatePaymentMetaInput } from '@salescrm/schemas';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
+import { uploadDocument } from '../projects/api';
 
 export const paymentsQuery = (search: string) => ({
   queryKey: ['payments', search],
@@ -36,6 +37,16 @@ export function useMarkPaid(milestoneId: string) {
         schema: paymentDtoSchema,
         headers: { 'Idempotency-Key': key },
       }),
+    onSuccess: refresh,
+  });
+}
+
+/** D-026: stores an invoice or payment slip against a payment (as an Invoice document of its project). */
+export function useAttachSlip() {
+  const refresh = useRefreshAfterPayment();
+  return useMutation({
+    mutationFn: ({ file, payment }: { file: File; payment: { id: string; project: { id: string } } }) =>
+      uploadDocument(payment.project.id, file, 'INVOICE', payment.id),
     onSuccess: refresh,
   });
 }
