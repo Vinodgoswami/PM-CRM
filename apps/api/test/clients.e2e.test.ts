@@ -132,13 +132,12 @@ test('detail returns contacts, projects and money totals', async () => {
   expect(res.body.projects).toEqual([{ id: project.id, code: 'PRJ-0001', name: 'Website', status: 'ACTIVE', parentProjectId: null }]);
 });
 
-test.each([
-  ['post', '/api/v1/clients'],
-  ['patch', '/api/v1/clients/any-id'],
-  ['post', '/api/v1/clients/any-id/archive'],
-] as const)('CEO cannot %s %s', async (method, path) => {
+test('D-018 the CEO creates and edits clients', async () => {
   const { agent, csrf } = await loginAs(app, prisma, 'CEO');
-  expect((await agent[method](path).set('X-CSRF-Token', csrf).send({ name: 'X' })).status).toBe(403);
+  const created = await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Ceo Client' });
+  expect(created.status).toBe(201);
+  const edited = await agent.patch(`/api/v1/clients/${created.body.id}`).set('X-CSRF-Token', csrf).send({ name: 'Ceo Client Ltd' });
+  expect(edited.status).toBe(200);
 });
 
 test('validation: blank name is rejected', async () => {

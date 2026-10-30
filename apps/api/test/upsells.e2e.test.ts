@@ -98,7 +98,7 @@ test('U-2 also applies when a project is created as an upsell', async () => {
   expect(other.body.error.details).toEqual({ rule: 'U-2' });
 });
 
-test('only the owner (or Admin) changes upsells; CEO never', async () => {
+test('only the owner, the CEO (D-018) or Admin change upsells', async () => {
   const owner = await loginAs(app, prisma, 'SALES');
   const p = await project(owner.agent, owner.csrf);
   const other = await loginAs(app, prisma, 'SALES');
@@ -107,7 +107,7 @@ test('only the owner (or Admin) changes upsells; CEO never', async () => {
   );
   expect((await send(other.agent, other.csrf, 'put', `/projects/${p.id}/parent`, { parentProjectId: null })).status).toBe(403);
   const ceo = await loginAs(app, prisma, 'CEO');
-  expect((await send(ceo.agent, ceo.csrf, 'post', `/projects/${p.id}/upsells`, { amountMinor: 100, date: '2026-10-01' })).status).toBe(403);
+  expect((await send(ceo.agent, ceo.csrf, 'post', `/projects/${p.id}/upsells`, { amountMinor: 100, date: '2026-10-01' })).status).toBe(201);
   const admin = await loginAs(app, prisma, 'ADMIN');
   expect((await send(admin.agent, admin.csrf, 'post', `/projects/${p.id}/upsells`, { amountMinor: 100, date: '2026-10-01' })).status).toBe(
     201,

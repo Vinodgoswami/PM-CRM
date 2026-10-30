@@ -40,7 +40,7 @@ export const routes: RouteObject[] = [
       { path: 'billing', element: guarded('billing.read', <BillingPage />) },
       { path: 'clients', element: guarded('clients.read', <ClientsListPage />) },
       { path: 'clients/:id', element: guarded('clients.read', <ClientDetailPage />) },
-      { path: 'settings', element: guarded('settings.manage', <SettingsPage />) },
+      { path: 'settings', element: guarded('users.manage', <SettingsPage />) },
       { path: 'audit', element: guarded('audit.read', <AuditLogPage />) },
     ],
   },

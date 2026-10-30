@@ -20,11 +20,11 @@ amounts — without asking anyone or opening a spreadsheet. The product uses no 
 
 ## Users
 
-| User                           | Goal                                                                 |
-| ------------------------------ | -------------------------------------------------------------------- |
-| Admin (owner)                  | Sets up users, enters and corrects everything, owns the data         |
-| Project Manager (code `SALES`) | Adds clients/projects/milestones, marks payments, tracks own numbers |
-| CEO                            | Reads performance and upcoming invoices; never edits                 |
+| User                           | Goal                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| Admin (owner)                  | Creates the CEO; settings and import; corrects anything (reversals)     |
+| Project Manager (code `SALES`) | Adds clients/projects/milestones, marks payments, tracks own numbers    |
+| CEO                            | Adds Project Managers; works on any client and project; whole-team view |
 
 Details: [07-roles-and-permissions.md](07-roles-and-permissions.md).
 

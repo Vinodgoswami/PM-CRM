@@ -3,6 +3,9 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, L
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useInviteUser } from './api';
+import { manageableRoles } from '@salescrm/auth/permissions';
+import { ROLE_LABEL } from '../../lib/labels';
+import { useSession } from '../auth/api';
 import { LinkPanel } from './LinkPanel';
 
 export function InviteUserDialog({ onClose }: { onClose: () => void }) {
@@ -10,6 +13,9 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const { data: session } = useSession();
+  // D-018: Admin adds anyone; the CEO adds Project Managers only.
+  const roles = (['SALES', 'CEO', 'ADMIN'] as const).filter((r) => session && manageableRoles(session.user.role).includes(r));
   const [role, setRole] = useState<'SALES' | 'CEO' | 'ADMIN'>('SALES');
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<LinkResponse | null>(null);
@@ -60,9 +66,11 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
                 value={role}
                 onChange={(e) => setRole(e.target.value as typeof role)}
               >
-                <option value="SALES">Project Manager</option>
-                <option value="CEO">CEO (read-only)</option>
-                <option value="ADMIN">Admin</option>
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
               </select>
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}

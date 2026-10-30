@@ -3,6 +3,7 @@ import { generateToken, hashToken } from '@salescrm/auth';
 import { type AppConfig } from '@salescrm/config';
 import { type AuthToken, type AuthTokenKind, type Prisma } from '@salescrm/database';
 import { APP_CONFIG } from '../../config.module';
+import { manageableRoles } from '@salescrm/auth/permissions';
 import { AppError } from '../../common/errors';
 
 const TTL_MS: Record<AuthTokenKind, number> = { INVITE: 72 * 3600_000, RESET: 24 * 3600_000 };
@@ -36,22 +37,20 @@ export class AuthTokensService {
   }
 
   /**
-   * Unused, unexpired, and its issuer is still an active Admin — a link must not outlive the authority that
-   * granted it (a deactivated admin cannot come back through an invite they minted).
+   * Unused, unexpired, and its issuer may still manage that kind of account (an active Admin for any link, an active
+   * CEO for Project Manager links, D-018) — a link must not outlive the authority that granted it.
    */
   private async findUsable(tx: Prisma.TransactionClient, kind: AuthTokenKind, token: string): Promise<AuthToken> {
     const row = await tx.authToken.findUnique({
       where: { tokenHash: hashToken(token, this.config.sessionSecret) },
       include: { createdBy: { select: { active: true, role: true } } },
     });
-    const usable =
-      row &&
-      row.kind === kind &&
-      !row.usedAt &&
-      row.expiresAt.getTime() > Date.now() &&
-      row.createdBy.active &&
-      row.createdBy.role === 'ADMIN';
+    const usable = row && row.kind === kind && !row.usedAt && row.expiresAt.getTime() > Date.now() && row.createdBy.active;
     if (!usable) throw this.invalid();
+    // An invite carries the role it creates; a reset link acts on an existing account with its current role.
+    const target =
+      row.role ?? (row.userId ? (await tx.user.findUnique({ where: { id: row.userId }, select: { role: true } }))?.role : null);
+    if (!target || !manageableRoles(row.createdBy.role).includes(target)) throw this.invalid();
     return row;
   }
 
@@ -72,7 +71,7 @@ export class AuthTokensService {
     return row;
   }
 
-  /** When an admin is deactivated or demoted, every link they issued stops working. */
+  /** When an Admin or CEO is deactivated or demoted, every link they issued stops working. */
   async revokeIssuedBy(tx: Prisma.TransactionClient, userId: string): Promise<void> {
     await tx.authToken.updateMany({ where: { createdById: userId, usedAt: null }, data: { usedAt: new Date() } });
   }

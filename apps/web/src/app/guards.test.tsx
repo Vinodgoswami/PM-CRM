@@ -25,10 +25,11 @@ test('ADMIN can open settings', async () => {
 });
 
 test('the sidebar shows the role-specific sections', async () => {
-  renderApp('/', sessionFor('CEO'));
+  renderApp('/', sessionFor('SALES'));
   const nav = await screen.findByRole('navigation', { name: 'Main' });
-  expect(nav).toHaveTextContent('Audit log');
+  expect(nav).toHaveTextContent('Clients');
   expect(nav).not.toHaveTextContent('Settings');
+  expect(nav).not.toHaveTextContent('Audit log');
 });
 
 test('a server error while checking the session does not sign the user out', async () => {

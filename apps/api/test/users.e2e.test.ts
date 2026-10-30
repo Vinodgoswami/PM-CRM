@@ -66,8 +66,8 @@ test('inviting an existing email is a conflict', async () => {
   expect(res.status).toBe(409);
 });
 
-test.each(['SALES', 'CEO'] as const)('%s cannot manage users', async (role) => {
-  const { agent, csrf } = await loginAs(app, prisma, role);
+test('a Project Manager cannot manage users', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const other = await createUser(prisma, { role: 'SALES' });
   expect(
     (await agent.post('/api/v1/users/invite').set('X-CSRF-Token', csrf).send({ email: 'z@example.com', name: 'Z', role: 'SALES' })).status,
@@ -138,4 +138,65 @@ test('user changes are audited', async () => {
   expect(log.actorId).toBe(admin.user.id);
   expect(log.before).toEqual({ role: 'SALES' });
   expect(log.after).toEqual({ role: 'CEO' });
+});
+
+test('D-018 the CEO invites and manages Project Managers, and nobody else', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'CEO');
+  const invite = (role: string, email: string) =>
+    agent.post('/api/v1/users/invite').set('X-CSRF-Token', csrf).send({ email, name: 'N', role });
+  expect((await invite('SALES', 'pm@example.com')).status).toBe(201);
+  expect((await invite('CEO', 'ceo2@example.com')).status).toBe(403);
+  expect((await invite('ADMIN', 'admin2@example.com')).status).toBe(403);
+
+  const pm = await createUser(prisma, { role: 'SALES' });
+  const admin = await createUser(prisma, { role: 'ADMIN' });
+  expect((await agent.get('/api/v1/users')).status).toBe(200);
+  expect((await agent.post(`/api/v1/users/${pm.id}/reset-link`).set('X-CSRF-Token', csrf)).status).toBe(201);
+  expect((await agent.patch(`/api/v1/users/${pm.id}`).set('X-CSRF-Token', csrf).send({ active: false })).status).toBe(200);
+  expect((await agent.patch(`/api/v1/users/${pm.id}`).set('X-CSRF-Token', csrf).send({ role: 'ADMIN' })).status).toBe(403);
+  expect((await agent.patch(`/api/v1/users/${admin.id}`).set('X-CSRF-Token', csrf).send({ active: false })).status).toBe(403);
+  expect((await agent.post(`/api/v1/users/${admin.id}/reset-link`).set('X-CSRF-Token', csrf)).status).toBe(403);
+});
+
+test('D-018 the Admin creates CEOs', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const res = await agent
+    .post('/api/v1/users/invite')
+    .set('X-CSRF-Token', csrf)
+    .send({ email: 'boss@example.com', name: 'Boss', role: 'CEO' });
+  expect(res.status).toBe(201);
+});
+
+test('D-018 a Project Manager invited by the CEO can accept; the link dies if the CEO is deactivated', async () => {
+  const ceo = await loginAs(app, prisma, 'CEO');
+  const invite = (email: string) =>
+    ceo.agent.post('/api/v1/users/invite').set('X-CSRF-Token', ceo.csrf).send({ email, name: 'PM', role: 'SALES' });
+  const first = await invite('pm1@example.com');
+  const accepted = await http()
+    .post('/api/v1/auth/invite/accept')
+    .send({ token: tokenFrom(first.body.url), name: 'Rohan', password: NEW_PASSWORD });
+  expect(accepted.status).toBe(200);
+  expect(accepted.body.user).toMatchObject({ role: 'SALES', name: 'Rohan' });
+
+  const second = await invite('pm2@example.com');
+  const admin = await loginAs(app, prisma, 'ADMIN');
+  await admin.agent.patch(`/api/v1/users/${ceo.user.id}`).set('X-CSRF-Token', admin.csrf).send({ active: false }).expect(200);
+  const late = await http()
+    .post('/api/v1/auth/invite/accept')
+    .send({ token: tokenFrom(second.body.url), name: 'Meera', password: NEW_PASSWORD });
+  expect(late.status).toBe(400);
+});
+
+test('D-018 a CEO-issued link can never create anything but a Project Manager', async () => {
+  const ceo = await loginAs(app, prisma, 'CEO');
+  // Forge the situation directly: a token minted by a CEO for an ADMIN account must not be usable.
+  const link = await ceo.agent
+    .post('/api/v1/users/invite')
+    .set('X-CSRF-Token', ceo.csrf)
+    .send({ email: 'x@example.com', name: 'X', role: 'SALES' });
+  await prisma.authToken.updateMany({ where: { email: 'x@example.com' }, data: { role: 'ADMIN' } });
+  const res = await http()
+    .post('/api/v1/auth/invite/accept')
+    .send({ token: tokenFrom(link.body.url), name: 'X', password: NEW_PASSWORD });
+  expect(res.status).toBe(400);
 });

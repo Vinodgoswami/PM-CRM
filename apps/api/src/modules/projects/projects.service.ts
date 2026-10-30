@@ -253,10 +253,12 @@ export class ProjectsService {
 
   /** Owner is the caller unless they may reassign (Admin), in which case it must be an active Admin or Sales user. */
   private async resolveOwner(tx: Prisma.TransactionClient, user: SessionUser, requested: string | undefined): Promise<string> {
+    // D-018: the CEO works on projects but does not own them; they say which project manager does.
+    if (user.role === 'CEO' && !requested) throw new AppError(400, 'VALIDATION_FAILED', 'Choose the project manager for this project.');
     if (!requested || !can(user, 'projects.reassign')) return user.id;
     const owner = await tx.user.findUnique({ where: { id: requested } });
     if (!owner || !owner.active || owner.role === 'CEO')
-      throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active Admin or Sales user as owner.');
+      throw new AppError(400, 'VALIDATION_FAILED', 'Choose an active Admin or Project Manager as owner.');
     return owner.id;
   }
 

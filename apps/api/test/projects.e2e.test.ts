@@ -223,9 +223,19 @@ test('list filters, computed sort and overdue flag', async () => {
   expect(search.body.items.map((p: { name: string }) => p.name)).toEqual(['Lead']);
 });
 
-test('CEO cannot write; SALES cannot reassign owners', async () => {
+test('D-018 the CEO creates a project for a chosen project manager, and must choose one', async () => {
+  const pm = await createUser(prisma, { role: 'SALES' });
   const ceo = await loginAs(app, prisma, 'CEO');
-  expect((await post(ceo.agent, ceo.csrf, '/projects', { ...base, newClient: { name: 'X' } })).status).toBe(403);
+  const missing = await post(ceo.agent, ceo.csrf, '/projects', { ...base, newClient: { name: 'X' } });
+  expect(missing.status).toBe(400);
+  expect(missing.body.error.message).toBe('Choose the project manager for this project.');
+  const res = await post(ceo.agent, ceo.csrf, '/projects', { ...base, newClient: { name: 'Y' }, ownerId: pm.id });
+  expect(res.status).toBe(201);
+  expect(res.body.owner.id).toBe(pm.id);
+  expect(res.body.canEdit).toBe(true);
+});
+
+test('SALES cannot reassign owners', async () => {
   const sales = await loginAs(app, prisma, 'SALES');
   const p = await post(sales.agent, sales.csrf, '/projects', { ...base, clientId: await clientId(sales.agent, sales.csrf) });
   const res = await sales.agent

@@ -62,6 +62,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P6-1  | Done   | feat/dashboard-complete         | Playwright E2E (apps/e2e): flows F1–F5 against the built API, its own seeded salescrm_e2e database and ports; runs in CI after build                                                                                                 |
 | P6-4  | Done   | feat/dashboard-complete         | CSV import (Settings → Import data): template, preview with problems by line, all-or-nothing import under every entry rule; seed clients now carry nameKey (backfill migration)                                                      |
 | P4-10 | Done   | feat/pm-wording                 | Project-manager wording everywhere (D-017): role, stages, dashboard, extra work, audit log, server messages, CSV, import aliases; dashboard opens on this quarter; demo users renamed (pm1@/pm2@pmcrm.test)                          |
+| P4-11 | Done   | feat/ceo-manages-pms            | D-018 flow: Admin creates CEO; CEO invites/manages Project Managers (links valid while the CEO is active) and edits clients, projects, milestones, payments; CEO must choose the owning PM                                           |
 
 ## Blockers
 

@@ -110,12 +110,12 @@ test('PS-4 an ACTIVE project keeps dated milestones and at least one milestone',
   expect(last.body.error.details).toEqual({ rule: 'PS-4' });
 });
 
-test('other reps and the CEO cannot change milestones', async () => {
+test('other reps cannot change milestones; the CEO can (D-018)', async () => {
   const owner = await loginAs(app, prisma, 'SALES');
   const p = await project(owner.agent, owner.csrf);
   const other = await loginAs(app, prisma, 'SALES');
   expect((await call(other.agent, other.csrf, 'post', `/projects/${p.id}/milestones`, { title: 'X', amountMinor: 1 })).status).toBe(403);
   expect((await call(other.agent, other.csrf, 'patch', `/milestones/${p.milestones[0]!.id}`, { title: 'X' })).status).toBe(403);
   const ceo = await loginAs(app, prisma, 'CEO');
-  expect((await call(ceo.agent, ceo.csrf, 'delete', `/milestones/${p.milestones[0]!.id}`)).status).toBe(403);
+  expect((await call(ceo.agent, ceo.csrf, 'post', `/projects/${p.id}/milestones`, { title: 'Extra', amountMinor: 1 })).status).toBe(201);
 });

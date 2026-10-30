@@ -150,13 +150,13 @@ test('P-5 Admin reverses once; reversal of a reversal is refused; Sales cannot r
   expect((await admin.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({})).status).toBe(400);
 });
 
-test('other reps and the CEO cannot record payments', async () => {
+test('other reps cannot record payments; the CEO can (D-018)', async () => {
   const owner = await loginAs(app, prisma, 'SALES');
   const { milestoneId } = await projectWithMilestone(owner.agent, owner.csrf);
   const other = await loginAs(app, prisma, 'SALES');
   expect((await pay(other.agent, other.csrf, milestoneId, { paymentDate: '2026-10-05', amountMinor: 100 })).status).toBe(403);
   const ceo = await loginAs(app, prisma, 'CEO');
-  expect((await pay(ceo.agent, ceo.csrf, milestoneId, { paymentDate: '2026-10-05', amountMinor: 100 })).status).toBe(403);
+  expect((await pay(ceo.agent, ceo.csrf, milestoneId, { paymentDate: '2026-10-05', amountMinor: 100 })).status).toBe(201);
 });
 
 test('the database rejects a negative payment that is not a reversal', async () => {

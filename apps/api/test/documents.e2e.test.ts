@@ -118,7 +118,7 @@ test('tampered and expired storage tokens are refused', async () => {
   expect((await http().put(`${prefix}${expired}.${sig}`).set('Content-Type', 'application/pdf').send(PDF)).status).toBe(403);
 });
 
-test('roles: another rep cannot upload or delete; CEO can download', async () => {
+test('roles: another rep cannot upload or delete; the CEO can download and upload (D-018)', async () => {
   const owner = await loginAs(app, prisma, 'SALES');
   const projectId = await newProject(owner.agent, owner.csrf);
   const slot = await requestUpload(owner.agent, owner.csrf, projectId);
@@ -131,10 +131,10 @@ test('roles: another rep cannot upload or delete; CEO can download', async () =>
 
   const ceo = await loginAs(app, prisma, 'CEO');
   expect((await ceo.agent.get(`/api/v1/documents/${slot.body.documentId}/download`)).status).toBe(200);
-  expect((await requestUpload(ceo.agent, ceo.csrf, projectId)).status).toBe(403);
+  expect((await requestUpload(ceo.agent, ceo.csrf, projectId)).status).toBe(201);
 
   expect((await owner.agent.delete(`/api/v1/documents/${slot.body.documentId}`).set('X-CSRF-Token', owner.csrf)).status).toBe(204);
-  expect(await prisma.document.count()).toBe(0);
+  expect(await prisma.document.count({ where: { status: 'READY' } })).toBe(0);
 });
 
 test('download names with non-ASCII characters work', async () => {

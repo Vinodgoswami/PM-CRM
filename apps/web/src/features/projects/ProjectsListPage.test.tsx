@@ -33,9 +33,9 @@ test('an empty result shows the empty state with a create action', async () => {
   expect(screen.getAllByRole('link', { name: /new project/i }).length).toBeGreaterThan(0);
 });
 
-test('CEO sees no new-project button', async () => {
+test('the CEO can start a new project (D-018)', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /projects': page([listItem()]) }).fn);
   renderApp('/projects', sessionFor('CEO'));
   await screen.findByText('Website Redesign');
-  expect(screen.queryByRole('link', { name: /new project/i })).toBeNull();
+  expect(screen.getByRole('link', { name: /new project/i })).toBeInTheDocument();
 });

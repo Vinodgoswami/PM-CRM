@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { can, type Permission, PERMISSIONS, type Scope, scopeFor } from '../src/permissions';
+import { can, manageableRoles, type Permission, PERMISSIONS, type Scope, scopeFor } from '../src/permissions';
 
 // Row by row from docs/07-roles-and-permissions.md § Permission matrix: [ADMIN, SALES, CEO].
 const MATRIX: [Permission, Scope, Scope, Scope][] = [
@@ -10,13 +10,13 @@ const MATRIX: [Permission, Scope, Scope, Scope][] = [
   ['export', 'all', 'own', 'all'],
   ['projects.read', 'all', 'all', 'all'],
   ['clients.read', 'all', 'all', 'all'],
-  ['projects.write', 'all', 'own', false],
-  ['clients.write', 'all', 'all', false],
-  ['payments.create', 'all', 'own', false],
-  ['payments.editMeta', 'all', 'own', false],
+  ['projects.write', 'all', 'own', 'all'],
+  ['clients.write', 'all', 'all', 'all'],
+  ['payments.create', 'all', 'own', 'all'],
+  ['payments.editMeta', 'all', 'own', 'all'],
   ['payments.reverse', 'all', false, false],
-  ['projects.reassign', 'all', false, false],
-  ['users.manage', 'all', false, false],
+  ['projects.reassign', 'all', false, 'all'],
+  ['users.manage', 'all', false, 'all'],
   ['settings.manage', 'all', false, false],
   ['audit.read', 'all', false, 'all'],
 ];
@@ -38,9 +38,16 @@ test('own scope depends on the resource owner', () => {
   expect(can(sales, 'projects.write')).toBe(true); // may write some resources (their own)
 });
 
-test('CEO never writes', () => {
+test('D-018 the CEO edits any project and records payments; only Admin reverses payments or changes settings', () => {
   const ceo = { id: 'c1', role: 'CEO' as const };
-  expect(can(ceo, 'payments.create')).toBe(false);
-  expect(can(ceo, 'projects.write', { ownerId: 'c1' })).toBe(false);
-  expect(can(ceo, 'dashboard.company')).toBe(true);
+  expect(can(ceo, 'projects.write', { ownerId: 'someone-else' })).toBe(true);
+  expect(can(ceo, 'payments.create', { ownerId: 'someone-else' })).toBe(true);
+  expect(can(ceo, 'payments.reverse')).toBe(false);
+  expect(can(ceo, 'settings.manage')).toBe(false);
+});
+
+test('D-018 Admin adds anyone; the CEO adds and manages Project Managers only; PMs add no one', () => {
+  expect(manageableRoles('ADMIN')).toEqual(['ADMIN', 'CEO', 'SALES']);
+  expect(manageableRoles('CEO')).toEqual(['SALES']);
+  expect(manageableRoles('SALES')).toEqual([]);
 });
