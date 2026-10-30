@@ -5,12 +5,17 @@ export const inviteUserSchema = z.object({
   email: emailSchema,
   name: z.string().trim().min(1, 'Enter a name').max(100),
   role: roleSchema,
+  /** D-024: for a project manager, the CEO they report to (Admin only; a CEO's invites join their own team). */
+  managerId: z.string().optional(),
 });
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 
 export const updateUserSchema = z
-  .object({ role: roleSchema.optional(), active: z.boolean().optional() })
-  .refine((v) => v.role !== undefined || v.active !== undefined, 'Change the role or the active flag');
+  .object({ role: roleSchema.optional(), active: z.boolean().optional(), managerId: z.string().nullable().optional() })
+  .refine(
+    (v) => v.role !== undefined || v.active !== undefined || v.managerId !== undefined,
+    'Change the role, the active flag or the team',
+  );
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 export const acceptInviteSchema = z.object({
@@ -33,6 +38,8 @@ export const userListItemSchema = z.object({
   role: roleSchema,
   active: z.boolean(),
   lastLoginAt: z.string().nullable(),
+  /** D-024: the CEO a project manager reports to. */
+  manager: z.object({ id: z.string(), name: z.string() }).nullable().default(null),
 });
 export type UserListItem = z.infer<typeof userListItemSchema>;
 

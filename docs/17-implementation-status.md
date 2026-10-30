@@ -73,6 +73,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-19 | Done   | fix/invites-admin-dashboard     | D-022: Admin dashboard (figures, counts, upcoming-invoice totals, no names); Users top-bar tab with pending invites (resend / cancel); invite page shows company, role and email; re-inviting replaces the old link                                                                         |
 | P4-20 | Done   | feat/email                      | D-023: invite / resend / reset emails over SMTP (nodemailer), log transport in development, `emailed` shown on screen with the link still copyable                                                                                                                                          |
 | P4-21 | Done   | fix/email-log-mode              | Log mode (no SMTP set up) no longer reports invites as emailed; the screen says to share the link by hand                                                                                                                                                                                   |
+| P4-22 | Done   | feat/ceo-teams                  | D-024 teams: `managerId` on users and invites, team-scoped Users / invites / owners / assignment for CEOs, Admin "Reports to" column and invite field, no self row, seed PMs report to the demo CEO                                                                                         |
 
 ## Blockers
 

@@ -58,6 +58,10 @@ model User {
   /// Profile photo in private storage (avatars/<userId>/…); null = initials are shown.
   avatarKey    String?
   active       Boolean   @default(true)
+  /// D-024: the CEO a project manager reports to (their team); null for everyone else, or a PM not yet assigned.
+  managerId    String?
+  manager      User?     @relation("Team", fields: [managerId], references: [id])
+  team         User[]    @relation("Team")
   lastLoginAt  DateTime? @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
@@ -73,6 +77,8 @@ model User {
   issuedTokens    AuthToken[]   @relation("AuthTokenIssuer")
   upsellEntries   UpsellEntry[]
   milestones      Milestone[]
+
+  @@index([managerId])
 }
 
 model Session {
@@ -102,6 +108,8 @@ model AuthToken {
   usedAt      DateTime?     @db.Timestamptz(3)
   createdById String
   createdBy   User          @relation("AuthTokenIssuer", fields: [createdById], references: [id])
+  /// D-024: for a project-manager invite, the CEO they will report to.
+  managerId   String?
   createdAt   DateTime      @default(now()) @db.Timestamptz(3)
 }
 

@@ -2,7 +2,7 @@ import { inviteUserSchema, type LinkResponse } from '@salescrm/schemas';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Label } from '@salescrm/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useInviteUser } from './api';
+import { useInviteUser, useUsers } from './api';
 import { manageableRoles } from '@salescrm/auth/permissions';
 import { ROLE_LABEL } from '../../lib/labels';
 import { useSession } from '../auth/api';
@@ -18,6 +18,10 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
   // D-018: Admin adds anyone; the CEO adds Project Managers only.
   const roles = (['SALES', 'CEO', 'ADMIN'] as const).filter((r) => session && manageableRoles(session.user.role).includes(r));
   const [role, setRole] = useState<'SALES' | 'CEO' | 'ADMIN'>('SALES');
+  // D-024: the Admin chooses which CEO a new project manager reports to; a CEO's invites join their own team.
+  const choosesTeam = session?.user.role === 'ADMIN' && role === 'SALES';
+  const ceos = (useUsers().data?.items ?? []).filter((u) => u.role === 'CEO' && u.active);
+  const [managerId, setManagerId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<LinkResponse | null>(null);
 
@@ -39,7 +43,7 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
             className="mt-4 space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              const parsed = inviteUserSchema.safeParse({ name, email, role });
+              const parsed = inviteUserSchema.safeParse({ name, email, role, ...(choosesTeam && managerId ? { managerId } : {}) });
               if (!parsed.success) return setError(parsed.error.issues[0]!.message);
               setError(null);
               invite.mutate(parsed.data, {
@@ -74,6 +78,19 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
                 ))}
               </OptionSelect>
             </div>
+            {choosesTeam && (
+              <div className="space-y-1.5">
+                <Label htmlFor="inv-manager">Reports to</Label>
+                <OptionSelect id="inv-manager" className="h-9 w-full rounded-md" value={managerId} onValueChange={setManagerId}>
+                  <option value="">No one yet (assign later)</option>
+                  {ceos.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </OptionSelect>
+              </div>
+            )}
             {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end">
               <Button type="submit" disabled={invite.isPending}>

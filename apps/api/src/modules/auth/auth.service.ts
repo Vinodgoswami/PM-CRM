@@ -83,7 +83,15 @@ export class AuthService {
         throw new AppError(400, 'VALIDATION_FAILED', 'An account with this email already exists. Sign in instead.');
       }
       const created = await tx.user.create({
-        data: { email: invite.email, name: input.name, role: invite.role, passwordHash, lastLoginAt: new Date() },
+        data: {
+          email: invite.email,
+          name: input.name,
+          role: invite.role,
+          passwordHash,
+          lastLoginAt: new Date(),
+          // D-024: a project manager joins the team chosen when they were invited.
+          managerId: invite.role === 'SALES' ? invite.managerId : null,
+        },
       });
       await this.audit.record(tx, {
         actorId: created.id,

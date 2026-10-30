@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { CurrentUser, type SessionUser } from '../../common/current-user';
 import { RequirePermission } from '../../common/decorators';
 import { PrismaService } from '../prisma/prisma.module';
 
@@ -9,9 +10,10 @@ export class OwnersController {
 
   @Get()
   @RequirePermission('dashboard.company')
-  async list(): Promise<{ items: { id: string; name: string }[] }> {
+  async list(@CurrentUser() user: SessionUser): Promise<{ items: { id: string; name: string }[] }> {
     const items = await this.prisma.user.findMany({
-      where: { active: true, role: 'SALES' }, // D-021: project managers own projects; the Admin sees none
+      // D-021: project managers own projects. D-024: a CEO picks and filters by their own team only.
+      where: { active: true, role: 'SALES', ...(user.role === 'CEO' ? { managerId: user.id } : {}) },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });

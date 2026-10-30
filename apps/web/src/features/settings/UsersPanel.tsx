@@ -36,7 +36,10 @@ export function UsersPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const mine = session ? manageableRoles(session.user.role) : [];
-  const change = (u: UserListItem, patch: { role?: Role; active?: boolean }, question: string) => {
+  // D-024: the Admin assigns project managers to a CEO; a CEO only ever sees their own team, so no column there.
+  const assignsTeams = session?.user.role === 'ADMIN';
+  const ceos = (data?.items ?? []).filter((x) => x.role === 'CEO' && x.active);
+  const change = (u: UserListItem, patch: { role?: Role; active?: boolean; managerId?: string | null }, question: string) => {
     if (!window.confirm(question)) return;
     setError(null);
     update.mutate({ id: u.id, ...patch }, { onSuccess: () => toast.success(`${u.name} updated`), onError: (e) => setError(e.message) });
@@ -66,6 +69,7 @@ export function UsersPanel() {
               <TH>Name</TH>
               <TH>Email</TH>
               <TH>Role</TH>
+              {assignsTeams && <TH>Reports to</TH>}
               <TH>Status</TH>
               <TH>Last sign-in</TH>
               <TH />
@@ -102,6 +106,35 @@ export function UsersPanel() {
                       </OptionSelect>
                     )}
                   </TD>
+                  {assignsTeams && (
+                    <TD>
+                      {u.role === 'SALES' ? (
+                        <OptionSelect
+                          aria-label={`Reports to for ${u.name}`}
+                          className="h-8 min-w-36 rounded-md"
+                          value={u.manager?.id ?? ''}
+                          onValueChange={(v) =>
+                            change(
+                              u,
+                              { managerId: v || null },
+                              v
+                                ? `${u.name} will report to ${ceos.find((c) => c.id === v)?.name ?? 'this CEO'}. Continue?`
+                                : `Remove ${u.name} from their team?`,
+                            )
+                          }
+                        >
+                          <option value="">No one yet</option>
+                          {ceos.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </OptionSelect>
+                      ) : (
+                        <span className="text-text-muted">—</span>
+                      )}
+                    </TD>
+                  )}
                   <TD>{u.active ? <Badge tone="success">Active</Badge> : <Badge>Deactivated</Badge>}</TD>
                   <TD>{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN') : 'Never'}</TD>
                   <TD className="space-x-1 text-right">

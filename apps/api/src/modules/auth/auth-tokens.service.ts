@@ -17,7 +17,7 @@ export class AuthTokensService {
   async issue(
     tx: Prisma.TransactionClient,
     kind: AuthTokenKind,
-    data: { email: string; name?: string; role?: AuthToken['role']; userId?: string; createdById: string },
+    data: { email: string; name?: string; role?: AuthToken['role']; userId?: string; createdById: string; managerId?: string | null },
   ): Promise<{ id: string; url: string; expiresAt: Date }> {
     const token = generateToken();
     const expiresAt = new Date(Date.now() + TTL_MS[kind]);
@@ -30,6 +30,7 @@ export class AuthTokensService {
         role: data.role ?? null,
         userId: data.userId ?? null,
         createdById: data.createdById,
+        managerId: data.managerId ?? null,
         expiresAt,
       },
     });

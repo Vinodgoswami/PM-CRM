@@ -2,7 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import { type PrismaClient } from '@salescrm/database';
 import type request from 'supertest';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
-import { createTestApp, createUser, loginAs, resetDatabase } from './harness';
+import { createTestApp, createUser, joinTeam, loginAs, resetDatabase } from './harness';
 
 // D-020 with the fixed test provider: 1 INR = 0.012 USD, 1 USD = 84 INR.
 let app: INestApplication;
@@ -96,6 +96,7 @@ test('a project saves its rate when created and again when it is confirmed', asy
 test('the dashboard, billing and invoices total everything in the base currency', async () => {
   const pm = await createUser(prisma, { role: 'SALES' });
   const ceo = await loginAs(app, prisma, 'CEO');
+  await joinTeam(prisma, pm.id, ceo.user.id);
   const res = await ceo.agent
     .post('/api/v1/projects')
     .set('X-CSRF-Token', ceo.csrf)

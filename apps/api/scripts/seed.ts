@@ -33,6 +33,8 @@ export async function runSeed(prisma: PrismaClient, opts: { today: IsoDate; pass
         userIds.set(u.key, row.id);
       }
       const adminId = userIds.get('admin')!;
+      // D-024: the demo project managers report to the demo CEO.
+      await tx.user.updateMany({ where: { role: 'SALES' }, data: { managerId: userIds.get('ceo')! } });
 
       const clientIds: string[] = [];
       for (const c of data.clients) {
