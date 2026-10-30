@@ -29,11 +29,15 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogTitle>Invite user</DialogTitle>
-        <DialogDescription>They set their own password from the link. Nothing is emailed; share the link yourself.</DialogDescription>
+        <DialogDescription>
+          {link
+            ? 'They choose their own password from this link.'
+            : 'We email them a link to set their own password. You also get the link, to share yourself if needed.'}
+        </DialogDescription>
         {link ? (
           <div className="mt-4 space-y-4">
             <LinkPanel url={link.url} expiresAt={link.expiresAt} note="Works once." emailed={link.emailed} to={email} />
-            <div className="flex justify-end">
+            <div className="flex justify-end border-t border-border pt-4">
               <Button onClick={onClose}>Done</Button>
             </div>
           </div>
@@ -55,46 +59,58 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
               });
             }}
           >
-            <div className="space-y-1.5">
-              <Label htmlFor="inv-name">Name</Label>
-              <Input id="inv-name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="inv-email">Email</Label>
-              <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="inv-role">Role</Label>
-              <OptionSelect
-                id="inv-role"
-                className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-                value={role}
-                onValueChange={(v) => setRole(v as typeof role)}
-              >
-                {roles.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABEL[r]}
-                  </option>
-                ))}
-              </OptionSelect>
-            </div>
-            {choosesTeam && (
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="inv-manager">Reports to</Label>
-                <OptionSelect id="inv-manager" className="h-9 w-full rounded-md" value={managerId} onValueChange={setManagerId}>
-                  <option value="">No one yet (assign later)</option>
-                  {ceos.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
+                <Label htmlFor="inv-name">Name</Label>
+                <Input id="inv-name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="inv-email">Email</Label>
+                <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className={`grid gap-4 ${choosesTeam ? 'sm:grid-cols-2' : ''}`}>
+              <div className="space-y-1.5">
+                <Label htmlFor="inv-role">Role</Label>
+                <OptionSelect
+                  id="inv-role"
+                  className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                  value={role}
+                  onValueChange={(v) => setRole(v as typeof role)}
+                >
+                  {roles.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABEL[r]}
                     </option>
                   ))}
                 </OptionSelect>
               </div>
-            )}
+              {choosesTeam && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="inv-manager">Reports to</Label>
+                  <OptionSelect
+                    id="inv-manager"
+                    className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                    value={managerId}
+                    onValueChange={setManagerId}
+                  >
+                    <option value="">No one yet (assign later)</option>
+                    {ceos.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </OptionSelect>
+                </div>
+              )}
+            </div>
             {error && <p className="text-sm text-danger">{error}</p>}
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={invite.isPending}>
-                Create invite link
+                {invite.isPending ? 'Sending…' : 'Send invite'}
               </Button>
             </div>
           </form>

@@ -62,12 +62,15 @@ export function MilestoneRowsEditor({
                 <p className="mt-1 text-sm text-danger">{r.amountError ?? errors[`milestones.${i}.amountMinor`]}</p>
               )}
             </div>
-            <Input
-              aria-label={`Milestone ${n} due date`}
-              type="date"
-              value={r.dueDate}
-              onChange={(e) => update(r.key, { dueDate: e.target.value })}
-            />
+            <div>
+              <Input
+                aria-label={`Milestone ${n} due date`}
+                type="date"
+                value={r.dueDate}
+                onChange={(e) => update(r.key, { dueDate: e.target.value })}
+              />
+              {errors[`milestones.${i}.dueDate`] && <p className="mt-1 text-sm text-danger">{errors[`milestones.${i}.dueDate`]}</p>}
+            </div>
             <Button
               type="button"
               variant="ghost"
@@ -87,10 +90,10 @@ export function MilestoneRowsEditor({
         {rows.length > 0 && expectedMinor !== null && (
           <p className={`text-sm ${left === 0 ? 'text-success' : 'text-text-muted'}`}>
             {left === 0
-              ? 'Milestones add up to the expected amount'
+              ? 'Milestones add up to the booking amount'
               : left > 0
                 ? `${formatApiMoney(left, currency)} not yet in milestones`
-                : `Milestones exceed the expected amount by ${formatApiMoney(-left, currency)}`}
+                : `Milestones exceed the booking amount by ${formatApiMoney(-left, currency)}`}
           </p>
         )}
       </div>

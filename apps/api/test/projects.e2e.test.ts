@@ -285,3 +285,21 @@ test('two simultaneous edits of the same version: one wins, the other gets 409',
   );
   expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
 });
+
+test('D-025 a hired project is created Active with just a booking amount; milestones it has need due dates', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const cid = await clientId(agent, csrf);
+  const bare = await post(agent, csrf, '/projects', { name: 'Hired', expectedAmountMinor: 500000, clientId: cid, status: 'ACTIVE' });
+  expect(bare.status).toBe(201);
+  expect(bare.body).toMatchObject({ status: 'ACTIVE', startDate: null });
+  expect(bare.body.wonAt).not.toBeNull();
+  const undated = await post(agent, csrf, '/projects', {
+    name: 'Hired 2',
+    expectedAmountMinor: 500000,
+    clientId: cid,
+    status: 'ACTIVE',
+    milestones: [{ title: 'Design', amountMinor: 100000 }],
+  });
+  expect(undated.status).toBe(400);
+  expect(undated.body.error.details).toEqual({ rule: 'PS-4' });
+});

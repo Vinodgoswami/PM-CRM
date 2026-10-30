@@ -36,7 +36,7 @@ const projectRoutes = {
 
 async function fillBasics(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Project name'), 'Website');
-  await user.type(screen.getByLabelText('Expected amount'), '1,00,000');
+  await user.type(screen.getByLabelText('Booking amount'), '1,00,000');
 }
 
 test('choosing an existing client from the combobox sends its id', async () => {
@@ -111,19 +111,20 @@ test('milestone rows show what is left to schedule and are sent with the project
   await user.click(screen.getByRole('button', { name: 'Add milestone' }));
   await user.type(screen.getByLabelText('Milestone 1 task'), 'Design');
   await user.type(screen.getByLabelText('Milestone 1 amount'), '40,000');
+  await user.type(screen.getByLabelText('Milestone 1 due date'), '2026-11-15');
   expect(screen.getByText('₹60,000.00 not yet in milestones')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Add milestone' }));
   await user.type(screen.getByLabelText('Milestone 2 task'), 'Build');
   await user.type(screen.getByLabelText('Milestone 2 amount'), '60,000');
   await user.type(screen.getByLabelText('Milestone 2 due date'), '2026-12-15');
-  expect(screen.getByText('Milestones add up to the expected amount')).toBeInTheDocument();
+  expect(screen.getByText('Milestones add up to the booking amount')).toBeInTheDocument();
 
   await user.click(screen.getByRole('combobox', { name: 'Client' }));
   await user.click(await screen.findByRole('option', { name: 'Acme' }));
   await user.click(screen.getByRole('button', { name: 'Create project' }));
   await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
   expect((api.calls.find((c) => c.method === 'POST')!.body as { milestones: unknown[] }).milestones).toEqual([
-    { title: 'Design', amountMinor: 4000000 },
+    { title: 'Design', amountMinor: 4000000, dueDate: '2026-11-15' },
     { title: 'Build', amountMinor: 6000000, dueDate: '2026-12-15' },
   ]);
 });
@@ -135,7 +136,7 @@ test('missing required fields are reported before anything is sent', async () =>
   await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
   expect(await screen.findByText('Enter the project name')).toBeInTheDocument();
   expect(screen.getByText('Choose an existing client or add a new one')).toBeInTheDocument();
-  expect(screen.getByText('Enter an amount')).toBeInTheDocument();
+  expect(screen.getByText('Enter the booking amount')).toBeInTheDocument();
   expect(api.calls.filter((c) => c.method === 'POST')).toHaveLength(0);
 });
 
@@ -172,4 +173,47 @@ test('amounts follow the chosen client currency and the currency is sent', async
   await user.click(screen.getByRole('button', { name: 'Create project' }));
   await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
   expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ currency: 'JPY', expectedAmountMinor: 100000 });
+});
+
+test('D-025 a new project is hired work: no status, start date or duration; it is created Active', async () => {
+  const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user);
+  expect(screen.queryByLabelText('Status')).toBeNull();
+  expect(screen.queryByLabelText('Start date')).toBeNull();
+  expect(screen.queryByLabelText('Duration')).toBeNull();
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.type(screen.getByPlaceholderText('Search clients…'), 'ac');
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  const body = api.calls.find((c) => c.method === 'POST')!.body as Record<string, unknown>;
+  expect(body).toMatchObject({ status: 'ACTIVE', expectedAmountMinor: 10000000 });
+  expect(body).not.toHaveProperty('startDate');
+  expect(body).not.toHaveProperty('durationValue');
+});
+
+test('D-025 the booking amount is required, and every milestone needs a due date', async () => {
+  const api = stubApi({ 'GET /clients': clients, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.type(await screen.findByLabelText('Project name'), 'Website');
+  await user.click(screen.getByRole('button', { name: 'Add milestone' }));
+  await user.type(screen.getByLabelText('Milestone 1 task'), 'Design');
+  await user.type(screen.getByLabelText('Milestone 1 amount'), '40,000');
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  expect(await screen.findByText('Enter the booking amount')).toBeInTheDocument();
+  expect(screen.getByText('Choose a due date')).toBeInTheDocument();
+  expect(api.calls.some((c) => c.method === 'POST')).toBe(false);
+});
+
+test('D-025 editing a project has no start date or duration either', async () => {
+  vi.stubGlobal('fetch', stubApi({ ...projectRoutes }).fn);
+  renderApp('/projects/p9/edit', sessionFor('SALES'));
+  expect(await screen.findByLabelText('Booking amount')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Start date')).toBeNull();
+  expect(screen.queryByLabelText('Duration')).toBeNull();
 });

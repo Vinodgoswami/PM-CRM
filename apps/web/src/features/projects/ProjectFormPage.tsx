@@ -70,11 +70,7 @@ function CreateProject() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'LEAD' | 'PROPOSAL' | 'WON' | 'ACTIVE'>('LEAD');
   const [ownerId, setOwnerId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [durationValue, setDurationValue] = useState('');
-  const [durationUnit, setDurationUnit] = useState<'WEEKS' | 'MONTHS'>('MONTHS');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [rows, setRows] = useState<MilestoneRow[]>([]);
   const [errors, setErrors] = useState<Errors>({});
@@ -90,14 +86,13 @@ function CreateProject() {
     const input = {
       name,
       description,
-      status,
+      // D-025: only hired work is entered here, so it starts Active and is marked complete from its page.
+      status: 'ACTIVE' as const,
       ...(client && 'clientId' in client ? { clientId: client.clientId } : {}),
       ...(client && 'newClient' in client
         ? { newClient: { name: client.newClient.name, ...(client.newClient.email ? { email: client.newClient.email } : {}) } }
         : {}),
       ...(isAdmin && ownerId ? { ownerId } : {}),
-      ...(startDate ? { startDate } : {}),
-      ...(durationValue ? { durationValue: Number(durationValue), durationUnit } : {}),
       expectedAmountMinor: expected.minor ?? undefined,
       currency,
       ...(parentProjectId ? { parentProjectId } : {}),
@@ -111,10 +106,11 @@ function CreateProject() {
     const found: Errors = parsed.success ? {} : issuesToErrors(parsed.error.issues);
     // Zod skips the object-level client refine while other fields fail, so check it here as well.
     if (!client) found.clientId = 'Choose an existing client or add a new one';
-    if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter an amount';
+    if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter the booking amount';
     if (mustChoose && !ownerId) found.ownerId = 'Choose the project manager for this project.';
     rows.forEach((r, i) => {
       if (r.amountMinor === null) found[`milestones.${i}.amountMinor`] = r.amountError ?? 'Enter an amount';
+      if (!r.dueDate) found[`milestones.${i}.dueDate`] = 'Choose a due date';
     });
     setErrors(found);
     if (!parsed.success || Object.keys(found).length) return;
@@ -190,13 +186,8 @@ function CreateProject() {
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="status" label="Status">
-              <OptionSelect id="status" className={selectClass} value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-                <option value="LEAD">Enquiry</option>
-                <option value="PROPOSAL">Quoted</option>
-                <option value="WON">Confirmed</option>
-                <option value="ACTIVE">Active</option>
-              </OptionSelect>
+            <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
+              <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
             </Field>
             {isAdmin && (
               <Field id="owner" label={OWNER} error={errors.ownerId}>
@@ -216,28 +207,6 @@ function CreateProject() {
                 </OptionSelect>
               </Field>
             )}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field id="start" label="Start date">
-              <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </Field>
-            <Field id="duration" label="Duration">
-              <div className="flex gap-2">
-                <Input id="duration" type="number" min={1} value={durationValue} onChange={(e) => setDurationValue(e.target.value)} />
-                <OptionSelect
-                  aria-label="Duration unit"
-                  className={selectClass}
-                  value={durationUnit}
-                  onValueChange={(v) => setDurationUnit(v as 'WEEKS' | 'MONTHS')}
-                >
-                  <option value="MONTHS">months</option>
-                  <option value="WEEKS">weeks</option>
-                </OptionSelect>
-              </div>
-            </Field>
-            <Field id="expected" label="Expected amount" error={errors.expectedAmountMinor}>
-              <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
-            </Field>
           </div>
         </Card>
         <Card>
@@ -269,9 +238,6 @@ function EditForm({ project }: { project: ProjectDetail }) {
   const update = useUpdateProject(project.id);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
-  const [startDate, setStartDate] = useState(project.startDate ?? '');
-  const [durationValue, setDurationValue] = useState(project.durationValue ? String(project.durationValue) : '');
-  const [durationUnit, setDurationUnit] = useState<'WEEKS' | 'MONTHS'>(project.durationUnit ?? 'MONTHS');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({
     minor: project.expectedAmountMinor,
     error: null,
@@ -283,14 +249,11 @@ function EditForm({ project }: { project: ProjectDetail }) {
     const parsed = updateProjectSchema.safeParse({
       name,
       description,
-      startDate: startDate || null,
-      durationValue: durationValue ? Number(durationValue) : null,
-      durationUnit: durationValue ? durationUnit : null,
       expectedAmountMinor: expected.minor ?? undefined,
       updatedAt: project.updatedAt,
     });
     const found: Errors = parsed.success ? {} : issuesToErrors(parsed.error.issues);
-    if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter an amount';
+    if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter the booking amount';
     setErrors(found);
     if (!parsed.success || Object.keys(found).length) return;
     update.mutate(parsed.data, {
@@ -324,25 +287,8 @@ function EditForm({ project }: { project: ProjectDetail }) {
               onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field id="start" label="Start date">
-              <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </Field>
-            <Field id="duration" label="Duration">
-              <div className="flex gap-2">
-                <Input id="duration" type="number" min={1} value={durationValue} onChange={(e) => setDurationValue(e.target.value)} />
-                <OptionSelect
-                  aria-label="Duration unit"
-                  className={selectClass}
-                  value={durationUnit}
-                  onValueChange={(v) => setDurationUnit(v as 'WEEKS' | 'MONTHS')}
-                >
-                  <option value="MONTHS">months</option>
-                  <option value="WEEKS">weeks</option>
-                </OptionSelect>
-              </div>
-            </Field>
-            <Field id="expected" label="Expected amount" error={errors.expectedAmountMinor}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
               <MoneyInput
                 id="expected"
                 currency={project.currency}

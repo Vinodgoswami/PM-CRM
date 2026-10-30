@@ -75,3 +75,16 @@ test('the open tab lives in the address, so it survives the project reloading', 
   await queryClient.resetQueries({ queryKey: ['projects'] });
   await waitFor(() => expect(screen.getByRole('tab', { name: 'Milestones' })).toHaveAttribute('aria-selected', 'true'));
 });
+
+test('D-025 an active project is finished with one clear button', async () => {
+  const api = stubApi({
+    ...base,
+    'GET /projects/p1': { body: detail({ status: 'ACTIVE' }) },
+    'POST /projects/p1/status': { body: detail({ status: 'COMPLETED' }) },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  renderApp('/projects/p1', sessionFor('SALES'));
+  await userEvent.click(await screen.findByRole('button', { name: 'Mark as completed' }));
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'POST')?.body).toEqual({ status: 'COMPLETED' }));
+});

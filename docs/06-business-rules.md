@@ -31,6 +31,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
   project counts as **booked**.
 - **PS-3** LEAD and PROPOSAL projects form the **pipeline**; they are not booked sales.
 - **PS-4** Moving to ACTIVE requires at least one milestone and every milestone to have a due date.
+  D-025: a project _created_ ACTIVE (hired work, the only kind the form enters) needs just the booking amount;
+  milestones may follow, but each one it is created with needs a due date.
 - **PS-5** Moving to COMPLETED is allowed with unpaid milestones (they stay in Upcoming/Overdue).
 - **PS-6** LOST projects with payments are not allowed; reverse payments first.
 
