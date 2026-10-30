@@ -15,7 +15,19 @@ import {
   TabsTrigger,
   toast,
 } from '@salescrm/ui';
-import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronDown, Pencil } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  Flag,
+  History,
+  Layers,
+  LayoutList,
+  Pencil,
+  Wallet,
+} from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { ApiError } from '../../lib/api';
@@ -107,13 +119,25 @@ function ProjectView({ project }: { project: ProjectDetail }) {
         value={TABS.includes(params.get('tab') ?? '') ? params.get('tab')! : 'overview'}
         onValueChange={(tab) => setParams(tab === 'overview' ? {} : { tab }, { replace: true })}
       >
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="milestones">Milestones</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="upsells">Phases &amp; upsell</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
+        <TabsList aria-label="Project sections">
+          <TabsTrigger value="overview">
+            <LayoutList className="size-4" aria-hidden /> Overview
+          </TabsTrigger>
+          <TabsTrigger value="milestones">
+            <Flag className="size-4" aria-hidden /> Milestones <Count n={project.milestones.length} />
+          </TabsTrigger>
+          <TabsTrigger value="payments">
+            <Wallet className="size-4" aria-hidden /> Payments
+          </TabsTrigger>
+          <TabsTrigger value="upsells">
+            <Layers className="size-4" aria-hidden /> Phases &amp; upsell <Count n={project.upsellProjects.length} />
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileText className="size-4" aria-hidden /> Documents
+          </TabsTrigger>
+          <TabsTrigger value="activity">
+            <History className="size-4" aria-hidden /> Activity
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <OverviewTab project={project} />
@@ -166,6 +190,16 @@ function MarkCompleted({ project }: { project: ProjectDetail }) {
 }
 
 /** Back to where the user came from (clients, invoices, a phase…), or to Projects when the page was opened directly. */
+/** A small count beside a tab label; hidden at zero. Not part of the tab's accessible name. */
+function Count({ n }: { n: number }) {
+  if (n === 0) return null;
+  return (
+    <span aria-hidden className="rounded-full bg-black/10 px-1.5 text-xs tabular-nums">
+      {n}
+    </span>
+  );
+}
+
 function BackButton() {
   const navigate = useNavigate();
   const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
