@@ -7,25 +7,32 @@ import { type Role } from '@salescrm/types';
 export type Scope = 'all' | 'own' | false;
 
 export const PERMISSIONS = {
-  'dashboard.company': { ADMIN: 'all', SALES: false, CEO: 'all' },
-  'dashboard.own': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
-  'invoices.read': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
-  'billing.read': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
-  export: { ADMIN: 'all', SALES: 'own', CEO: 'all' },
-  // Q-01 provisional default: Sales may view every project, edit only their own.
-  'projects.read': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
-  'clients.read': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
+  // D-021: the Admin manages accounts and sees counts only; clients, projects and money are the CEO's and PMs'.
+  'admin.overview': { ADMIN: 'all', SALES: false, CEO: false },
+  'dashboard.company': { ADMIN: false, SALES: false, CEO: 'all' },
+  'dashboard.own': { ADMIN: false, SALES: 'all', CEO: 'all' },
+  'invoices.read': { ADMIN: false, SALES: 'own', CEO: 'all' },
+  'billing.read': { ADMIN: false, SALES: 'own', CEO: 'all' },
+  export: { ADMIN: false, SALES: 'own', CEO: 'all' },
+  // Q-01 provisional default: project managers may view every project, edit only their own.
+  'projects.read': { ADMIN: false, SALES: 'all', CEO: 'all' },
+  'clients.read': { ADMIN: false, SALES: 'all', CEO: 'all' },
   // D-018: the CEO works on any project alongside the project managers.
-  'projects.write': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
-  'clients.write': { ADMIN: 'all', SALES: 'all', CEO: 'all' },
-  'payments.create': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
-  'payments.editMeta': { ADMIN: 'all', SALES: 'own', CEO: 'all' },
-  'payments.reverse': { ADMIN: 'all', SALES: false, CEO: false },
-  'projects.reassign': { ADMIN: 'all', SALES: false, CEO: 'all' },
+  'projects.write': { ADMIN: false, SALES: 'own', CEO: 'all' },
+  'clients.write': { ADMIN: false, SALES: 'all', CEO: 'all' },
+  'payments.create': { ADMIN: false, SALES: 'own', CEO: 'all' },
+  'payments.editMeta': { ADMIN: false, SALES: 'own', CEO: 'all' },
+  'payments.reverse': { ADMIN: false, SALES: false, CEO: 'all' },
+  'projects.reassign': { ADMIN: false, SALES: false, CEO: 'all' },
   // Which accounts each role may add or manage is narrowed by manageableRoles().
   'users.manage': { ADMIN: 'all', SALES: false, CEO: 'all' },
-  'settings.manage': { ADMIN: 'all', SALES: false, CEO: false },
+  /** The company name only. */
+  'settings.company': { ADMIN: 'all', SALES: false, CEO: 'all' },
+  /** Currency, financial year, time zone, due-soon days, and CSV import. */
+  'settings.manage': { ADMIN: false, SALES: false, CEO: 'all' },
+  /** The audit log: the Admin sees account events only (audit.business adds client, project and money events). */
   'audit.read': { ADMIN: 'all', SALES: false, CEO: 'all' },
+  'audit.business': { ADMIN: false, SALES: false, CEO: 'all' },
 } as const satisfies Record<string, Record<Role, Scope>>;
 
 export type Permission = keyof typeof PERMISSIONS;

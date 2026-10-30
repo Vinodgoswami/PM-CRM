@@ -30,7 +30,7 @@ const rate = ({ url }: { url: URL }) => ({
 
 test('an invoice shows its balance in the client’s currency and in the company’s', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /invoices': invoices, 'GET /settings': settings }).fn);
-  renderApp('/invoices', sessionFor('ADMIN'));
+  renderApp('/invoices', sessionFor('CEO'));
   const row =
     (await screen.findByText('M1 Design')).closest('li, tr, div[data-row]') ?? (await screen.findByText('M1 Design')).parentElement!;
   await waitFor(() => expect(screen.getByRole('region', { name: /Overdue/ })).toHaveTextContent('≈ $600.00'));
@@ -45,7 +45,7 @@ test('Mark as paid pre-fills the day’s rate, shows the converted amount, and s
     'POST /milestones/m1/payments': { status: 201, body: {} },
   });
   vi.stubGlobal('fetch', api.fn);
-  renderApp('/invoices', sessionFor('ADMIN'));
+  renderApp('/invoices', sessionFor('CEO'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Mark M1 Design as paid' }));
   const dialog = await screen.findByRole('dialog');
@@ -68,7 +68,7 @@ test('when no rate can be found, the form asks for one', async () => {
       'GET /fx-rate': { status: 400, body: { error: { code: 'VALIDATION_FAILED', message: 'No exchange rate is available' } } },
     }).fn,
   );
-  renderApp('/invoices', sessionFor('ADMIN'));
+  renderApp('/invoices', sessionFor('CEO'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Mark M1 Design as paid' }));
   const dialog = await screen.findByRole('dialog');
@@ -80,7 +80,7 @@ test('when no rate can be found, the form asks for one', async () => {
 test('same-currency payments need no rate', async () => {
   const inr = { body: { ...settings.body, baseCurrency: 'INR' } };
   vi.stubGlobal('fetch', stubApi({ 'GET /invoices': invoices, 'GET /settings': inr }).fn);
-  renderApp('/invoices', sessionFor('ADMIN'));
+  renderApp('/invoices', sessionFor('CEO'));
   await userEvent.click(await screen.findByRole('button', { name: 'Mark M1 Design as paid' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).queryByLabelText(/Exchange rate/)).toBeNull();
@@ -113,7 +113,7 @@ test('Completed Billing lists each payment in both currencies', async () => {
       'GET /payments': { body: { items: [payment], page: 1, pageSize: 50, total: 1, totalMinor: 60000, otherCurrencyPayments: 0 } },
     }).fn,
   );
-  renderApp('/billing', sessionFor('ADMIN'));
+  renderApp('/billing', sessionFor('CEO'));
   const row = (await screen.findByText('INV-9')).closest('tr')!;
   expect(row).toHaveTextContent('₹50,000.00');
   expect(row).toHaveTextContent('$600.00 @ 0.012');

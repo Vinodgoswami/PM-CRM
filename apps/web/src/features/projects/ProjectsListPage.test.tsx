@@ -8,7 +8,7 @@ const page = (items: unknown[]) => ({ body: { items, page: 1, pageSize: 25, tota
 
 test('lists projects with formatted rupee amounts', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /projects': page([listItem()]) }).fn);
-  renderApp('/projects', sessionFor('ADMIN'));
+  renderApp('/projects', sessionFor('CEO'));
   const row = (await screen.findByText('Website Redesign')).closest('tr')!;
   expect(within(row).getByText('PRJ-0001')).toBeInTheDocument();
   expect(within(row).getByText('₹1,25,000.00')).toBeInTheDocument();
@@ -19,7 +19,7 @@ test('lists projects with formatted rupee amounts', async () => {
 test('the status filter is kept in the URL and refetches', async () => {
   const api = stubApi({ 'GET /projects': page([listItem()]) });
   vi.stubGlobal('fetch', api.fn);
-  const { router } = renderApp('/projects', sessionFor('ADMIN'));
+  const { router } = renderApp('/projects', sessionFor('CEO'));
   await screen.findByText('Website Redesign');
   await userEvent.click(screen.getByRole('link', { name: 'Not yet confirmed' }));
   await waitFor(() => expect(router.state.location.search).toContain('status=LEAD%2CPROPOSAL'));

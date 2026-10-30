@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SEED_PASSWORD } from '../playwright.config';
 import { signIn, uniq } from './helpers';
 
 // docs/08 key flows, run against the seeded demo data (fresh database per run).
@@ -39,8 +40,8 @@ test('F2 mark a milestone as paid', async ({ page }) => {
   await expect(page.getByRole('cell', { name: invoice, exact: true })).toBeVisible();
 });
 
-test('F3 an Admin reverses a wrong payment', async ({ page }) => {
-  await signIn(page, 'admin');
+test('F3 the CEO reverses a wrong payment (D-021)', async ({ page }) => {
+  await signIn(page, 'ceo');
   await page.goto('/billing');
   const row = page
     .getByRole('row')
@@ -87,4 +88,15 @@ test('F5 CEO weekly check: quarter view, team, overdue invoices, PDF', async ({ 
   });
   await page.getByRole('button', { name: 'Export PDF' }).click();
   expect(await page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
+});
+
+test('D-021 the Admin lands on a counts-only overview and cannot open projects', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill('admin@pmcrm.test');
+  await page.getByLabel('Password', { exact: true }).fill(SEED_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Projects' })).toHaveCount(0);
+  await page.goto('/projects');
+  await expect(page.getByText(/permission|not allowed|access/i).first()).toBeVisible();
 });

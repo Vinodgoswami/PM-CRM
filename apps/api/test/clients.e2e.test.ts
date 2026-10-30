@@ -31,7 +31,7 @@ test('SALES creates a client with a primary contact, audited', async () => {
 });
 
 test('C-2 duplicate active names conflict and return the existing id', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'CEO');
   const first = await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Acme' });
   const dup = await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: ' acme ' });
   expect(dup.status).toBe(409);
@@ -39,7 +39,7 @@ test('C-2 duplicate active names conflict and return the existing id', async () 
 });
 
 test('C-2 concurrent duplicate creates leave exactly one client', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'CEO');
   const results = await Promise.all([
     agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Acme' }),
     agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'ACME' }),
@@ -49,7 +49,7 @@ test('C-2 concurrent duplicate creates leave exactly one client', async () => {
 });
 
 test('C-3 archiving hides the client and frees its name', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'CEO');
   const client = await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Acme' });
   expect((await agent.post(`/api/v1/clients/${client.body.id}/archive`).set('X-CSRF-Token', csrf)).status).toBe(200);
   expect((await agent.get('/api/v1/clients')).body.items).toHaveLength(0);
@@ -77,7 +77,7 @@ test('renaming to an existing name conflicts; editing fields is audited', async 
 });
 
 test('contacts: add, make primary (only one primary remains)', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'CEO');
   const c = await agent
     .post('/api/v1/clients')
     .set('X-CSRF-Token', csrf)
@@ -94,7 +94,7 @@ test('contacts: add, make primary (only one primary remains)', async () => {
 });
 
 test('detail returns contacts, projects and money totals', async () => {
-  const { agent, csrf, user } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf, user } = await loginAs(app, prisma, 'CEO');
   const c = await agent.post('/api/v1/clients').set('X-CSRF-Token', csrf).send({ name: 'Acme' });
   const project = await prisma.project.create({
     data: {
@@ -168,7 +168,7 @@ test('client list items carry the client currency', async () => {
 });
 
 test('client list items carry booking, paid and outstanding totals', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const p = await agent
     .post('/api/v1/projects')
     .set('X-CSRF-Token', csrf)

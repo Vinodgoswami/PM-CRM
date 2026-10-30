@@ -15,7 +15,7 @@ const base = { 'GET /settings': { body: settings }, 'GET /users': { body: users 
 test('company settings save only the fields that changed', async () => {
   const api = stubApi({ ...base, 'PATCH /settings': ({ body }) => ({ body: { ...settings, ...(body as object) } }) });
   vi.stubGlobal('fetch', api.fn);
-  renderApp('/settings', sessionFor('ADMIN'));
+  renderApp('/settings', sessionFor('CEO'));
   const user = userEvent.setup();
   const days = await screen.findByLabelText('Due soon (days)');
   await user.clear(days);

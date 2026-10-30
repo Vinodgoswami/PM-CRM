@@ -68,7 +68,7 @@ test('SALES see only their own numbers and no team table', async () => {
 });
 
 test('an unknown period is rejected', async () => {
-  const { agent } = await loginAs(app, prisma, 'ADMIN');
+  const { agent } = await loginAs(app, prisma, 'CEO');
   expect((await agent.get('/api/v1/dashboard?period=FOREVER')).status).toBe(400);
 });
 

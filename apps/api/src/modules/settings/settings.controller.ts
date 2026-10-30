@@ -16,7 +16,7 @@ export class SettingsController {
   }
 
   @Patch()
-  @RequirePermission('settings.manage')
+  @RequirePermission('settings.company')
   update(
     @CurrentUser() user: SessionUser,
     @Body(new ZodValidationPipe(updateSettingsSchema)) body: UpdateSettingsInput,

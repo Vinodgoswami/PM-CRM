@@ -125,7 +125,7 @@ test('P-4 details can be edited later; the amount never', async () => {
   expect(amount.status).toBe(400);
 });
 
-test('P-5 Admin reverses once; reversal of a reversal is refused; Sales cannot reverse', async () => {
+test('P-5 the CEO reverses once (D-021); reversal of a reversal is refused; a project manager cannot reverse', async () => {
   const sales = await loginAs(app, prisma, 'SALES');
   const { projectId, milestoneId } = await projectWithMilestone(sales.agent, sales.csrf);
   const p = await pay(sales.agent, sales.csrf, milestoneId, { paymentDate: '2026-10-05', amountMinor: 100000 });
@@ -133,21 +133,18 @@ test('P-5 Admin reverses once; reversal of a reversal is refused; Sales cannot r
     (await sales.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', sales.csrf).send({ reason: 'x' })).status,
   ).toBe(403);
 
-  const admin = await loginAs(app, prisma, 'ADMIN');
-  const rev = await admin.agent
-    .post(`/api/v1/payments/${p.body.id}/reverse`)
-    .set('X-CSRF-Token', admin.csrf)
-    .send({ reason: 'Wrong invoice' });
+  const ceo = await loginAs(app, prisma, 'CEO');
+  const rev = await ceo.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({ reason: 'Wrong invoice' });
   expect(rev.status).toBe(201);
   expect(rev.body).toMatchObject({ amountMinor: -100000, reversesPaymentId: p.body.id, note: 'Wrong invoice' });
-  expect(await statusOf(admin.agent, projectId)).toMatchObject({ status: 'OVERDUE', balanceMinor: 100000 });
+  expect(await statusOf(ceo.agent, projectId)).toMatchObject({ status: 'OVERDUE', balanceMinor: 100000 });
   expect(
-    (await admin.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({ reason: 'again' })).status,
+    (await ceo.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({ reason: 'again' })).status,
   ).toBe(409);
   expect(
-    (await admin.agent.post(`/api/v1/payments/${rev.body.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({ reason: 'undo' })).status,
+    (await ceo.agent.post(`/api/v1/payments/${rev.body.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({ reason: 'undo' })).status,
   ).toBe(409);
-  expect((await admin.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({})).status).toBe(400);
+  expect((await ceo.agent.post(`/api/v1/payments/${p.body.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({})).status).toBe(400);
 });
 
 test('other reps cannot record payments; the CEO can (D-018)', async () => {

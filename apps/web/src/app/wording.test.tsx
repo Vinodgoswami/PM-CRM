@@ -31,7 +31,7 @@ test('project stages are Enquiry, Quoted, Confirmed, Active, On hold, Completed,
     listItem({ id: `p${i}`, code: `PRJ-000${i}`, name: `Project ${i}`, status }),
   );
   vi.stubGlobal('fetch', stubApi({ 'GET /projects': { body: { items, page: 1, pageSize: 25, total: items.length } }, ...owners }).fn);
-  renderApp('/projects', sessionFor('ADMIN'));
+  renderApp('/projects', sessionFor('CEO'));
   await screen.findByText('Project 0');
   for (const label of ['Enquiry', 'Quoted', 'Confirmed', 'Active', 'On hold', 'Completed', 'Cancelled']) {
     expect(screen.getAllByText(label).length).toBeGreaterThan(0);
@@ -61,7 +61,7 @@ test('the Admin invites Project Managers', async () => {
 
 test('a project page calls upsells "Extra work"', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /projects/p1': { body: detail({ status: 'WON' }) } }).fn);
-  renderApp('/projects/p1', sessionFor('ADMIN'));
+  renderApp('/projects/p1', sessionFor('CEO'));
   expect(await screen.findByRole('tab', { name: 'Extra work' })).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(SALES_WORDS);
 });
@@ -90,7 +90,7 @@ test('the audit log shows stage and role names, not stored codes', async () => {
       },
     }).fn,
   );
-  renderApp('/audit', sessionFor('ADMIN'));
+  renderApp('/audit', sessionFor('CEO'));
   expect(await screen.findByText('status: Enquiry → Confirmed')).toBeInTheDocument();
   expect(screen.getByText('role: Project Manager → CEO')).toBeInTheDocument();
 });

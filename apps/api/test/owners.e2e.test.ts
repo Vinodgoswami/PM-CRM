@@ -16,17 +16,16 @@ afterAll(async () => {
   await app.close();
 });
 
-test('the CEO gets the active people who can own projects, sorted by name', async () => {
+test('the CEO gets the active project managers, sorted by name', async () => {
   await createUser(prisma, { role: 'SALES', name: 'Zara Sales' });
   await createUser(prisma, { role: 'SALES', name: 'Old Rep', active: false });
   const { agent, user } = await loginAs(app, prisma, 'CEO');
   const admin = await createUser(prisma, { role: 'ADMIN', name: 'Asha Admin' });
   const res = await agent.get('/api/v1/owners');
   expect(res.status).toBe(200);
-  expect(res.body.items).toEqual([
-    { id: admin.id, name: 'Asha Admin' },
-    { id: expect.any(String), name: 'Zara Sales' },
-  ]);
+  // D-021: only project managers own projects; the Admin (who sees no projects) is not listed.
+  expect(res.body.items).toEqual([{ id: expect.any(String), name: 'Zara Sales' }]);
+  expect(res.body.items.map((o: { id: string }) => o.id)).not.toContain(admin.id);
   expect(res.body.items.map((o: { id: string }) => o.id)).not.toContain(user.id);
 });
 

@@ -31,7 +31,7 @@ test('SALES see their own dashboard without the team table', async () => {
 test('the dashboard opens on this quarter; switching the period asks the API for that period', async () => {
   const api = stubApi({ 'GET /dashboard': { body: dashboard() } });
   vi.stubGlobal('fetch', api.fn);
-  renderApp('/', sessionFor('ADMIN'));
+  renderApp('/', sessionFor('CEO'));
   await screen.findByRole('heading', { name: /Welcome back/ });
   await waitFor(() =>
     expect(

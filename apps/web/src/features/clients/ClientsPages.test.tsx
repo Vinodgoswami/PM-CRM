@@ -80,7 +80,7 @@ test('archiving asks for confirmation first', async () => {
   const api = stubApi({ 'GET /clients/c1': { body: detail }, 'POST /clients/c1/archive': { body: { ...acme, archived: true } } });
   vi.stubGlobal('fetch', api.fn);
   const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
-  renderApp('/clients/c1', sessionFor('ADMIN'));
+  renderApp('/clients/c1', sessionFor('CEO'));
   const archive = await screen.findByRole('button', { name: 'Archive' });
   await userEvent.click(archive);
   expect(api.calls.some((c) => c.path === '/clients/c1/archive')).toBe(false);

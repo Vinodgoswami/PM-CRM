@@ -49,7 +49,7 @@ const pay = (agent: Agent, csrf: string, milestoneId: string, amount: number) =>
     .send({ paymentDate: today(), amountMinor: amount });
 
 test('D-020 other-currency work is converted at its rates; only work with no rate stays out (M-4 note)', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const inr = await project(agent, csrf, { client: 'Acme' });
   // Test rates: 1 USD = 84 INR; there is no EUR rate, so EUR work cannot be converted.
   const usd = await project(agent, csrf, { client: 'Globex', currency: 'USD', amount: 1000000 });
@@ -72,7 +72,7 @@ test('D-020 other-currency work is converted at its rates; only work with no rat
 });
 
 test('P-8 payments are only recorded on booked work', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const lead = await project(agent, csrf, { client: 'Acme', status: 'LEAD' });
   const res = await pay(agent, csrf, lead.milestones[0]!.id, 100);
   expect(res.status).toBe(400);
@@ -80,7 +80,7 @@ test('P-8 payments are only recorded on booked work', async () => {
 });
 
 test('CSV cells cannot run formulas, CR is quoted, and the file starts with a UTF-8 BOM', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const p = await project(agent, csrf, { client: '=HYPERLINK("http://x","click")' });
   await agent
     .post(`/api/v1/milestones/${p.milestones[0]!.id}/payments`)

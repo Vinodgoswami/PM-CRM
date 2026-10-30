@@ -67,7 +67,7 @@ test('uploading a document requests a slot, uploads, then confirms', async () =>
 
 test('the open tab lives in the address, so it survives the project reloading', async () => {
   vi.stubGlobal('fetch', stubApi(base).fn);
-  const { router, queryClient } = renderApp('/projects/p1?tab=payments', sessionFor('ADMIN'));
+  const { router, queryClient } = renderApp('/projects/p1?tab=payments', sessionFor('CEO'));
   expect(await screen.findByRole('tab', { name: 'Payments' })).toHaveAttribute('aria-selected', 'true');
   await userEvent.click(screen.getByRole('tab', { name: 'Milestones' }));
   expect(router.state.location.search).toBe('?tab=milestones');

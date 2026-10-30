@@ -81,21 +81,21 @@ test('exactly one of clientId and newClient is required', async () => {
 
 test('project codes continue after seeded data', async () => {
   await runSeed(prisma, { today: '2026-10-29', password: 'seed-test-password' });
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const anyClient = await prisma.client.findFirstOrThrow();
   const res = await post(agent, csrf, '/projects', { ...base, clientId: anyClient.id });
   expect(res.status).toBe(201);
   expect(res.body.code).toBe('PRJ-0041');
 });
 
-test('owner: SALES always owns what they create; ADMIN may assign', async () => {
+test('owner: SALES always owns what they create; the CEO assigns a project manager (D-021)', async () => {
   const rep = await createUser(prisma, { role: 'SALES' });
   const sales = await loginAs(app, prisma, 'SALES');
   const cid = await clientId(sales.agent, sales.csrf);
   const mine = await post(sales.agent, sales.csrf, '/projects', { ...base, clientId: cid, ownerId: rep.id });
   expect(mine.body.owner.id).toBe(sales.user.id);
 
-  const admin = await loginAs(app, prisma, 'ADMIN');
+  const admin = await loginAs(app, prisma, 'CEO');
   const assigned = await post(admin.agent, admin.csrf, '/projects', { ...base, clientId: cid, ownerId: rep.id });
   expect(assigned.body.owner.id).toBe(rep.id);
 });
@@ -114,7 +114,7 @@ test('PS-2 creating as WON stamps wonAt', async () => {
   expect(res.body.wonAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
 
-test('PS-1 status changes follow the arrows for SALES; ADMIN may jump', async () => {
+test('PS-1 status changes follow the arrows for SALES; the CEO may jump (D-021)', async () => {
   const sales = await loginAs(app, prisma, 'SALES');
   const dated = threeMilestones.map((m) => ({ ...m, dueDate: '2026-12-01' }));
   const p = await post(sales.agent, sales.csrf, '/projects', {
@@ -127,7 +127,7 @@ test('PS-1 status changes follow the arrows for SALES; ADMIN may jump', async ()
   expect(jump.body.error.details).toEqual({ rule: 'PS-1' });
   expect((await post(sales.agent, sales.csrf, `/projects/${p.body.id}/status`, { status: 'PROPOSAL' })).status).toBe(200);
 
-  const admin = await loginAs(app, prisma, 'ADMIN');
+  const admin = await loginAs(app, prisma, 'CEO');
   const ok = await post(admin.agent, admin.csrf, `/projects/${p.body.id}/status`, { status: 'ACTIVE' });
   expect(ok.status).toBe(200);
   expect(ok.body).toMatchObject({ status: 'ACTIVE' });
@@ -136,7 +136,7 @@ test('PS-1 status changes follow the arrows for SALES; ADMIN may jump', async ()
 });
 
 test('PS-6 a project with payments cannot be marked LOST', async () => {
-  const { agent, csrf, user } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf, user } = await loginAs(app, prisma, 'SALES');
   const p = await post(agent, csrf, '/projects', {
     ...base,
     clientId: await clientId(agent, csrf),
@@ -195,7 +195,7 @@ test('M-3 currency is fixed once milestones exist', async () => {
 });
 
 test('list filters, computed sort and overdue flag', async () => {
-  const { agent, csrf, user } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf, user } = await loginAs(app, prisma, 'SALES');
   const cid = await clientId(agent, csrf);
   const overdue = await post(agent, csrf, '/projects', {
     ...base,
@@ -245,11 +245,11 @@ test('SALES cannot reassign owners', async () => {
   expect(res.status).toBe(403);
 });
 
-test('ADMIN reassigns the owner, audited', async () => {
+test('the CEO reassigns the owner, audited (D-021)', async () => {
   const sales = await loginAs(app, prisma, 'SALES');
   const p = await post(sales.agent, sales.csrf, '/projects', { ...base, clientId: await clientId(sales.agent, sales.csrf) });
   const rep = await createUser(prisma, { role: 'SALES' });
-  const admin = await loginAs(app, prisma, 'ADMIN');
+  const admin = await loginAs(app, prisma, 'CEO');
   const res = await admin.agent.patch(`/api/v1/projects/${p.body.id}/owner`).set('X-CSRF-Token', admin.csrf).send({ ownerId: rep.id });
   expect(res.status).toBe(200);
   expect(res.body.owner.id).toBe(rep.id);
@@ -257,7 +257,7 @@ test('ADMIN reassigns the owner, audited', async () => {
 });
 
 test('unknown project is 404', async () => {
-  const { agent } = await loginAs(app, prisma, 'ADMIN');
+  const { agent } = await loginAs(app, prisma, 'CEO');
   expect((await agent.get('/api/v1/projects/does-not-exist')).status).toBe(404);
 });
 

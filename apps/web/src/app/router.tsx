@@ -18,7 +18,17 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { AppLayout } from './AppLayout';
 import { ComparePage } from '../features/dashboard/ComparePage';
 import { ProfilePage } from '../features/settings/ProfilePage';
+import { AdminOverviewPage } from '../features/admin/AdminOverviewPage';
+import { can } from '@salescrm/auth/permissions';
+import { useSession } from '../features/auth/api';
 import { RequireAuth, RequirePermission } from './guards';
+
+/** D-021: the Admin lands on the counts-only overview; everyone else on the dashboard. */
+function Home() {
+  const { data } = useSession();
+  if (data && can(data.user, 'admin.overview')) return <AdminOverviewPage />;
+  return guarded('dashboard.own', <DashboardPage />);
+}
 
 const guarded = (permission: Permission, element: ReactNode) => <RequirePermission permission={permission}>{element}</RequirePermission>;
 
@@ -33,7 +43,7 @@ export const routes: RouteObject[] = [
       </RequireAuth>
     ),
     children: [
-      { index: true, element: guarded('dashboard.own', <DashboardPage />) },
+      { index: true, element: <Home /> },
       { path: 'compare', element: guarded('dashboard.company', <ComparePage />) },
       { path: 'invoices', element: guarded('invoices.read', <InvoicesPage />) },
       { path: 'projects', element: guarded('projects.read', <ProjectsListPage />) },

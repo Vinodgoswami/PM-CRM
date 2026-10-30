@@ -1,6 +1,8 @@
 import { type Settings, updateSettingsSchema } from '@salescrm/schemas';
 import { Button, Card, Input, Label, Skeleton, toast } from '@salescrm/ui';
 import { useState } from 'react';
+import { can } from '@salescrm/auth/permissions';
+import { useSession } from '../auth/api';
 import { useSettings, useUpdateSettings } from './api';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -13,6 +15,9 @@ export function CompanySettingsForm() {
 
 function Form({ initial }: { initial: Settings }) {
   const save = useUpdateSettings();
+  // D-021: the Admin may only rename the company; the rest is the CEO's.
+  const { data: session } = useSession();
+  const locked = !session || !can(session.user, 'settings.manage');
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setValues((v) => ({ ...v, [key]: value }));
@@ -33,6 +38,7 @@ function Form({ initial }: { initial: Settings }) {
           save.mutate(parsed.data, { onSuccess: () => toast.success('Settings saved'), onError: (err) => setError(err.message) });
         }}
       >
+        {locked && <p className="text-sm text-text-muted">Currency, financial year, time zone and due-soon days are set by the CEO.</p>}
         <div className="space-y-1.5">
           <Label htmlFor="s-company">Company name</Label>
           <Input id="s-company" value={values.companyName} onChange={(e) => set('companyName', e.target.value)} />
@@ -42,6 +48,7 @@ function Form({ initial }: { initial: Settings }) {
             <Label htmlFor="s-currency">Base currency</Label>
             <Input
               id="s-currency"
+              disabled={locked}
               maxLength={3}
               value={values.baseCurrency}
               onChange={(e) => set('baseCurrency', e.target.value.toUpperCase())}
@@ -51,6 +58,7 @@ function Form({ initial }: { initial: Settings }) {
             <Label htmlFor="s-fy">Financial year starts in</Label>
             <select
               id="s-fy"
+              disabled={locked}
               className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
               value={values.fyStartMonth}
               onChange={(e) => set('fyStartMonth', Number(e.target.value))}
@@ -64,12 +72,13 @@ function Form({ initial }: { initial: Settings }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-tz">Timezone</Label>
-            <Input id="s-tz" value={values.timezone} onChange={(e) => set('timezone', e.target.value)} />
+            <Input id="s-tz" disabled={locked} value={values.timezone} onChange={(e) => set('timezone', e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-due">Due soon (days)</Label>
             <Input
               id="s-due"
+              disabled={locked}
               type="number"
               min={1}
               max={60}

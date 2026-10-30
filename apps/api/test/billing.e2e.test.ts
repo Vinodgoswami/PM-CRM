@@ -43,7 +43,7 @@ async function paidProject(agent: Agent, csrf: string, client: string, payments:
 }
 
 test('billing lists payments newest first with a total, filtered by period and project', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const a = await paidProject(agent, csrf, 'Acme', [
     ['2026-04-10', 100000],
     ['2026-07-15', 250000],
@@ -59,8 +59,9 @@ test('billing lists payments newest first with a total, filtered by period and p
 });
 
 test('reversals are listed and subtract from the total', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
-  await paidProject(agent, csrf, 'Acme', [['2026-04-10', 100000]]);
+  const pm = await loginAs(app, prisma, 'SALES');
+  await paidProject(pm.agent, pm.csrf, 'Acme', [['2026-04-10', 100000]]);
+  const { agent, csrf } = await loginAs(app, prisma, 'CEO'); // D-021: the CEO reverses
   const [payment] = (await agent.get('/api/v1/payments')).body.items;
   await agent.post(`/api/v1/payments/${payment.id}/reverse`).set('X-CSRF-Token', csrf).send({ reason: 'Wrong' }).expect(201);
   const after = await agent.get('/api/v1/payments');
@@ -80,7 +81,7 @@ test('SALES only see payments on their own projects, whatever the filter', async
 });
 
 test('CSV export has exact amounts and the same scope', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   await paidProject(agent, csrf, 'Acme, Inc', [['2026-04-10', 1234567]]);
   const res = await agent.get('/api/v1/exports/csv/billing');
   expect(res.status).toBe(200);
@@ -99,7 +100,7 @@ test('each payment says whether the viewer may edit its details', async () => {
   const [mine] = (await owner.agent.get('/api/v1/payments')).body.items;
   expect(mine.canEdit).toBe(true);
 
-  const admin = await loginAs(app, prisma, 'ADMIN');
+  const admin = await loginAs(app, prisma, 'CEO');
   await admin.agent.post(`/api/v1/payments/${mine.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({ reason: 'Wrong' }).expect(201);
   const rows = (await admin.agent.get('/api/v1/payments')).body.items as { reversesPaymentId: string | null; canEdit: boolean }[];
   expect(rows.find((r) => r.reversesPaymentId)!.canEdit).toBe(false);

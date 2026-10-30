@@ -40,7 +40,7 @@ const file = () => new File(['client,project,expected_amount\nAcme,Website,10000
 
 async function openImport() {
   const user = userEvent.setup();
-  renderApp('/settings', sessionFor('ADMIN'));
+  renderApp('/settings', sessionFor('CEO'));
   await user.click(await screen.findByRole('tab', { name: 'Import data' }));
   return user;
 }

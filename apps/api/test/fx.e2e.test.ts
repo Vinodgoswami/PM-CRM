@@ -74,13 +74,13 @@ test('correcting a payment’s rate recomputes its base amount; a reversal mirro
   const fixed = await agent.patch(`/api/v1/payments/${paid.body.id}`).set('X-CSRF-Token', csrf).send({ fxRate: '0.011' });
   expect(fixed.status).toBe(200);
   expect(fixed.body).toMatchObject({ fxRate: '0.011', baseAmountMinor: 55000, amountMinor: 5000000 });
-  const admin = await loginAs(app, prisma, 'ADMIN');
-  const rev = await admin.agent.post(`/api/v1/payments/${paid.body.id}/reverse`).set('X-CSRF-Token', admin.csrf).send({ reason: 'Wrong' });
+  const ceo = await loginAs(app, prisma, 'CEO');
+  const rev = await ceo.agent.post(`/api/v1/payments/${paid.body.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({ reason: 'Wrong' });
   expect(rev.body).toMatchObject({ amountMinor: -5000000, fxRate: '0.011', baseAmountMinor: -55000, baseCurrency: 'USD' });
 });
 
 test('a project saves its rate when created and again when it is confirmed', async () => {
-  const { agent, csrf } = await loginAs(app, prisma, 'ADMIN');
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const lead = await inrProject(agent, csrf, 'LEAD');
   const before = await prisma.project.findUniqueOrThrow({ where: { id: lead.id } });
   expect(before.fxRate?.toString()).toBe('0.012');
