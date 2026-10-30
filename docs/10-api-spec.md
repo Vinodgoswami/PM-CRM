@@ -121,6 +121,11 @@ Permission keys from [07](07-roles-and-permissions.md).
 | GET    | /dashboard            | dashboard.own / dashboard.company | KPIs K1–K12 + series C1–C9 for filters                                                                                     |
 | POST   | /imports/preview      | settings.manage                   | `{ csv }` → counts, problems by line, first 100 projects (P6-4); writes nothing                                            |
 | POST   | /imports              | settings.manage                   | `{ csv }` → creates clients, projects, milestones, payments in one transaction; 400 with `details.errors` if any row fails |
+| POST   | /me/avatar/upload-url | signed in                         | `{ mimeType: jpeg/png/webp, sizeBytes ≤ 2 MB }` → `{ key, url, headers }` (signed PUT)                                     |
+| POST   | /me/avatar            | signed in                         | `{ key }` from your own slot, checked to be a small image → `{ avatarUrl }`; old photo deleted                             |
+| DELETE | /me/avatar            | signed in                         | Removes your photo (initials shown)                                                                                        |
+| GET    | /users/:id/avatar     | signed in                         | 302 to a short-lived signed URL of that user's photo; 404 when none                                                        |
+| POST   | /auth/password/change | signed in                         | `{ currentPassword, newPassword }`; ends your other sessions                                                               |
 | GET    | /dashboard/team       | dashboard.company                 | team performance rows                                                                                                      |
 | GET    | /dashboard/tables     | dashboard.own                     | T1–T3                                                                                                                      |
 | GET    | /dashboard/drilldown  | dashboard.own                     | `?metric=K1&bucket=2026-07`                                                                                                |

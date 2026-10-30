@@ -55,6 +55,8 @@ model User {
   email        String    @unique
   passwordHash String?
   role         Role
+  /// Profile photo in private storage (avatars/<userId>/…); null = initials are shown.
+  avatarKey    String?
   active       Boolean   @default(true)
   lastLoginAt  DateTime? @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)

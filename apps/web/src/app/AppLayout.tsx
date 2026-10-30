@@ -6,18 +6,11 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useLogout, useSession } from '../features/auth/api';
 import { APP_NAME } from '../lib/brand';
 import { ROLE_LABEL } from '../lib/labels';
+import { Avatar } from '../features/auth/Avatar';
 import { type NavItem, visibleNav } from './nav';
 
 /** Settings and the audit log live as icon buttons on the right, like the reference; the rest are pill tabs. */
 const UTILITY = new Set(['/settings', '/audit']);
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
 export function AppLayout() {
   const { data } = useSession();
@@ -90,9 +83,7 @@ export function AppLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button type="button" className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 hover:bg-accent">
-                  <span className="grid size-9 place-items-center rounded-full bg-accent text-xs font-bold text-primary">
-                    {initials(user.name)}
-                  </span>
+                  <Avatar name={user.name} url={user.avatarUrl} />
                   <span className="hidden text-left leading-tight sm:block">
                     <span className="block truncate text-sm font-semibold">{user.name}</span>
                     <span className="block text-xs text-text-muted">{ROLE_LABEL[user.role]}</span>

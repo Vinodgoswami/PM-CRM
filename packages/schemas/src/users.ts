@@ -38,3 +38,12 @@ export type UserListItem = z.infer<typeof userListItemSchema>;
 
 export const linkResponseSchema = z.object({ url: z.string(), expiresAt: z.string() });
 export type LinkResponse = z.infer<typeof linkResponseSchema>;
+
+/** Profile photo (any signed-in user, for themselves): small JPEG, PNG or WebP. */
+export const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+export const avatarUploadSchema = z.object({
+  mimeType: z.enum(AVATAR_TYPES, { message: 'Use a JPEG, PNG or WebP image' }),
+  sizeBytes: z.number().int().min(1).max(AVATAR_MAX_BYTES, 'Use an image up to 2 MB'),
+});
+export const setAvatarSchema = z.object({ key: z.string().min(1).max(200) });

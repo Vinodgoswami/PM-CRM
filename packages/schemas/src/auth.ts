@@ -23,6 +23,8 @@ export const sessionUserSchema = z.object({
   name: z.string(),
   email: z.string(),
   role: roleSchema,
+  /** Address of the profile photo (changes when the photo does); null shows initials. */
+  avatarUrl: z.string().nullable().default(null),
 });
 export type SessionUserDto = z.infer<typeof sessionUserSchema>;
 
