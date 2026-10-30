@@ -7,7 +7,13 @@ import { OptionSelect } from '../../../components/OptionSelect';
 import { documentDownloadUrl, useDeleteDocument, useDocuments, useUploadDocument } from '../api';
 
 type DocType = (typeof DOCUMENT_TYPES)[number];
-const TYPE_LABEL: Record<DocType, string> = { PROPOSAL: 'Proposal', SOW: 'SOW', CONTRACT: 'Contract', INVOICE: 'Invoice', OTHER: 'Other' };
+export const TYPE_LABEL: Record<DocType, string> = {
+  PROPOSAL: 'Proposal',
+  SOW: 'SOW',
+  CONTRACT: 'Contract',
+  INVOICE: 'Invoice',
+  OTHER: 'Other',
+};
 
 const size = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;

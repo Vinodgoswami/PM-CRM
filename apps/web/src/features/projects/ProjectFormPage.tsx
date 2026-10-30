@@ -7,12 +7,13 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Pencil } from 'lucide-react';
 import { ClientFormDialog } from '../clients/ClientFormDialog';
 import { MilestonesTab } from './tabs/MilestonesTab';
+import { type PickedFile, ProjectFilesPicker } from './ProjectFilesPicker';
 import { z } from 'zod';
 import { ApiError, apiFetch } from '../../lib/api';
 import { useSession } from '../auth/api';
 import { useClient } from '../clients/api';
 import { useSettings } from '../settings/api';
-import { useCreateProject, useProject, useUpdateProject } from './api';
+import { uploadDocument, useCreateProject, useProject, useUpdateProject } from './api';
 import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
 import { OWNER } from '../../lib/labels';
@@ -76,6 +77,8 @@ function CreateProject() {
   const [ownerId, setOwnerId] = useState('');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [rows, setRows] = useState<MilestoneRow[]>([]);
+  const [files, setFiles] = useState<PickedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const parentProjectId = params.get('parent') ?? undefined;
@@ -119,9 +122,24 @@ function CreateProject() {
     if (!parsed.success || Object.keys(found).length) return;
 
     create.mutate(parsed.data, {
-      onSuccess: (project) => {
+      onSuccess: async (project) => {
         toast.success(`${project.code} created`);
-        navigate(`/projects/${project.id}`);
+        // Documents need the project's id, so they upload right after it is created.
+        if (files.length > 0) {
+          setUploading(true);
+          const failed: string[] = [];
+          for (const f of files) {
+            try {
+              await uploadDocument(project.id, f.file, f.type);
+            } catch {
+              failed.push(f.file.name);
+            }
+          }
+          setUploading(false);
+          if (failed.length) toast.error(`Not uploaded: ${failed.join(', ')}. Add them from the Documents tab.`);
+          else toast.success(`${files.length} document${files.length > 1 ? 's' : ''} uploaded`);
+        }
+        navigate(`/projects/${project.id}${files.length ? '?tab=documents' : ''}`);
       },
       onError: (err) => {
         // C-2: the new client already exists — switch to it so the next submit links the project to it.
@@ -215,12 +233,19 @@ function CreateProject() {
         <Card>
           <MilestoneRowsEditor rows={rows} onChange={setRows} expectedMinor={expected.minor} currency={currency} errors={errors} />
         </Card>
+        <Card className="space-y-3">
+          <div>
+            <h2 className="font-medium">Documents</h2>
+            <p className="text-sm text-text-muted">Optional. Uploaded to the project when you create it.</p>
+          </div>
+          <ProjectFilesPicker files={files} onChange={setFiles} />
+        </Card>
         <div className="flex justify-end gap-2">
           <Button asChild variant="outline">
             <Link to="/projects">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? 'Creating…' : 'Create project'}
+          <Button type="submit" disabled={create.isPending || uploading}>
+            {uploading ? 'Uploading documents…' : create.isPending ? 'Creating…' : 'Create project'}
           </Button>
         </div>
       </form>
