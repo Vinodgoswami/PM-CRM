@@ -63,13 +63,13 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
       daysOverdue: 10,
       project: { id: 'p2', code: 'PRJ-0020', name: 'Portal' },
       client: { id: 'c2', name: 'Bluepeak' },
-      owner: { id: 'u2', name: 'Rohan Sales' },
+      owner: { id: 'u2', name: 'Rohan Mehta' },
     },
   ],
   topClients: [{ id: 'c1', name: 'Acme', bookedMinor: 500000000, collectedMinor: 300000000 }],
   team: [
     {
-      user: { id: 'u2', name: 'Rohan Sales' },
+      user: { id: 'u2', name: 'Rohan Mehta' },
       bookedMinor: 1500000000,
       collectedMinor: 700000000,
       outstandingMinor: 300000000,

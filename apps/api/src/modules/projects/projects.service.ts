@@ -362,12 +362,12 @@ export class ProjectsService {
     if (!parent || parent.archivedAt || !can(user, 'projects.read', { ownerId: parent.ownerId })) {
       throw new RuleViolation('U-2', 'Choose an existing project as the original project.');
     }
-    if (parent.clientId !== clientId) throw new RuleViolation('U-2', 'An upsell must belong to the same client as the original project.');
+    if (parent.clientId !== clientId) throw new RuleViolation('U-2', 'Extra work must belong to the same client as the original project.');
     if (childId) {
       const links = await tx.project.findMany({ where: { clientId }, select: { id: true, parentProjectId: true } });
       const parentOf = new Map(links.map((l) => [l.id, l.parentProjectId]));
       if (wouldCreateCycle(childId, parentId, (id) => parentOf.get(id) ?? null)) {
-        throw new RuleViolation('U-2', 'A project cannot be an upsell of itself or of one of its own upsells.');
+        throw new RuleViolation('U-2', 'A project cannot be extra work for itself or for one of its own extra-work projects.');
       }
     }
   }
@@ -394,8 +394,8 @@ export class ProjectsService {
     const today = await this.settings.today();
     await this.prisma.$transaction(async (tx) => {
       const p = await this.loadForWrite(id, user, tx);
-      if (!p.wonAt) throw new RuleViolation('U-1', 'Upsell amounts can only be added to a won project.');
-      if (input.date > today) throw new RuleViolation('U-1', 'The upsell date cannot be in the future.');
+      if (!p.wonAt) throw new RuleViolation('U-1', 'Extra work amounts can only be added to a confirmed project.');
+      if (input.date > today) throw new RuleViolation('U-1', 'The extra work date cannot be in the future.');
       const entry = await tx.upsellEntry.create({
         data: {
           projectId: id,

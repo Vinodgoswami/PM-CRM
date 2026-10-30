@@ -2,12 +2,13 @@
 
 ## Purpose
 
-SalesCRM is a **project-centred** sales CRM for one company's sales team. The unit of work is a _project sold to a
-client_, not a lead. It records what was sold, how it is split into billable milestones, what has been collected, and
-what is coming due.
+**Project Management CRM** (code name `salescrm`) is for **project managers** who track their projects and invoices.
+The unit of work is a _project for a client_. It records what was contracted, how it is split into billable
+milestones, what has been collected, and what is coming due.
 
-The CEO uses it to see the team's performance — monthly, quarterly and yearly sales, collections, upcoming invoices
-and overdue amounts — without asking anyone or opening a spreadsheet.
+Each project manager uses it to see what they achieved **quarter by quarter** and to show that to the CEO. The CEO
+sees the whole team — monthly, quarterly and yearly contracted and collected amounts, upcoming invoices and overdue
+amounts — without asking anyone or opening a spreadsheet. The product uses no sales vocabulary on screen (D-017).
 
 ## Success criteria
 
@@ -19,11 +20,11 @@ and overdue amounts — without asking anyone or opening a spreadsheet.
 
 ## Users
 
-| User          | Goal                                                                 |
-| ------------- | -------------------------------------------------------------------- |
-| Admin (owner) | Sets up users, enters and corrects everything, owns the data         |
-| Sales         | Adds clients/projects/milestones, marks payments, tracks own numbers |
-| CEO           | Reads performance and upcoming invoices; never edits                 |
+| User                           | Goal                                                                 |
+| ------------------------------ | -------------------------------------------------------------------- |
+| Admin (owner)                  | Sets up users, enters and corrects everything, owns the data         |
+| Project Manager (code `SALES`) | Adds clients/projects/milestones, marks payments, tracks own numbers |
+| CEO                            | Reads performance and upcoming invoices; never edits                 |
 
 Details: [07-roles-and-permissions.md](07-roles-and-permissions.md).
 
@@ -50,6 +51,19 @@ Details: [07-roles-and-permissions.md](07-roles-and-permissions.md).
 - Accounting (tax, ledgers); export CSV for the accountant instead.
 
 ## Glossary
+
+**On-screen words vs stored codes (D-017).** Screens, messages and exports use the left column; code, database and API
+keep the right column so nothing is migrated.
+
+| On screen                                                        | Stored / in code                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------ |
+| Project Manager (role), Project manager (owner filters, columns) | `SALES`, owner / "salesperson"                   |
+| Enquiry · Quoted · Confirmed · Cancelled                         | `LEAD` · `PROPOSAL` · `WON` · `LOST`             |
+| Contracted                                                       | booked (`bookedMinor`)                           |
+| Not yet confirmed                                                | pipeline (`pipelineMinor`)                       |
+| Confirmation rate, Projects confirmed                            | win rate (K11), `wonCount`                       |
+| Extra work, extra-work project                                   | upsell entry, upsell project (`parentProjectId`) |
+| confirmed_date (import column; `won_date` still accepted)        | `wonAt`                                          |
 
 | Term              | Meaning                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------- |

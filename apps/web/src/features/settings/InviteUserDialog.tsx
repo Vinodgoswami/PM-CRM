@@ -60,7 +60,7 @@ export function InviteUserDialog({ onClose }: { onClose: () => void }) {
                 value={role}
                 onChange={(e) => setRole(e.target.value as typeof role)}
               >
-                <option value="SALES">Sales</option>
+                <option value="SALES">Project Manager</option>
                 <option value="CEO">CEO (read-only)</option>
                 <option value="ADMIN">Admin</option>
               </select>

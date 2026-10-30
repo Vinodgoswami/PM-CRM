@@ -25,8 +25,8 @@ test('a project the user cannot edit shows no edit controls', async () => {
   await screen.findByRole('heading', { name: 'Website Redesign' });
   expect(screen.queryByRole('button', { name: /change status/i })).toBeNull();
   expect(screen.queryByRole('link', { name: /edit/i })).toBeNull();
-  await userEvent.click(screen.getByRole('tab', { name: 'Upsells' }));
-  expect(screen.queryByRole('button', { name: /add upsell amount/i })).toBeNull();
+  await userEvent.click(screen.getByRole('tab', { name: 'Extra work' }));
+  expect(screen.queryByRole('button', { name: /add extra work amount/i })).toBeNull();
 });
 
 test('uploading a document requests a slot, uploads, then confirms', async () => {
@@ -63,4 +63,15 @@ test('uploading a document requests a slot, uploads, then confirms', async () =>
   const order = api.calls.map((c) => c.path);
   expect(order.indexOf('/projects/p1/documents/upload-url')).toBeLessThan(order.indexOf('/storage/local/tok'));
   expect(order.indexOf('/storage/local/tok')).toBeLessThan(order.indexOf('/documents/d1/confirm'));
+});
+
+test('the open tab lives in the address, so it survives the project reloading', async () => {
+  vi.stubGlobal('fetch', stubApi(base).fn);
+  const { router, queryClient } = renderApp('/projects/p1?tab=payments', sessionFor('ADMIN'));
+  expect(await screen.findByRole('tab', { name: 'Payments' })).toHaveAttribute('aria-selected', 'true');
+  await userEvent.click(screen.getByRole('tab', { name: 'Milestones' }));
+  expect(router.state.location.search).toBe('?tab=milestones');
+  // A payment or reversal drops the cached project; the page reloads it and must stay on the same tab.
+  await queryClient.resetQueries({ queryKey: ['projects'] });
+  await waitFor(() => expect(screen.getByRole('tab', { name: 'Milestones' })).toHaveAttribute('aria-selected', 'true'));
 });

@@ -15,7 +15,7 @@ function monthRange(ym: string) {
   return { from: `${ym}-01`, to: new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10) };
 }
 
-/** What is behind one monthly bar (docs/09 C1 drill-down): the payments, or the projects won. */
+/** What is behind one monthly bar (docs/09 C1 drill-down): the payments, or the projects confirmed. */
 export function DrillDownDialog({
   month,
   series,
@@ -33,12 +33,12 @@ export function DrillDownDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogTitle>
-          {series === 'collected' ? 'Collected' : 'Won'} in {monthName(month)}
+          {series === 'collected' ? 'Collected' : 'Confirmed'} in {monthName(month)}
         </DialogTitle>
         <DialogDescription>
           {series === 'collected'
             ? 'Every payment received this month.'
-            : 'Projects booked this month (upsell amounts are counted in Booked too).'}
+            : 'Projects confirmed this month (extra work amounts count towards Contracted too).'}
         </DialogDescription>
         <div className="mt-4 max-h-[60dvh] overflow-y-auto">
           {series === 'collected' ? (
@@ -126,7 +126,7 @@ function Payments({ search }: { search: string }) {
 function Won({ search }: { search: string }) {
   const { isPending, loadingMore, items, total, more } = usePaged(search, projectsQuery);
   if (isPending) return <Skeleton className="h-24 w-full" />;
-  if (items.length === 0) return <EmptyState title="No projects won this month" />;
+  if (items.length === 0) return <EmptyState title="No projects confirmed this month" />;
   return (
     <>
       <List>
@@ -137,7 +137,7 @@ function Won({ search }: { search: string }) {
                 {p.code} {p.name}
               </Link>
               <p className="text-xs text-text-muted">
-                {p.client.name} · won {formatDate(p.wonAt)} · {p.owner.name}
+                {p.client.name} · confirmed {formatDate(p.wonAt)} · {p.owner.name}
               </p>
             </div>
             <span className="font-semibold tabular-nums">{formatApiMoney(p.contractValueMinor, p.currency)}</span>

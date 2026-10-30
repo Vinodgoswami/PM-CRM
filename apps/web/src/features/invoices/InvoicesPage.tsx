@@ -12,6 +12,7 @@ import { MarkPaidDialog, type MarkPaidTarget } from '../payments/MarkPaidDialog'
 import { CurrencyNote } from '../dashboard/CurrencyNote';
 import { useClientOptions, useOwners } from '../filters/api';
 import { FilterSelect } from '../filters/FilterSelect';
+import { OWNER } from '../../lib/labels';
 import { MilestoneStatusBadge } from '../payments/MilestoneStatusBadge';
 
 const GROUP_LABEL: Record<InvoicesResponse['groups'][number]['key'], string> = {
@@ -64,7 +65,7 @@ export function InvoicesPage() {
             ))}
           </FilterSelect>
           {showOwners && (
-            <FilterSelect label="Salesperson" value={owner} onChange={setOwner}>
+            <FilterSelect label={OWNER} value={owner} onChange={setOwner}>
               <option value="">Everyone</option>
               {owners.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -82,7 +83,7 @@ export function InvoicesPage() {
       ) : isError ? (
         <EmptyState title="Could not load invoices" />
       ) : data.groups.length === 0 ? (
-        <EmptyState title="Nothing to collect" description="Every milestone of booked work is paid." />
+        <EmptyState title="Nothing to collect" description="Every milestone of confirmed work is paid." />
       ) : (
         data.groups.map((g, gi) => (
           <motion.section

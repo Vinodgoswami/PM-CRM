@@ -221,10 +221,10 @@ export function buildSeed(today: IsoDate, random: () => number): SeedData {
 
   return {
     users: [
-      { key: 'admin', name: 'Asha Admin', email: 'admin@salescrm.test', role: 'ADMIN' },
-      { key: 'sales1', name: 'Rohan Sales', email: 'sales1@salescrm.test', role: 'SALES' },
-      { key: 'sales2', name: 'Meera Sales', email: 'sales2@salescrm.test', role: 'SALES' },
-      { key: 'ceo', name: 'Vikram CEO', email: 'ceo@salescrm.test', role: 'CEO' },
+      { key: 'admin', name: 'Asha Admin', email: 'admin@pmcrm.test', role: 'ADMIN' },
+      { key: 'sales1', name: 'Rohan Mehta', email: 'pm1@pmcrm.test', role: 'SALES' },
+      { key: 'sales2', name: 'Meera Iyer', email: 'pm2@pmcrm.test', role: 'SALES' },
+      { key: 'ceo', name: 'Vikram CEO', email: 'ceo@pmcrm.test', role: 'CEO' },
     ],
     clients,
     projects,

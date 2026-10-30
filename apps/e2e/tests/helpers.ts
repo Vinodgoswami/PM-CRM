@@ -1,12 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 import { SEED_PASSWORD } from '../playwright.config';
 
-export type SeedUser = 'admin' | 'sales1' | 'ceo';
+export type SeedUser = 'admin' | 'pm1' | 'ceo';
 
 /** Signs in through the real login form as a seeded demo user. */
 export async function signIn(page: Page, who: SeedUser) {
   await page.goto('/login');
-  await page.getByLabel('Email').fill(`${who}@salescrm.test`);
+  await page.getByLabel('Email').fill(`${who}@pmcrm.test`);
   await page.getByLabel('Password', { exact: true }).fill(SEED_PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   // The login card also says "Welcome back!"; the dashboard's h1 is "Welcome back, <name>".

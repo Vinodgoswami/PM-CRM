@@ -86,7 +86,7 @@ test('audit log filters by entity and pages through results', async () => {
   vi.stubGlobal('fetch', api.fn);
   renderApp('/audit', sessionFor('CEO'));
   const user = userEvent.setup();
-  expect(await screen.findByText('status: LEAD → PROPOSAL')).toBeInTheDocument();
+  expect(await screen.findByText('status: Enquiry → Quoted')).toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText('Entity'), 'Project');
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('entity')).toBe('Project'));
   await user.click(screen.getByRole('button', { name: 'Next' }));

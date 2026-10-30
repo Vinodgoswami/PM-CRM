@@ -98,10 +98,10 @@ test('on the Booked series the drill-down lists projects won that month', async 
   vi.stubGlobal('fetch', api.fn);
   renderApp('/', sessionFor('CEO'));
   const user = userEvent.setup();
-  await user.click(within(await screen.findByRole('radiogroup', { name: 'Series' })).getByRole('radio', { name: 'booked' }));
+  await user.click(within(await screen.findByRole('radiogroup', { name: 'Series' })).getByRole('radio', { name: 'contracted' }));
   await user.click(await screen.findByRole('button', { name: /^Dec: / }));
   const dialog = await screen.findByRole('dialog');
-  expect(dialog).toHaveTextContent('Won in December 2026');
+  expect(dialog).toHaveTextContent('Confirmed in December 2026');
   expect(await within(dialog).findByText(/Loyalty App/)).toBeInTheDocument();
   const q = api.calls.filter((c) => c.path === '/projects').at(-1)!.url.searchParams;
   expect([q.get('wonFrom'), q.get('wonTo')]).toEqual(['2026-12-01', '2026-12-31']);
@@ -127,7 +127,7 @@ test('Export PDF opens the print dialog for the current view', async () => {
   renderApp('/', sessionFor('CEO'));
   await userEvent.click(await screen.findByRole('button', { name: 'Export PDF' }));
   expect(print).toHaveBeenCalledOnce();
-  expect(screen.getByTestId('print-header')).toHaveTextContent(/Project Management CRM dashboard · Year/);
+  expect(screen.getByTestId('print-header')).toHaveTextContent(/Project Management CRM dashboard · Quarter/);
 });
 
 test('a drill-down with more than 100 payments offers Load more', async () => {

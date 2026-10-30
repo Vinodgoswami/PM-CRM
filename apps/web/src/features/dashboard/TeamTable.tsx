@@ -4,24 +4,25 @@ import { ChevronDown } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import { formatApiMoney } from '../../lib/money';
 import { MiniBars } from './MoreCharts';
+import { OWNER } from '../../lib/labels';
 import { Panel } from './Panel';
 
-/** docs/09 team performance: one row per salesperson; a row expands to its 12-month trend. */
+/** docs/09 team performance: one row per project manager; a row expands to its 12-month trend. */
 export function TeamTable({ team, currency }: { team: NonNullable<Dashboard['team']>; currency: string }) {
   const money = (m: number) => formatApiMoney(m, currency);
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <Panel title="Team performance" subtitle="Per salesperson, this period">
+    <Panel title="Team performance" subtitle="Per project manager, this period">
       <Table>
         <THead>
           <TR>
-            <TH>Salesperson</TH>
-            <TH className="text-right">Booked</TH>
+            <TH>{OWNER}</TH>
+            <TH className="text-right">Contracted</TH>
             <TH className="text-right">Collected</TH>
             <TH className="text-right">Outstanding</TH>
             <TH className="text-right">Overdue</TH>
-            <TH className="text-right">Upsell</TH>
-            <TH className="text-right">Win rate</TH>
+            <TH className="text-right">Extra work</TH>
+            <TH className="text-right">Confirmation rate</TH>
             <TH className="text-right">Avg deal</TH>
             <TH className="text-right">Active projects</TH>
           </TR>

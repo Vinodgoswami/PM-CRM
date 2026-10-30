@@ -62,7 +62,7 @@ export function ClientsListPage() {
               <TH>Company</TH>
               <TH>Primary email</TH>
               <TH className="text-right">Projects</TH>
-              <TH className="text-right">Total booking</TH>
+              <TH className="text-right">Total contracted</TH>
               <TH className="text-right">Paid</TH>
               <TH className="text-right">Outstanding</TH>
             </TR>

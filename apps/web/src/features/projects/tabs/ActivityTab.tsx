@@ -6,9 +6,9 @@ const LABEL: Record<string, string> = {
   'project.update': 'edited the project',
   'project.status': 'changed the status',
   'project.owner': 'changed the owner',
-  'project.parent.set': 'changed the upsell link',
-  'project.upsell.add': 'added an upsell amount',
-  'project.upsell.remove': 'removed an upsell amount',
+  'project.parent.set': 'changed the extra-work link',
+  'project.upsell.add': 'added an extra work amount',
+  'project.upsell.remove': 'removed an extra work amount',
   'document.upload': 'uploaded a document',
   'document.delete': 'deleted a document',
 };

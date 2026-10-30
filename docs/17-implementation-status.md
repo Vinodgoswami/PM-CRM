@@ -61,6 +61,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-9  | Done   | feat/dashboard-complete         | Drill-down lists load 100 at a time with “Load more”; abandoned uploads (PENDING > 1 h) are swept hourly with their stored bytes                                                                                                     |
 | P6-1  | Done   | feat/dashboard-complete         | Playwright E2E (apps/e2e): flows F1–F5 against the built API, its own seeded salescrm_e2e database and ports; runs in CI after build                                                                                                 |
 | P6-4  | Done   | feat/dashboard-complete         | CSV import (Settings → Import data): template, preview with problems by line, all-or-nothing import under every entry rule; seed clients now carry nameKey (backfill migration)                                                      |
+| P4-10 | Done   | feat/pm-wording                 | Project-manager wording everywhere (D-017): role, stages, dashboard, extra work, audit log, server messages, CSV, import aliases; dashboard opens on this quarter; demo users renamed (pm1@/pm2@pmcrm.test)                          |
 
 ## Blockers
 

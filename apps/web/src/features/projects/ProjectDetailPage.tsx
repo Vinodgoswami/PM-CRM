@@ -16,7 +16,7 @@ import {
   toast,
 } from '@salescrm/ui';
 import { AlertTriangle, ChevronDown, Pencil } from 'lucide-react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { ApiError } from '../../lib/api';
 import { formatApiMoney } from '../../lib/money';
@@ -28,6 +28,8 @@ import { MilestonesTab } from './tabs/MilestonesTab';
 import { OverviewTab } from './tabs/OverviewTab';
 import { PaymentsTab } from './tabs/PaymentsTab';
 import { UpsellsTab } from './tabs/UpsellsTab';
+
+const TABS = ['overview', 'milestones', 'payments', 'upsells', 'documents', 'activity'];
 
 export function ProjectDetailPage() {
   const { id = '' } = useParams();
@@ -54,6 +56,8 @@ export function ProjectDetailPage() {
 }
 
 function ProjectView({ project }: { project: ProjectDetail }) {
+  // The open tab is in the address (?tab=…): it survives the project reloading after a payment and can be linked.
+  const [params, setParams] = useSearchParams();
   const money = (minor: number) => formatApiMoney(minor, project.currency);
   return (
     <section className="space-y-6">
@@ -97,12 +101,15 @@ function ProjectView({ project }: { project: ProjectDetail }) {
         </p>
       )}
 
-      <Tabs defaultValue="overview">
+      <Tabs
+        value={TABS.includes(params.get('tab') ?? '') ? params.get('tab')! : 'overview'}
+        onValueChange={(tab) => setParams(tab === 'overview' ? {} : { tab }, { replace: true })}
+      >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="milestones">Milestones</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="upsells">Upsells</TabsTrigger>
+          <TabsTrigger value="upsells">Extra work</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>

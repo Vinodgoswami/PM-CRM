@@ -45,7 +45,7 @@ test('clients list shows columns and searches by name', async () => {
   expect(within(row).getByText('₹2,50,000.00')).toBeInTheDocument();
   expect(within(row).getByText('₹1,50,000.00')).toBeInTheDocument();
   expect(within(row).getByText('₹20,000.00')).toBeInTheDocument();
-  expect(screen.getByRole('columnheader', { name: 'Total booking' })).toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: 'Total contracted' })).toBeInTheDocument();
   await userEvent.type(screen.getByLabelText('Search clients'), 'acm');
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('q')).toBe('acm'));
 });

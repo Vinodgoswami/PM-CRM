@@ -14,7 +14,7 @@ import { StatusBadge } from './StatusBadge';
 const VIEWS = [
   { label: 'All', params: {} },
   { label: 'Active', params: { status: 'ACTIVE' } },
-  { label: 'Pipeline', params: { status: 'LEAD,PROPOSAL' } },
+  { label: 'Not yet confirmed', params: { status: 'LEAD,PROPOSAL' } },
   { label: 'Has overdue', params: { hasOverdue: 'true' } },
 ] as const;
 
