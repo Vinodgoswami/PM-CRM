@@ -1,18 +1,17 @@
 import { can } from '@salescrm/auth/permissions';
-import { type Dashboard, dashboardSchema } from '@salescrm/schemas';
+import { type Dashboard } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarClock, Download, FileDown, Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, Download, FileDown, Plus, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
 import { useSession } from '../auth/api';
 import { useOwners } from '../filters/api';
 import { HatchedBars, monthLabel, Sparkline, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
+import { isPeriod, type Period, PERIODS, PeriodPicker, useDashboard } from './data';
 import { dashboardCsv } from './csv';
 import { DrillDownDialog } from './DrillDownDialog';
 import { DueCalendar } from './DueCalendar';
@@ -22,24 +21,8 @@ import { TeamTable } from './TeamTable';
 import { APP_NAME } from '../../lib/brand';
 import { downloadCsv } from '../../lib/download';
 import { OWNER } from '../../lib/labels';
+import { UpcomingBookings } from './UpcomingBookings';
 import { useCountUp } from './useCountUp';
-
-const PERIODS = [
-  { key: 'THIS_MONTH', label: 'Month' },
-  { key: 'THIS_QUARTER', label: 'Quarter' },
-  { key: 'THIS_FY', label: 'Year' },
-  { key: 'LAST_FY', label: 'Last year' },
-] as const;
-type Period = (typeof PERIODS)[number]['key'];
-
-function useDashboard(period: Period, ownerId: string) {
-  const search = new URLSearchParams({ period, ...(ownerId ? { ownerId } : {}) }).toString();
-  return useQuery({
-    queryKey: ['dashboard', search],
-    queryFn: () => apiFetch(`/dashboard?${search}`, { schema: dashboardSchema }),
-    placeholderData: keepPreviousData,
-  });
-}
 
 const pct = (current: number, previous: number | undefined) =>
   previous === undefined || previous === 0 ? null : Math.round(((current - previous) / previous) * 100);
@@ -75,7 +58,7 @@ export function DashboardPage() {
   const [params, setParams] = useSearchParams();
   const asked = params.get('period');
   // Project managers report quarter by quarter, so the dashboard opens on this quarter.
-  const period: Period = PERIODS.some((p) => p.key === asked) ? (asked as Period) : 'THIS_QUARTER';
+  const period: Period = isPeriod(asked) ? asked : 'THIS_QUARTER';
   const ownerId = params.get('ownerId') ?? '';
   const setFilter = (key: 'period' | 'ownerId', value: string, fallback: string) =>
     setParams(
@@ -105,20 +88,7 @@ export function DashboardPage() {
           Welcome back, <span className="font-medium text-text-muted">{firstName}</span>
         </h1>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <div role="radiogroup" aria-label="Period" className="flex rounded-full bg-surface p-1 shadow-card">
-            {PERIODS.map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                role="radio"
-                aria-checked={period === p.key}
-                onClick={() => setPeriod(p.key)}
-                className={`rounded-full px-4 py-1.5 text-sm transition-colors ${period === p.key ? 'bg-primary font-semibold text-primary-contrast' : 'text-text-muted hover:text-text'}`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <PeriodPicker value={period} onChange={setPeriod} />
           {showOwners && (
             <select
               aria-label={OWNER}
@@ -133,6 +103,13 @@ export function DashboardPage() {
                 </option>
               ))}
             </select>
+          )}
+          {showOwners && (
+            <Button asChild variant="outline">
+              <Link to="/compare">
+                <Users className="size-4" /> Compare
+              </Link>
+            </Button>
           )}
           <Button
             variant="outline"
@@ -364,6 +341,8 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
           <DueCalendar ownerId={ownerId} currency={data.currency} />
         </Panel>
       </div>
+
+      <UpcomingBookings items={data.upcomingBookings} money={money} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <Panel

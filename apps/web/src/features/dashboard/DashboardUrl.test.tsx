@@ -56,3 +56,28 @@ test('the CSV has amounts in major units with currency, and neutralises formulas
   expect(csv).toContain('Q1,1000000.00,800000.00,900000.00,700000.00,INR');
   expect(csv).toContain('Rohan Mehta,15000000.00,7000000.00');
 });
+
+test('YTD and 2-year periods are offered', async () => {
+  const api = stubApi(routes);
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/', sessionFor('CEO'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('radio', { name: 'YTD' }));
+  await waitFor(() =>
+    expect(
+      api.calls
+        .filter((c) => c.path === '/dashboard')
+        .at(-1)!
+        .url.searchParams.get('period'),
+    ).toBe('FY_TO_DATE'),
+  );
+  await user.click(screen.getByRole('radio', { name: '2 years' }));
+  await waitFor(() =>
+    expect(
+      api.calls
+        .filter((c) => c.path === '/dashboard')
+        .at(-1)!
+        .url.searchParams.get('period'),
+    ).toBe('TWO_FY'),
+  );
+});

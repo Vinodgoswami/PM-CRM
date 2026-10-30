@@ -188,6 +188,21 @@ export class DashboardService {
     ];
     const fyFrom = fyOf(range.from ?? today, settings.fyStartMonth).start;
 
+    const upcomingBookings = rows
+      .filter((p) => p.status === 'LEAD' || p.status === 'PROPOSAL')
+      .sort((a, b) => (b.expectedAmountMinor > a.expectedAmountMinor ? 1 : b.expectedAmountMinor < a.expectedAmountMinor ? -1 : 0))
+      .slice(0, 10)
+      .map((p) => ({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        status: p.status,
+        expectedAmountMinor: j(p.expectedAmountMinor),
+        startDate: isoDate(p.startDate),
+        client: p.client,
+        owner: p.owner,
+      }));
+
     const recentPayments = rows
       .flatMap((p) => p.milestones.flatMap((ms) => ms.payments.map((pay) => ({ p, pay }))))
       .sort((a, b) => b.pay.paymentDate.getTime() - a.pay.paymentDate.getTime() || b.pay.createdAt.getTime() - a.pay.createdAt.getTime())
@@ -244,6 +259,7 @@ export class DashboardService {
         previousCumulativeMinor: j(x.previousCumulativeMinor),
       })),
       clientRevenue,
+      upcomingBookings,
       funnel: pipelineFunnel(metric).map((f) => ({ status: f.status, count: f.count, valueMinor: j(f.valueMinor) })),
       overdue,
       topClients: [...byClient.values()]

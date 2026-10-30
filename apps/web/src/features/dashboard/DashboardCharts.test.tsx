@@ -66,3 +66,13 @@ test('team table shows win rate, avg deal, and a monthly trend per person', asyn
   await userEvent.click(within(team).getByRole('button', { name: 'Show monthly trend for Rohan Mehta' }));
   expect(within(team).getByRole('img', { name: /Rohan Mehta, last 12 months/ })).toBeInTheDocument();
 });
+
+test('upcoming bookings show projects not yet confirmed with stage, project manager, start and amount', async () => {
+  await open();
+  const panel = screen.getByRole('region', { name: 'Upcoming bookings' });
+  const row = within(panel)
+    .getByText(/Loyalty App/)
+    .closest('tr')!;
+  for (const text of ['Zenith Pharma', 'Quoted', 'Rohan Mehta', '1 Dec 2026', '₹9,00,000.00']) expect(row).toHaveTextContent(text);
+  expect(panel).toHaveTextContent('1 project · ₹9,00,000.00');
+});

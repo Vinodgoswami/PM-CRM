@@ -39,3 +39,15 @@ test('comparableRange compares the same span of the previous period', async () =
   expect(comparableRange('THIS_MONTH', '2026-03-31', 4)).toEqual({ from: '2026-02-01', to: '2026-02-28' });
   expect(comparableRange('LAST_FY', '2026-10-29', 4)).toEqual({ from: '2024-04-01', to: '2025-03-31' });
 });
+
+test('FY_TO_DATE runs from the start of this financial year to today; compared with last year to the same date', async () => {
+  const { comparableRange, periodRange } = await import('../src/period-presets');
+  expect(periodRange('FY_TO_DATE', '2026-10-30', 4)).toEqual({ from: '2026-04-01', to: '2026-10-30' });
+  expect(comparableRange('FY_TO_DATE', '2026-10-30', 4)).toEqual({ from: '2025-04-01', to: '2025-10-30' });
+});
+
+test('TWO_FY covers last and this financial year; its comparison is the two years before', async () => {
+  const { periodRange, previousRange } = await import('../src/period-presets');
+  expect(periodRange('TWO_FY', '2026-10-30', 4)).toEqual({ from: '2025-04-01', to: '2027-03-31' });
+  expect(previousRange('TWO_FY', '2026-10-30', 4)).toEqual({ from: '2023-04-01', to: '2025-03-31' });
+});
