@@ -2,19 +2,19 @@
 
 Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 
-**Last updated:** 2026-10-29
+**Last updated:** 2026-10-30
 
 ## Summary
 
-| Phase                  | Status                            |
-| ---------------------- | --------------------------------- |
-| 0 Security & docs      | ✅ Done                           |
-| 1 Foundation           | ✅ Done (reviewed, fixes applied) |
-| 2 Clients & projects   | ✅ Done (pending review)          |
-| 3 Milestones & billing | ✅ Done (reviewed, fixes applied) |
-| 4 Dashboard            | Not started                       |
-| 5 Theme & animation    | Waiting for references (Q-09)     |
-| 6 Launch               | Not started                       |
+| Phase                  | Status                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| 0 Security & docs      | ✅ Done                                                                                      |
+| 1 Foundation           | ✅ Done (reviewed, fixes applied)                                                            |
+| 2 Clients & projects   | ✅ Done                                                                                      |
+| 3 Milestones & billing | ✅ Done (reviewed, fixes applied)                                                            |
+| 4 Dashboard            | ✅ Done (roadmap P4-1…P4-6 all covered; rows P4-4…P4-9 below are delivery increments)        |
+| 5 Theme & animation    | ✅ Done (D-013 green theme, D-014 light only + animated login)                               |
+| 6 Launch               | P6-1 E2E and P6-4 import done; P6-2 deploy and P6-3 GitHub wait on the owner (hosting, repo) |
 
 ## Tasks
 
