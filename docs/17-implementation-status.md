@@ -55,6 +55,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P3-8  | Done   | feat/billing-invoices-filters   | Billing: client, salesperson and custom-date filters (list, total and CSV), inline detail edit; Invoices: client + salesperson filters; stable salesperson lists                   |
 | P4-4  | Done   | feat/dashboard-extras           | Dashboard extras: click a month bar → payments collected / projects won that month; due-date calendar (C9) with day list; Export PDF via print (D-015)                             |
 | P4-5  | Done   | feat/win-rate                   | K11 win rate in core, dashboard API and the headline card; a project won and later lost counts as a loss                                                                           |
+| P4-6  | Done   | feat/rebrand-pm-crm             | Product renamed in the UI to Project Management CRM (D-016); login welcome panel starts with “Welcome back!”                                                                       |
 
 ## Blockers
 

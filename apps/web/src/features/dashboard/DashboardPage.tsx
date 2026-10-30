@@ -15,6 +15,7 @@ import { HatchedBars, monthLabel, Wave } from './charts';
 import { CurrencyNote } from './CurrencyNote';
 import { DrillDownDialog } from './DrillDownDialog';
 import { DueCalendar } from './DueCalendar';
+import { APP_NAME } from '../../lib/brand';
 import { useCountUp } from './useCountUp';
 
 const PERIODS = [
@@ -107,7 +108,7 @@ export function DashboardPage() {
   return (
     <section className="space-y-6">
       <p data-testid="print-header" className="hidden text-sm text-text-muted print:block">
-        SalesCRM dashboard · {PERIODS.find((p) => p.key === period)?.label}
+        {APP_NAME} dashboard · {PERIODS.find((p) => p.key === period)?.label}
         {ownerId ? ` · ${owners.find((o) => o.id === ownerId)?.name ?? ''}` : ''} · generated {new Date().toLocaleString('en-IN')}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-4">

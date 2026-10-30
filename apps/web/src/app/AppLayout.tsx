@@ -4,6 +4,7 @@ import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useLogout, useSession } from '../features/auth/api';
+import { APP_NAME } from '../lib/brand';
 import { type NavItem, visibleNav } from './nav';
 
 const ROLE_LABEL = { ADMIN: 'Admin', SALES: 'Sales', CEO: 'CEO' } as const;
@@ -62,9 +63,9 @@ export function AppLayout() {
     <MotionConfig reducedMotion="user">
       <div className="mx-auto flex min-h-dvh max-w-[1440px] flex-col px-3 pb-8 sm:px-5">
         <header className="sticky top-3 z-30 mt-3 flex print:hidden items-center gap-3 rounded-xl bg-surface/90 px-3 py-2.5 shadow-card backdrop-blur sm:px-4">
-          <NavLink to="/" className="flex shrink-0 items-center gap-2 pr-2">
-            <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">S</span>
-            <span className="text-base font-bold tracking-tight">SalesCRM</span>
+          <NavLink to="/" aria-label={APP_NAME} className="flex shrink-0 items-center gap-2 pr-2">
+            <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">P</span>
+            <span className="text-base font-bold tracking-tight lg:hidden xl:inline">{APP_NAME}</span>
           </NavLink>
 
           <nav aria-label="Main" className="mx-auto hidden items-center gap-1 rounded-full bg-background p-1 lg:flex">
