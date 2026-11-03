@@ -151,3 +151,16 @@ test('a drill-down with more than 100 payments offers Load more', async () => {
   expect(await within(dialog).findByText('INV-P2')).toBeInTheDocument();
   expect(within(dialog).getByText('INV-P1')).toBeInTheDocument();
 });
+
+test('D-029 calendar days still ahead are tinted green and days already past red', async () => {
+  vi.stubGlobal('fetch', stubApi(routes).fn);
+  renderApp('/', sessionFor('CEO'));
+  const user = userEvent.setup();
+  const calendar = await screen.findByRole('region', { name: 'Due-date calendar' });
+  while (!within(calendar).queryByText('December 2026')) {
+    await user.click(within(calendar).getByRole('button', { name: 'Next month' }));
+  }
+  const day = within(calendar).getByRole('button', { name: /15 December 2026: / });
+  const ahead = new Date() < new Date('2026-12-15T00:00:00');
+  expect(day).toHaveAttribute('data-tone', ahead ? 'upcoming' : 'past');
+});
