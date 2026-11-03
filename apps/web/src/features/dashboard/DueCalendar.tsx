@@ -85,13 +85,19 @@ export function DueCalendar({ ownerId, currency }: { ownerId: string; currency: 
               aria-pressed={selected === key}
               disabled={!items}
               onClick={() => setSelected(selected === key ? null : key)}
+              // D-029: due days ahead are a light green, days already past (unpaid) a light red; stronger for bigger sums.
+              data-tone={items ? (key < todayKey || overdue ? 'past' : 'upcoming') : undefined}
               style={
-                items && !overdue
-                  ? { backgroundColor: `color-mix(in oklab, var(--color-primary) ${20 + Math.round((total / max) * 60)}%, transparent)` }
+                items
+                  ? {
+                      backgroundColor: `color-mix(in oklab, var(--color-${key < todayKey || overdue ? 'danger' : 'primary'}) ${
+                        12 + Math.round((total / max) * 22)
+                      }%, transparent)`,
+                    }
                   : undefined
               }
               className={`aspect-square rounded-lg text-sm tabular-nums transition-shadow ${
-                overdue ? 'bg-danger/80 font-semibold text-white' : items ? 'font-semibold' : 'text-text-muted'
+                items ? (key < todayKey || overdue ? 'font-semibold text-danger' : 'font-semibold text-primary-strong') : 'text-text-muted'
               } ${key === todayKey ? 'ring-2 ring-primary/50' : ''} ${selected === key ? 'ring-2 ring-text' : ''}`}
             >
               {d}
