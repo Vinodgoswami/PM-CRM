@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type LoginInput, loginSchema } from '@salescrm/schemas';
 import { Button } from '@salescrm/ui';
@@ -16,8 +17,16 @@ export function LoginPage() {
   const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
   const { errors } = form.formState;
 
-  const onSubmit = form.handleSubmit((values) =>
-    login.mutate(values, { onSuccess: () => navigate(safeNext(params.get('next')), { replace: true }) }),
+  // One message at a time: a new attempt or any edit drops the previous server error.
+  const { reset: clearServerError } = login;
+  useEffect(() => {
+    const sub = form.watch(() => clearServerError());
+    return () => sub.unsubscribe();
+  }, [form, clearServerError]);
+
+  const onSubmit = form.handleSubmit(
+    (values) => login.mutate(values, { onSuccess: () => navigate(safeNext(params.get('next')), { replace: true }) }),
+    () => clearServerError(),
   );
 
   return (

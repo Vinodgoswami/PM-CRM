@@ -84,6 +84,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-30 | Done   | feat/clear-tabs                        | Tabs restyled as a pill bar (active tab filled in the primary colour); project tabs get icons and counts for milestones and phases                                                                                                                                                          |
 | P4-31 | Done   | feat/project-breadcrumbs               | Project page header: back arrow to Projects plus breadcrumbs (Projects › client › original project › this project), phase badge, owner under the title                                                                                                                                      |
 | P4-32 | Done   | feat/glass-ui                          | D-029 glass tokens and backdrop blur on cards / tables / overlays, tinted fixed background, sliding glass tab indicator (reduced-motion aware), calendar green-ahead / red-past tones                                                                                                       |
+| P4-33 | Done   | fix/login-single-error                 | Sign-in, invite and reset-password forms show one error at a time: editing or a failed field check clears the earlier server message                                                                                                                                                        |
 
 ## Blockers
 

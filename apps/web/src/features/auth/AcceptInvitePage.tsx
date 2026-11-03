@@ -32,13 +32,20 @@ export function AcceptInvitePage() {
     retry: false,
   });
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', password: '' } });
+  // One message at a time: editing or a failed field check drops the previous server error.
+  const { reset: clearServerError } = accept;
+  useEffect(() => {
+    const sub = form.watch(() => clearServerError());
+    return () => sub.unsubscribe();
+  }, [form, clearServerError]);
   const { errors } = form.formState;
   useEffect(() => {
     if (invite.data?.name) form.setValue('name', invite.data.name);
   }, [invite.data, form]);
 
-  const onSubmit = form.handleSubmit((values) =>
-    accept.mutate({ ...values, token }, { onSuccess: () => navigate('/', { replace: true }) }),
+  const onSubmit = form.handleSubmit(
+    (values) => accept.mutate({ ...values, token }, { onSuccess: () => navigate('/', { replace: true }) }),
+    () => clearServerError(),
   );
 
   if (invite.isError) {

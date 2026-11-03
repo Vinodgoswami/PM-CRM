@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema } from '@salescrm/schemas';
 import { Button } from '@salescrm/ui';
 import { Lock } from 'lucide-react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useParams } from 'react-router';
 import { type z } from 'zod';
@@ -15,6 +16,12 @@ export function ResetPasswordPage() {
   const { token = '' } = useParams();
   const reset = useResetPassword();
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { password: '' } });
+  // One message at a time: editing or a failed field check drops the previous server error.
+  const { reset: clearServerError } = reset;
+  useEffect(() => {
+    const sub = form.watch(() => clearServerError());
+    return () => sub.unsubscribe();
+  }, [form, clearServerError]);
   const { errors } = form.formState;
 
   if (reset.isSuccess) {
@@ -29,7 +36,14 @@ export function ResetPasswordPage() {
 
   return (
     <AuthCard title="Choose a new password">
-      <form className="space-y-4" onSubmit={form.handleSubmit((v) => reset.mutate({ ...v, token }))} noValidate>
+      <form
+        className="space-y-4"
+        onSubmit={form.handleSubmit(
+          (v) => reset.mutate({ ...v, token }),
+          () => clearServerError(),
+        )}
+        noValidate
+      >
         <Field
           label="New password"
           icon={Lock}

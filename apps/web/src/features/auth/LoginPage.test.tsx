@@ -50,3 +50,24 @@ test('next cannot redirect off-site', async () => {
   await submit('a@example.com', 'correct-password');
   await waitFor(() => expect(router.state.location.pathname).toBe('/'));
 });
+
+test('only one error shows: a field error replaces the earlier server message', async () => {
+  vi.stubGlobal('fetch', stubFetch(401, { error: { code: 'UNAUTHENTICATED', message: 'Invalid email or password' } }).fn);
+  renderApp('/login', null);
+  await submit('a@example.com', 'wrong-password');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password');
+  const user = userEvent.setup();
+  await user.clear(screen.getByLabelText('Password'));
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+  expect(await screen.findByText('Enter your password')).toBeInTheDocument();
+  expect(screen.queryByText('Invalid email or password')).toBeNull();
+});
+
+test('typing again clears the server message', async () => {
+  vi.stubGlobal('fetch', stubFetch(401, { error: { code: 'UNAUTHENTICATED', message: 'Invalid email or password' } }).fn);
+  renderApp('/login', null);
+  await submit('a@example.com', 'wrong-password');
+  await screen.findByRole('alert');
+  await userEvent.type(screen.getByLabelText('Password'), 'x');
+  expect(screen.queryByText('Invalid email or password')).toBeNull();
+});
