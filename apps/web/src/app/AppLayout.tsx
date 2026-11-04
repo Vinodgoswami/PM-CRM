@@ -8,6 +8,7 @@ import { APP_NAME } from '../lib/brand';
 import { ROLE_LABEL } from '../lib/labels';
 import { Avatar } from '../features/auth/Avatar';
 import { type NavItem, visibleNav } from './nav';
+import { LoadingBar } from './LoadingBar';
 
 /** Settings and the audit log live as icon buttons on the right, like the reference; the rest are pill tabs. */
 const UTILITY = new Set(['/settings', '/audit']);
@@ -55,6 +56,7 @@ export function AppLayout() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="mx-auto flex min-h-dvh max-w-[1440px] flex-col px-3 pb-8 sm:px-5">
+        <LoadingBar />
         <header className="sticky top-3 z-30 mt-3 flex print:hidden items-center gap-3 rounded-xl bg-surface px-3 py-2.5 shadow-card sm:px-4">
           <NavLink to="/" aria-label={APP_NAME} className="flex shrink-0 items-center gap-2 pr-2">
             <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-contrast">P</span>

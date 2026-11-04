@@ -112,6 +112,26 @@ body {
   }
 }
 
+/* Top loading bar: a short pill sliding across while data loads (see apps/web LoadingBar). */
+@keyframes loading-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.loading-bar {
+  animation: loading-slide 1.1s var(--easing-standard) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+
 /* Diagonal hatching used for the non-highlighted bars in charts (reference style). */
 .hatch {
   background-image: repeating-linear-gradient(135deg, var(--chart-3) 0 6px, transparent 6px 11px);
