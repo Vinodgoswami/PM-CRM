@@ -4,6 +4,7 @@ import { type AppConfig } from '@salescrm/config';
 import {
   type AcceptInviteInput,
   type ChangePasswordInput,
+  type ForgotPasswordInput,
   type LoginInput,
   type ResetPasswordInput,
   type SessionResponse,
@@ -13,6 +14,7 @@ import { type SessionUser } from '../../common/current-user';
 import { AppError, rateLimited, unauthenticated } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { MailService } from '../mail/mail.service';
 import { AuthTokensService } from './auth-tokens.service';
 import { avatarUrlFor } from '../users/avatar-url';
 import { SessionService } from './session.service';
@@ -20,6 +22,9 @@ import { SessionService } from './session.service';
 const MAX_FAILURES = 5;
 const FAILURE_WINDOW_MS = 15 * 60_000;
 const INVALID = 'Invalid email or password';
+/** D-034: the same answer for every address, so the page never reveals who has an account. */
+export const FORGOT_MESSAGE = 'If that email has an account, a reset link is on its way. It works once and expires in 24 hours.';
+const MAX_SELF_RESETS = 3;
 
 @Injectable()
 export class AuthService {
@@ -30,6 +35,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly tokens: AuthTokensService,
     private readonly audit: AuditService,
+    private readonly mail: MailService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -108,6 +114,24 @@ export class AuthService {
       user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
+  }
+
+  /** D-034: emails a one-time reset link to an active account; at most three per account per 15 minutes. */
+  async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    if (user?.active) {
+      const link = await this.prisma.$transaction(async (tx) => {
+        const recent = await tx.authToken.count({
+          where: { kind: 'RESET', userId: user.id, createdById: user.id, createdAt: { gte: new Date(Date.now() - FAILURE_WINDOW_MS) } },
+        });
+        if (recent >= MAX_SELF_RESETS) return null;
+        const issued = await this.tokens.issue(tx, 'RESET', { email: user.email, userId: user.id, createdById: user.id });
+        await this.audit.record(tx, { actorId: user.id, action: 'user.reset_requested', entity: 'User', entityId: user.id });
+        return issued;
+      });
+      if (link) await this.mail.trySend(this.mail.reset({ to: user.email, name: user.name, ...link, self: true }));
+    }
+    return { message: FORGOT_MESSAGE };
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {

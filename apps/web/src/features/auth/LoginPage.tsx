@@ -4,7 +4,7 @@ import { type LoginInput, loginSchema } from '@salescrm/schemas';
 import { Button } from '@salescrm/ui';
 import { ArrowRight, Lock, Mail } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useLogin } from './api';
 import { AuthCard } from './AuthCard';
 import { Field } from './Field';
@@ -59,7 +59,11 @@ export function LoginPage() {
           {!login.isPending && <ArrowRight aria-hidden className="size-4 transition-transform group-hover:translate-x-0.5" />}
         </Button>
         <div className="space-y-1 text-center text-sm text-text-muted">
-          <p>Forgot your password? Ask your admin for a reset link.</p>
+          <p>
+            <Link to="/forgot-password" className="font-medium text-primary hover:underline">
+              Forgot password?
+            </Link>
+          </p>
           <p>New here? Your admin sends you an invite link to create your account.</p>
         </div>
       </form>

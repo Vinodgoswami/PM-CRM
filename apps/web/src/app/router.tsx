@@ -10,6 +10,7 @@ import { InvoicesPage } from '../features/invoices/InvoicesPage';
 import { ClientDetailPage } from '../features/clients/ClientDetailPage';
 import { ClientsListPage } from '../features/clients/ClientsListPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { ProjectDetailPage } from '../features/projects/ProjectDetailPage';
 import { ProjectFormPage } from '../features/projects/ProjectFormPage';
@@ -27,6 +28,7 @@ export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
   { path: '/invite/:token', element: <AcceptInvitePage /> },
   { path: '/reset/:token', element: <ResetPasswordPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
   {
     element: (
       <RequireAuth>

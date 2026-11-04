@@ -48,6 +48,8 @@ export class AuthTokensService {
     });
     const usable = row && row.kind === kind && !row.usedAt && row.expiresAt.getTime() > Date.now() && row.createdBy.active;
     if (!usable) throw this.invalid();
+    // D-034: a reset link the person asked for themselves ("Forgot password?") needs no manager behind it.
+    if (row.kind === 'RESET' && row.userId && row.userId === row.createdById) return row;
     // An invite carries the role it creates; a reset link acts on an existing account with its current role.
     const target =
       row.role ?? (row.userId ? (await tx.user.findUnique({ where: { id: row.userId }, select: { role: true } }))?.role : null);
@@ -56,7 +58,11 @@ export class AuthTokensService {
   }
 
   private invalid(): AppError {
-    return new AppError(400, 'VALIDATION_FAILED', 'This link is invalid or has expired. Ask your admin for a new one.');
+    return new AppError(
+      400,
+      'VALIDATION_FAILED',
+      'This link is invalid or has expired. Use Forgot password? on the sign-in page, or ask your admin for a new one.',
+    );
   }
 
   /** The usable token row, for showing an invite before it is accepted. */

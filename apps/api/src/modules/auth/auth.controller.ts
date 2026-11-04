@@ -6,6 +6,8 @@ import {
   type LoginInput,
   loginSchema,
   type ResetPasswordInput,
+  type ForgotPasswordInput,
+  forgotPasswordSchema,
   resetPasswordSchema,
   type SessionResponse,
   type ChangePasswordInput,
@@ -61,6 +63,13 @@ export class AuthController {
     const { token, ...session } = await this.auth.acceptInvite(body, req.ip ?? 'unknown', req.headers['user-agent']);
     res.cookie(SESSION_COOKIE, token, { ...this.cookieOptions(), maxAge: ABSOLUTE_TIMEOUT_MS });
     return session;
+  }
+
+  @Public()
+  @Post('password/forgot')
+  @HttpCode(200)
+  forgotPassword(@Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordInput): Promise<{ message: string }> {
+    return this.auth.forgotPassword(body);
   }
 
   @Public()
