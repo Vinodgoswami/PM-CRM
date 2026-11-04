@@ -32,3 +32,8 @@ test('a month-first US date is read correctly when the day is over 12', () => {
 test('nothing recognisable gives nothing', () => {
   expect(parseInvoiceText('Thank you for your business!', 'USD')).toEqual({});
 });
+
+test('the due date is read from its own label, apart from the invoice date', () => {
+  const text = 'Invoice No: INV-5\nInvoice Date: 01/11/2026\nDue Date: 15/11/2026\nTotal: ₹500.00';
+  expect(parseInvoiceText(text, 'INR')).toEqual({ invoiceId: 'INV-5', amountMinor: 50000, date: '2026-11-01', dueDate: '2026-11-15' });
+});
