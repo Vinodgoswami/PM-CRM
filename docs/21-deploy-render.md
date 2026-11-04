@@ -96,15 +96,20 @@ Auto-deploy is off (docs/04): after pushing new code, press **Manual Deploy** in
 
 ## 6. The first Admin
 
-Production has no demo data. Create the first Admin once, from your own computer, against the Neon database (the
-password is typed at a hidden prompt; it is never printed or stored in a file):
+Production has no demo data. Either way below creates the first Admin once; both refuse when an Admin exists.
+
+**In Render (no terminal needed).** Service → **Environment** → add `ADMIN_EMAIL`, `ADMIN_NAME` and `ADMIN_PASSWORD`
+(at least 10 characters) → **Save**. On the next start the app creates that Admin and logs
+"Created the first Admin …". Sign in, then **delete `ADMIN_PASSWORD`** from the environment; later starts ignore the
+settings once an Admin exists.
+
+**From your computer.** Against the Neon database (the password is typed at a hidden prompt):
 
 ```bash
 DATABASE_URL="<the Neon connection string>" pnpm --filter @salescrm/api create-admin
 ```
 
-Then open the Render address, sign in, and invite the CEO from **Users**; the CEO invites the project managers.
-The script refuses to run when the database already has an Admin.
+Then sign in and invite the CEO from **Users**; the CEO invites the project managers.
 
 ## Troubleshooting
 

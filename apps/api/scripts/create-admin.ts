@@ -5,28 +5,10 @@
  * prompt and never printed or taken from the environment.
  */
 import { createInterface } from 'node:readline';
-import { hashPassword } from '@salescrm/auth';
-import { createPrismaClient, type PrismaClient } from '@salescrm/database';
-import { emailSchema, passwordSchema } from '@salescrm/schemas';
+import { createPrismaClient } from '@salescrm/database';
+import { createFirstAdmin } from '../src/modules/users/first-admin';
 
-export async function createFirstAdmin(
-  prisma: PrismaClient,
-  input: { email: string; name: string; password: string },
-): Promise<{ id: string; email: string }> {
-  const email = emailSchema.safeParse(input.email);
-  if (!email.success) throw new Error(email.error.issues[0]!.message);
-  const password = passwordSchema.safeParse(input.password);
-  if (!password.success) throw new Error(password.error.issues[0]!.message);
-  const name = input.name.trim();
-  if (!name) throw new Error('Enter a name');
-  if ((await prisma.user.count({ where: { role: 'ADMIN' } })) > 0) {
-    throw new Error('This database already has an Admin. Sign in, or ask them for a reset link.');
-  }
-  const user = await prisma.user.create({
-    data: { email: email.data, name, role: 'ADMIN', passwordHash: await hashPassword(password.data) },
-  });
-  return { id: user.id, email: user.email };
-}
+export { createFirstAdmin };
 
 function ask(question: string, hidden = false): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });

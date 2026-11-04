@@ -16,6 +16,8 @@ export interface AppConfig {
   email: EmailConfig;
   /** Built website to serve from the API (one-host deployment, e.g. Render); unset when a dev server or host serves it. */
   webDistDir?: string;
+  /** D-033: create this Admin at startup when the database has none (hosts without a shell, e.g. Render free). */
+  firstAdmin?: { email: string; name: string; password: string };
 }
 
 export type EmailConfig =
@@ -63,6 +65,9 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   WEB_DIST_DIR: z.string().min(1).optional(),
+  ADMIN_EMAIL: z.string().optional(),
+  ADMIN_NAME: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
 });
 
 // Values copied from examples or CI must never reach production.
@@ -86,6 +91,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     fx: { provider: e.FX_PROVIDER },
     email: emailFrom(e),
     ...(e.WEB_DIST_DIR ? { webDistDir: e.WEB_DIST_DIR } : {}),
+    ...firstAdminFrom(e),
   };
   if (config.nodeEnv === 'production') {
     const problems: string[] = [];
@@ -96,6 +102,14 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     if (problems.length) throw new ConfigError(problems);
   }
   return config;
+}
+
+function firstAdminFrom(e: z.infer<typeof envSchema>): Pick<AppConfig, 'firstAdmin'> {
+  const keys = ['ADMIN_EMAIL', 'ADMIN_NAME', 'ADMIN_PASSWORD'] as const;
+  const missing = keys.filter((k) => !e[k]);
+  if (missing.length === keys.length) return {};
+  if (missing.length) throw new ConfigError(missing.map((k) => `${k}: required with the other ADMIN_* settings`));
+  return { firstAdmin: { email: e.ADMIN_EMAIL!, name: e.ADMIN_NAME!, password: e.ADMIN_PASSWORD! } };
 }
 
 function emailFrom(e: z.infer<typeof envSchema>): EmailConfig {
