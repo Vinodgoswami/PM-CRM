@@ -98,6 +98,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-44 | Done   | feat/phase-type                        | D-037 `Project.phaseKind` (migration `20261104120000_phase_kind`), Phase type dropdown on new and edit, booking split and dashboard count scope parts as initial booking                                                                                                                    |
 | P4-45 | Done   | feat/phases-milestones-usd             | D-038 upsell milestones (migration `20261104150000_upsell_milestone`), phase/type on Add milestone, + Milestone per phase, Upsell badges, picker removed; E2E F4 checks the upsell milestone                                                                                                |
 | P4-46 | Done   | feat/phases-milestones-usd             | D-039 starting-rate conversion in dashboard and clients list, `FxService.startRates`, dropdown collision flip                                                                                                                                                                               |
+| P4-47 | Done   | feat/phases-milestones-usd             | Page fade-out no longer rebuilds the next page (`FrozenOutlet`): a dialog or tab opened right after navigating stays open; pages load once                                                                                                                                                  |
 
 ## Blockers
 
