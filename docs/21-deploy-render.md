@@ -3,12 +3,12 @@
 One free Render web service runs the API **and** serves the built website on the same address, so the session
 cookie stays first-party (D-011, D-030). The other pieces are free tiers elsewhere:
 
-| Piece         | Service       | Why                                                                |
-| ------------- | ------------- | ------------------------------------------------------------------ |
-| API + website | Render (free) | `render.yaml` in the repo root                                     |
-| Database      | Neon (free)   | Render's free Postgres is deleted after 30 days                    |
-| Files         | Cloudflare R2 | A free server's disk is wiped on every restart; R2 keeps documents |
-| Invite emails | Brevo SMTP    | About 300 emails a day free                                        |
+| Piece         | Service                                   | Why                                                                                                                     |
+| ------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| API + website | Render (free)                             | `render.yaml` in the repo root                                                                                          |
+| Database      | Neon (free)                               | Render's free Postgres is deleted after 30 days                                                                         |
+| Files         | Neon Object Storage (free, 5 GB, no card) | A free server's disk is wiped on every restart; the bucket keeps documents. R2 also works but asks for a payment method |
+| Invite emails | Brevo SMTP                                | About 300 emails a day free                                                                                             |
 
 Limits change; check each pricing page. The free Render service **sleeps after about 15 minutes idle** and takes
 30–60 seconds to wake on the next visit (about $7/month removes this).
@@ -27,13 +27,34 @@ into `main` first). `render.yaml` deploys the `main` branch.
 2. Dashboard → **Connect** → turn **Connection pooling off** → copy the connection string
    (`postgresql://…neon.tech/neondb?sslmode=require`). This is `DATABASE_URL`.
 
-## 3. Files — Cloudflare R2
+## 3. Files — Neon Object Storage
 
-1. Cloudflare dashboard → **R2** → create a bucket, e.g. `pmcrm-files` → `S3_BUCKET`.
-2. R2 → **Manage API tokens** → create a token with **Object Read & Write** on that bucket only. Copy the
-   **Access Key ID** → `S3_ACCESS_KEY_ID`, **Secret Access Key** → `S3_SECRET_ACCESS_KEY`, and the
-   **S3 endpoint** `https://<account id>.r2.cloudflarestorage.com` → `S3_ENDPOINT`.
-3. Bucket → **Settings → CORS policy**, paste (replace the origin with your Render address after step 5):
+Neon's S3-compatible storage is in the same Neon project as the database. Its free plan includes 5 GB. It is
+offered in a few regions only (including AWS Singapore, `aws-ap-southeast-1`); the project must be in one of them.
+
+1. Neon Console → your project → **Buckets** (or **Storage**) → create a **private** bucket named `pmcrm-files`
+   → `S3_BUCKET`. (CLI alternative: `neon buckets create pmcrm-files`.)
+2. **Settings → Credentials → Create credential**, name `pmcrm-render`, scopes **storage:read** and
+   **storage:write**. The secret is shown once. Map what Neon shows to Render's names:
+
+   | Neon shows              | Render variable        |
+   | ----------------------- | ---------------------- |
+   | `AWS_ENDPOINT_URL_S3`   | `S3_ENDPOINT`          |
+   | `AWS_ACCESS_KEY_ID`     | `S3_ACCESS_KEY_ID`     |
+   | `AWS_SECRET_ACCESS_KEY` | `S3_SECRET_ACCESS_KEY` |
+   | `AWS_REGION`            | `S3_REGION`            |
+
+3. After step 5 gives you the Render address, let the website upload to the bucket (CORS), once, from your
+   computer. The values are the same as in Render; nothing is printed:
+
+```bash
+S3_ENDPOINT="…" S3_BUCKET=pmcrm-files S3_REGION="…" S3_ACCESS_KEY_ID="…" S3_SECRET_ACCESS_KEY="…" \
+WEB_ORIGIN=https://pmcrm.onrender.com pnpm --filter @salescrm/api set-bucket-cors
+```
+
+Using Cloudflare R2 instead: create a bucket and an R2 API token (Object Read & Write on that bucket), set
+`S3_ENDPOINT` to `https://<account id>.r2.cloudflarestorage.com`, `S3_REGION` to `auto`, and paste the same rule
+under the bucket's **Settings → CORS policy**:
 
 ```json
 [
@@ -56,12 +77,12 @@ into `main` first). `render.yaml` deploys the `main` branch.
 
 1. render.com → **New → Blueprint** → choose the GitHub repository. Render reads `render.yaml` and creates the
    `pmcrm` web service (free, Singapore). `SESSION_SECRET` is generated for you.
-2. Fill in the values it asks for: `DATABASE_URL`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+2. Fill in the values it asks for: `DATABASE_URL`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
    `S3_SECRET_ACCESS_KEY`, `EMAIL_FROM`, `SMTP_USER`, `SMTP_PASS`, and `WEB_ORIGIN` = the service address,
    e.g. `https://pmcrm.onrender.com` (if Render adds a suffix to the name, use the address it shows).
 3. Deploy. The build installs and builds both apps (`scripts/render/build.sh`); each start applies database
    migrations, then runs the API (`scripts/render/start.sh`). Health check: `/api/v1/health`.
-4. If the address differs from what you entered, fix `WEB_ORIGIN` and the R2 CORS origin, then
+4. If the address differs from what you entered, fix `WEB_ORIGIN`, re-run the CORS step (3.3) with it, then
    **Manual Deploy → Deploy latest commit**.
 
 Auto-deploy is off (docs/04): after pushing new code, press **Manual Deploy** in Render.
@@ -80,10 +101,10 @@ The script refuses to run when the database already has an Admin.
 
 ## Troubleshooting
 
-| Symptom                                                          | Check                                                                 |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Deploy fails at start with "Invalid configuration"               | A value is missing or wrong in Render → Environment; the log names it |
-| Sign-in works but every change says "Request origin not allowed" | `WEB_ORIGIN` must equal the address in the browser exactly            |
-| Document upload fails                                            | R2 CORS origin, bucket name and token permissions                     |
-| Invites are "Not emailed"                                        | Brevo sender verified, `SMTP_USER` / `SMTP_PASS` correct              |
-| First visit is slow                                              | The free service was asleep; it wakes in 30–60 s                      |
+| Symptom                                                          | Check                                                                                   |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Deploy fails at start with "Invalid configuration"               | A value is missing or wrong in Render → Environment; the log names it                   |
+| Sign-in works but every change says "Request origin not allowed" | `WEB_ORIGIN` must equal the address in the browser exactly                              |
+| Document upload fails                                            | CORS step (3.3) run with the exact address; bucket name; `S3_REGION`; credential scopes |
+| Invites are "Not emailed"                                        | Brevo sender verified, `SMTP_USER` / `SMTP_PASS` correct                                |
+| First visit is slow                                              | The free service was asleep; it wakes in 30–60 s                                        |

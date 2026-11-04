@@ -1,5 +1,5 @@
 # Render Blueprint: one free web service runs the API and serves the built website on the same address, so the
-# session cookie stays first-party (D-011). Postgres is Neon, files are Cloudflare R2, email is Brevo SMTP; their
+# session cookie stays first-party (D-011). Postgres and files are on Neon (or files on R2), email is Brevo SMTP; their
 # values are entered in the Render dashboard (sync: false), never committed. Guide: docs/21-deploy-render.md.
 services:
   - type: web
@@ -31,9 +31,9 @@ services:
         value: frankfurter
       - key: STORAGE_DRIVER
         value: s3
-      - key: S3_REGION
-        value: auto
-      - key: S3_ENDPOINT # https://<account id>.r2.cloudflarestorage.com
+      - key: S3_REGION # Neon: its AWS_REGION, e.g. ap-southeast-1 (R2: auto)
+        sync: false
+      - key: S3_ENDPOINT # Neon: its AWS_ENDPOINT_URL_S3 (R2: https://<account id>.r2.cloudflarestorage.com)
         sync: false
       - key: S3_BUCKET
         sync: false
