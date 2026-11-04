@@ -148,7 +148,15 @@ export const projectDetailSchema = projectListItemSchema.extend({
       collectedMinor: z.number().default(0),
     }),
   ),
-  upsellEntries: z.array(z.object({ id: z.string(), amountMinor: z.number(), date: isoDateSchema, note: z.string().nullable() })),
+  upsellEntries: z.array(
+    z.object({
+      id: z.string(),
+      amountMinor: z.number(),
+      date: isoDateSchema,
+      note: z.string().nullable(),
+      milestoneId: z.string().nullable().default(null),
+    }),
+  ),
   milestones: z.array(
     z.object({
       id: z.string(),
@@ -158,6 +166,7 @@ export const projectDetailSchema = projectListItemSchema.extend({
       dueDate: isoDateSchema.nullable(),
       paidMinor: z.number(),
       balanceMinor: z.number(),
+      isUpsell: z.boolean().default(false),
       status: z.enum(['PAID', 'OVERDUE', 'PARTIALLY_PAID', 'DUE_SOON', 'SCHEDULED', 'UNSCHEDULED']),
     }),
   ),
@@ -172,6 +181,8 @@ export const upsellEntrySchema = z.object({
   amountMinor: positiveMinorSchema,
   date: isoDateSchema,
   note: text(500).optional(),
+  /** D-038: when given, a milestone for this amount is created too (marked Upsell). */
+  dueDate: isoDateSchema.optional(),
 });
 export type UpsellEntryInput = z.infer<typeof upsellEntrySchema>;
 

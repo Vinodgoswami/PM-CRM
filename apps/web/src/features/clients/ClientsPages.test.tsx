@@ -134,3 +134,9 @@ test('a client row opens to list its projects with booking, milestones and payme
   expect(link).toHaveTextContent('₹50,000.00 of ₹1,25,000.00');
   expect(link).toHaveTextContent('Active');
 });
+
+test('D-039 client totals are shown in your dashboard currency', async () => {
+  vi.stubGlobal('fetch', stubApi({ 'GET /clients': list([{ ...acme, currency: 'INR', totalsCurrency: 'USD', bookedMinor: 1200 }]) }).fn);
+  renderApp('/clients', sessionFor('SALES'));
+  expect(await screen.findByText('$12.00')).toBeInTheDocument();
+});

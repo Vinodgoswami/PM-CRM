@@ -165,7 +165,7 @@ test('D-036 each user may view the dashboard in their own currency, converted at
   expect((await pm.agent.get('/api/v1/auth/session')).body.user.displayCurrency).toBe('USD');
   const usd = (await pm.agent.get('/api/v1/dashboard?period=THIS_FY')).body;
   expect(usd.currency).toBe('USD');
-  expect(usd.conversion).toMatchObject({ from: 'INR', to: 'USD', rate: '0.012' });
+  expect(usd.conversion).toMatchObject({ from: 'INR', to: 'USD' });
   expect(usd.kpis).toMatchObject({ bookedMinor: 1200, collectedMinor: 600 }); // $12.00 and $6.00
 
   const ceo = await loginAs(app, prisma, 'CEO');
@@ -193,4 +193,25 @@ test('D-036 projects already in your dashboard currency keep their exact amounts
   const d = (await pm.agent.get('/api/v1/dashboard?period=THIS_FY')).body;
   expect(d.currency).toBe('USD');
   expect(d.kpis.bookedMinor).toBe(6000000); // exactly $60,000.00 for $38,000 + $22,000
+});
+
+test('D-039 switching the company currency keeps every project, each converted at its rate from the day it was created', async () => {
+  const pm = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(pm.agent, pm.csrf, 'Rupee Co', 100000); // ₹1,000 while the company currency is INR
+  const ceo = await loginAs(app, prisma, 'CEO');
+  await ceo.agent.patch('/api/v1/settings').set('X-CSRF-Token', ceo.csrf).send({ baseCurrency: 'USD' }).expect(200);
+  const d = (await ceo.agent.get('/api/v1/dashboard?period=THIS_FY')).body;
+  expect(d.currency).toBe('USD');
+  expect(d.otherCurrencyProjects).toBe(0);
+  expect(d.kpis).toMatchObject({ bookedMinor: 1200, collectedMinor: 600 }); // ₹1,000 × 0.012 = $12.00
+});
+
+test('D-039 the clients list is in your currency, each project converted at its starting rate', async () => {
+  const pm = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(pm.agent, pm.csrf, 'Rupee Co', 100000);
+  const inr = (await pm.agent.get('/api/v1/clients')).body.items[0];
+  expect(inr).toMatchObject({ currency: 'INR', totalsCurrency: 'INR', bookedMinor: 100000, collectedMinor: 50000 });
+  await pm.agent.patch('/api/v1/me/preferences').set('X-CSRF-Token', pm.csrf).send({ displayCurrency: 'USD' }).expect(200);
+  const usd = (await pm.agent.get('/api/v1/clients')).body.items[0];
+  expect(usd).toMatchObject({ currency: 'INR', totalsCurrency: 'USD', bookedMinor: 1200, collectedMinor: 600 });
 });

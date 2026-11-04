@@ -25,8 +25,8 @@ export class ClientsController {
 
   @Get()
   @RequirePermission('clients.read')
-  list(@Query(new ZodValidationPipe(clientListQuerySchema)) query: ClientListQuery) {
-    return this.clients.list(query);
+  list(@CurrentUser() user: SessionUser, @Query(new ZodValidationPipe(clientListQuerySchema)) query: ClientListQuery) {
+    return this.clients.list(query, user);
   }
 
   @Post()

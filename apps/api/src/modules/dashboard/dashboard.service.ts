@@ -20,7 +20,8 @@ import { minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
 import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
-import { inBase, rowInDisplay } from '../fx/to-base';
+import { inBase, projectRate } from '../fx/to-base';
+import { FxService } from '../fx/fx.service';
 import { can } from '@salescrm/auth/permissions';
 import { SettingsService } from '../settings/settings.service';
 
@@ -34,13 +35,14 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly fx: FxService,
   ) {}
 
   /**
-   * `display` (D-036): show the figures in the viewer's own currency. Projects already in that currency use their own
-   * amounts; the rest go through the base currency and then today's rate (`rate` = display units per base unit).
+   * `display` (D-036/D-039): the figures in the viewer's own currency, else the company's. Projects already in that
+   * currency keep their own amounts; the rest use their saved rate, or the rate of the day they were created.
    */
-  async get(user: SessionUser, q: DashboardQuery, display?: { currency: string; rate: string }): Promise<Dashboard> {
+  async get(user: SessionUser, q: DashboardQuery, display?: string): Promise<Dashboard> {
     const [settings, today] = await Promise.all([this.settings.get(), this.settings.today()]);
     // Company view (CEO / Admin) may narrow to one owner; everyone else is limited to their own projects.
     const company = scopeFor(user.role, 'dashboard.company') === 'all';
@@ -76,13 +78,12 @@ export class DashboardService {
     });
     // D-020: every project is converted to the base currency at its saved rate; one without a rate is left out and
     // counted for a note (M-4).
-    const base = settings.baseCurrency;
-    const rows = all.flatMap((p) => {
-      if (display && p.currency === display.currency) return inBase(p, p.currency) ?? [];
-      const row = inBase(p, base);
-      if (!row) return [];
-      return display ? rowInDisplay(row, display.rate, base, display.currency) : row;
-    });
+    const target = display ?? settings.baseCurrency;
+    const start = await this.fx.startRates(
+      all.filter((p) => !projectRate(p, target)),
+      target,
+    );
+    const rows = all.flatMap((p) => inBase(p, target, start.get(p.id)) ?? []);
     const metric: MetricProject[] = rows.map((p) => ({
       id: p.id,
       ownerId: p.ownerId,
@@ -269,7 +270,7 @@ export class DashboardService {
     // D-022: a viewer who may not see client or project records (the Admin) gets every figure, but no names.
     const anonymous = !can(user, 'projects.read');
     const result: Dashboard = {
-      currency: display?.currency ?? settings.baseCurrency,
+      currency: target,
       conversion: null,
       anonymous,
       upcomingSummary,

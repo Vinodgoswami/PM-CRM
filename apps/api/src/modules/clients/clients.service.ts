@@ -11,7 +11,9 @@ import {
   type UpdateClientInput,
   type UpdateContactInput,
 } from '@salescrm/schemas';
-import { minorToJson } from '@salescrm/types';
+import { convertMinor, minorToJson } from '@salescrm/types';
+import { FxService } from '../fx/fx.service';
+import { projectRate } from '../fx/to-base';
 import { type SessionUser } from '../../common/current-user';
 import { conflict, notFound } from '../../common/errors';
 import { AuditService } from '../audit/audit.service';
@@ -47,9 +49,26 @@ function clientTotals(projects: MoneyProject[], today: IsoDate, currency: string
   return { bookedMinor: minorToJson(booked), collectedMinor: minorToJson(collected), outstandingMinor: minorToJson(outstanding) };
 }
 
-function toListItem(c: ClientRow, today: IsoDate): ClientListItem {
+/** D-039: a client's totals in `target`, each project converted at its saved or starting rate. */
+function totalsIn(projects: MoneyProject[], today: IsoDate, target: string, start: Map<string, string>) {
+  let booked = 0n;
+  let collected = 0n;
+  let outstanding = 0n;
+  for (const p of projects) {
+    const rate = p.currency === target ? '1' : (projectRate(p, target) ?? start.get(p.id));
+    if (!rate) continue; // no rate at all: left out, like the dashboard (M-4)
+    const conv = (m: bigint) => (rate === '1' ? m : convertMinor(m, rate, p.currency, target));
+    const t = totalsFor(p, today);
+    if (p.wonAt) booked += conv(t.contractValueMinor);
+    collected += conv(t.collectedMinor);
+    outstanding += conv(t.outstandingMinor);
+  }
+  return { bookedMinor: minorToJson(booked), collectedMinor: minorToJson(collected), outstandingMinor: minorToJson(outstanding) };
+}
+
+function toListItem(c: ClientRow, today: IsoDate, target: string, start: Map<string, string>): ClientListItem {
   return {
-    ...clientTotals(c.projects, today, c.currency),
+    ...totalsIn(c.projects, today, target, start),
     id: c.id,
     name: c.name,
     company: c.company,
@@ -57,6 +76,7 @@ function toListItem(c: ClientRow, today: IsoDate): ClientListItem {
     projects: c._count.projects,
     archived: c.archivedAt !== null,
     currency: c.currency,
+    totalsCurrency: target,
   };
 }
 
@@ -76,6 +96,7 @@ export class ClientsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly settings: SettingsService,
+    private readonly fx: FxService,
   ) {}
 
   /** Throws the C-2 conflict (with the existing id) when an active client already uses this name. */
@@ -127,13 +148,17 @@ export class ClientsService {
   async create(actor: SessionUser, input: CreateClientInput): Promise<ClientListItem> {
     try {
       const created = await this.prisma.$transaction((tx) => this.createIn(tx, actor, input));
-      return toListItem(created, await this.settings.today());
+      return toListItem(created, await this.settings.today(), created.currency, new Map());
     } catch (e) {
       return this.rethrowDuplicate(e, input.name);
     }
   }
 
-  async list(query: ClientListQuery): Promise<{ items: ClientListItem[]; page: number; pageSize: number; total: number }> {
+  /** D-039: totals are in the viewer's dashboard currency (else the company's). */
+  async list(
+    query: ClientListQuery,
+    viewer?: { displayCurrency?: string | null },
+  ): Promise<{ items: ClientListItem[]; page: number; pageSize: number; total: number }> {
     const where: Prisma.ClientWhereInput = {
       ...(query.includeArchived ? {} : { archivedAt: null }),
       ...(query.q
@@ -152,8 +177,11 @@ export class ClientsService {
       }),
       this.prisma.client.count({ where }),
     ]);
-    const today = await this.settings.today();
-    return { items: rows.map((r) => toListItem(r, today)), page: query.page, pageSize: query.pageSize, total };
+    const [today, settings] = await Promise.all([this.settings.today(), this.settings.get()]);
+    const target = viewer?.displayCurrency ?? settings.baseCurrency;
+    const projects = rows.flatMap((r) => r.projects).filter((p) => !projectRate(p, target));
+    const start = await this.fx.startRates(projects, target);
+    return { items: rows.map((r) => toListItem(r, today, target, start)), page: query.page, pageSize: query.pageSize, total };
   }
 
   async get(id: string): Promise<ClientDetail> {
@@ -208,7 +236,7 @@ export class ClientsService {
           if (diff) await this.audit.record(tx, { actorId: actor.id, action: 'client.update', entity: 'Client', entityId: id, ...diff });
           return after;
         })
-        .then(async (after) => toListItem(after, await this.settings.today()));
+        .then(async (after) => toListItem(after, await this.settings.today(), after.currency, new Map()));
     } catch (e) {
       return this.rethrowDuplicate(e, input.name ?? '');
     }
@@ -224,7 +252,7 @@ export class ClientsService {
         await this.audit.record(tx, { actorId: actor.id, action: 'client.archive', entity: 'Client', entityId: id });
         return after;
       })
-      .then(async (after) => toListItem(after, await this.settings.today()));
+      .then(async (after) => toListItem(after, await this.settings.today(), after.currency, new Map()));
   }
 
   async addContact(actor: SessionUser, clientId: string, input: ContactInput): Promise<ContactDto> {

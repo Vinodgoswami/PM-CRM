@@ -67,8 +67,12 @@ test('F4 add an extra work amount to a confirmed project', async ({ page }) => {
   await page.getByLabel('Amount').fill('25,000');
   const note = uniq('E2E extra pages');
   await page.getByLabel('Note').fill(note);
-  await page.getByRole('button', { name: 'Add extra work amount' }).click();
-  await expect(page.getByText(note)).toBeVisible();
+  await page.getByLabel('Milestone due date').fill('2026-12-31');
+  await page.getByRole('button', { name: 'Add upsell' }).click();
+  // D-038: the upsell is listed and billed through its own milestone.
+  await expect(page.getByText(note).first()).toBeVisible();
+  await page.getByRole('tab', { name: /Milestones/ }).click();
+  await expect(page.getByRole('cell', { name: note })).toBeVisible();
 });
 
 test('F5 CEO weekly check: quarter view, team, overdue invoices, PDF', async ({ page }) => {

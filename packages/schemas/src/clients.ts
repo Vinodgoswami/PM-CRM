@@ -83,6 +83,8 @@ export const clientListItemSchema = z.object({
   projects: z.number(),
   archived: z.boolean(),
   currency: z.string(),
+  /** D-039: the currency of the booked / paid / outstanding totals (the viewer's, else the company's). */
+  totalsCurrency: z.string().optional(),
   bookedMinor: z.number(),
   collectedMinor: z.number(),
   outstandingMinor: z.number(),

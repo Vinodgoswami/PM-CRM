@@ -26,7 +26,7 @@ test('a project the user cannot edit shows no edit controls', async () => {
   expect(screen.queryByRole('button', { name: /change status/i })).toBeNull();
   expect(screen.queryByRole('link', { name: /edit/i })).toBeNull();
   await userEvent.click(screen.getByRole('tab', { name: 'Phases & upsell' }));
-  expect(screen.queryByRole('button', { name: /add extra work amount/i })).toBeNull();
+  expect(screen.queryByRole('button', { name: /add upsell/i })).toBeNull();
 });
 
 test('uploading a document requests a slot, uploads, then confirms', async () => {
@@ -183,6 +183,42 @@ test('D-037 a scope-part phase counts as initial booking, an upsell phase as ups
   expect(split).toHaveTextContent('Initial booking₹1,30,000.00'); // ₹1,00,000 + scope part ₹30,000
   expect(split).toHaveTextContent('Upsell₹20,000.00');
   expect(split).toHaveTextContent('Total booking₹1,50,000.00');
-  expect(screen.getByRole('link', { name: /Phase 2/ })).toHaveTextContent('Scope part');
-  expect(screen.getByRole('link', { name: /Phase 3/ })).toHaveTextContent('Upsell');
+  expect(screen.getByRole('link', { name: /^Phase 2 ·/ })).toHaveTextContent('Scope part');
+  expect(screen.getByRole('link', { name: /^Phase 3 ·/ })).toHaveTextContent('Upsell');
+});
+
+test('D-038 the Phases tab adds milestones per phase, asks upsell amounts for a due date, and has no extra project picker', async () => {
+  const phased = detail({
+    phase: 1,
+    upsellEntries: [],
+    upsellProjects: [
+      {
+        id: 'p2',
+        code: 'PRJ-0002',
+        name: 'Phase 2',
+        status: 'ACTIVE',
+        phase: 2,
+        phaseKind: 'UPSELL',
+        expectedAmountMinor: 100,
+        contractValueMinor: 100,
+        collectedMinor: 0,
+      },
+    ],
+  });
+  const api = stubApi({ ...base, 'GET /projects/p1': { body: phased }, 'POST /projects/p1/upsells': { status: 201, body: phased } });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=upsells', sessionFor('SALES'));
+  expect(await screen.findByRole('link', { name: 'Add milestone to Phase 2' })).toHaveAttribute(
+    'href',
+    '/projects/p2?tab=milestones&add=1',
+  );
+  expect(screen.queryByText('Part of another project')).toBeNull();
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText('Amount'), '500');
+  await user.type(screen.getByLabelText('Note'), 'Computer vision');
+  await user.type(screen.getByLabelText('Milestone due date'), '2026-12-20');
+  await user.click(screen.getByRole('button', { name: /Add upsell/ }));
+  await waitFor(() =>
+    expect(api.calls.find((c) => c.method === 'POST')?.body).toMatchObject({ amountMinor: 50000, dueDate: '2026-12-20' }),
+  );
 });

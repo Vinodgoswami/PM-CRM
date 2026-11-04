@@ -215,6 +215,9 @@ model UpsellEntry {
   amountMinor BigInt
   date        DateTime @db.Date
   note        String?
+  /// D-038: the milestone this upsell amount is billed through (created with it).
+  milestoneId String?    @unique
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   createdById String
   createdBy   User     @relation(fields: [createdById], references: [id])
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
@@ -237,6 +240,7 @@ model Milestone {
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
 
   payments Payment[]
+  upsellEntry UpsellEntry?
 
   @@unique([projectId, number])
   @@index([dueDate])

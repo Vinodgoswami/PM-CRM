@@ -2,7 +2,7 @@ import { todayIn } from '@salescrm/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
-import { renderApp, sessionFor, stubApi } from '../../test/render';
+import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
 import { detail } from './fixtures';
 
 const settings = { body: { companyName: '', baseCurrency: 'INR', fyStartMonth: 4, timezone: 'Asia/Kolkata', dueSoonDays: 7 } };
@@ -283,4 +283,62 @@ test('D-027 renaming a paid milestone needs no reset', async () => {
   await waitFor(() => expect(api.calls.some((c) => c.method === 'PATCH')).toBe(true));
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(api.calls.some((c) => c.path.endsWith('/reset-payments'))).toBe(false);
+});
+
+const withPhases = detail({
+  phase: 1,
+  milestones: [{ ...detail().milestones[0]!, isUpsell: true }],
+  upsellProjects: [
+    {
+      id: 'p2',
+      code: 'PRJ-0002',
+      name: 'Website phase 2',
+      status: 'ACTIVE',
+      phase: 2,
+      phaseKind: 'SCOPE',
+      expectedAmountMinor: 100,
+      contractValueMinor: 100,
+      collectedMinor: 0,
+    },
+  ],
+});
+
+test('D-038 an upsell milestone carries an Upsell badge', async () => {
+  vi.stubGlobal('fetch', stubApi({ ...routes, 'GET /projects/p1': { body: withPhases } }).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const row = (await screen.findByText('Design')).closest('tr')!;
+  expect(within(row).getByText('Upsell')).toBeInTheDocument();
+});
+
+test('D-038 adding a milestone asks for its phase and whether it is an upsell', async () => {
+  const api = stubApi({
+    ...routes,
+    'GET /projects/p1': { body: withPhases },
+    'POST /projects/p1/upsells': { status: 201, body: withPhases },
+    'POST /projects/p2/milestones': { status: 201, body: detail({ id: 'p2' }) },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=milestones&add=1', sessionFor('SALES'));
+  const user = userEvent.setup();
+  // Opened straight away by the Phases section's "+ Milestone" link (?add=1).
+  await user.type(await screen.findByLabelText('New milestone task'), 'Computer vision');
+  await user.type(screen.getByLabelText('New milestone amount'), '400');
+  await user.type(screen.getByLabelText('New milestone due date'), '2026-12-20');
+  await choose(user, screen.getByRole('combobox', { name: 'Milestone type' }), 'UPSELL');
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  await waitFor(() =>
+    expect(api.calls.find((c) => c.path === '/projects/p1/upsells')?.body).toMatchObject({
+      amountMinor: 40000,
+      note: 'Computer vision',
+      dueDate: '2026-12-20',
+    }),
+  );
+
+  await user.type(screen.getByLabelText('New milestone task'), 'Phase two part');
+  await user.type(screen.getByLabelText('New milestone amount'), '100');
+  await user.type(screen.getByLabelText('New milestone due date'), '2026-12-21');
+  await choose(user, screen.getByRole('combobox', { name: 'Milestone phase' }), 'p2');
+  await choose(user, screen.getByRole('combobox', { name: 'Milestone type' }), 'CONTRACT');
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  await waitFor(() => expect(api.calls.find((c) => c.path === '/projects/p2/milestones')?.body).toMatchObject({ title: 'Phase two part' }));
 });

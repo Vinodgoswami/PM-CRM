@@ -35,7 +35,7 @@ export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   phase: null,
   phaseKind: null,
   upsellProjects: [],
-  upsellEntries: [{ id: 'u1', amountMinor: 2500000, date: '2026-10-01', note: 'Extra pages' }],
+  upsellEntries: [{ id: 'u1', amountMinor: 2500000, date: '2026-10-01', note: 'Extra pages', milestoneId: null }],
   milestones: [
     {
       id: 'm1',
@@ -43,6 +43,7 @@ export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
       title: 'Design',
       amountMinor: 10000000,
       dueDate: '2026-10-01',
+      isUpsell: false,
       paidMinor: 5000000,
       balanceMinor: 5000000,
       status: 'OVERDUE',

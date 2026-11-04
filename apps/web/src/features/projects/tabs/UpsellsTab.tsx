@@ -5,10 +5,9 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
-import { useAddUpsell, useProjects, useRemoveUpsell, useSetParent } from '../api';
+import { useAddUpsell, useRemoveUpsell } from '../api';
 import { StatusBadge } from '../StatusBadge';
 import { ProjectBookingSplit, projectBooking } from '../ProjectBookingSplit';
-import { OptionSelect } from '../../../components/OptionSelect';
 import { MoneyInput } from '../MoneyInput';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -53,15 +52,6 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
         )}
         {project.canEdit && project.wonAt && <AddUpsellForm project={project} />}
       </section>
-
-      <section className="space-y-3">
-        <h2 className="font-medium">Part of another project</h2>
-        {project.canEdit ? (
-          <ParentPicker project={project} />
-        ) : (
-          <p className="text-sm">{project.parent ? `${project.parent.code} ${project.parent.name}` : 'Not linked'}</p>
-        )}
-      </section>
     </div>
   );
 }
@@ -75,7 +65,12 @@ function Phases({ project }: { project: ProjectDetail }) {
         <Link to={`/projects/${project.parent.id}`} className="font-medium text-primary hover:underline">
           Phase {project.phase} of {project.parent.code} {project.parent.name}
         </Link>
-        <p className="mt-1 text-text-muted">Its booking counts as upsell. Open the original project to see every phase together.</p>
+        <p className="mt-1 text-text-muted">
+          {project.phaseKind === 'SCOPE'
+            ? 'A part of the original scope: its booking counts towards the initial booking.'
+            : 'Its booking counts as upsell.'}{' '}
+          Open the original project to see every phase together.
+        </p>
       </section>
     );
   }
@@ -105,10 +100,10 @@ function Phases({ project }: { project: ProjectDetail }) {
             <span className="tabular-nums">{money(initial)}</span>
           </li>
           {project.upsellProjects.map((u) => (
-            <li key={u.id}>
+            <li key={u.id} className="flex items-center gap-2 pr-2 hover:bg-accent">
               <Link
                 to={`/projects/${u.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-accent"
+                className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
               >
                 <span className="flex items-center gap-2">
                   <span>
@@ -127,6 +122,13 @@ function Phases({ project }: { project: ProjectDetail }) {
                   <span className="block text-xs text-text-muted">{money(u.collectedMinor)} received</span>
                 </span>
               </Link>
+              {project.canEdit && (
+                <Button asChild size="sm" variant="outline" className="shrink-0">
+                  <Link to={`/projects/${u.id}?tab=milestones&add=1`} aria-label={`Add milestone to Phase ${u.phase}`}>
+                    <Plus className="size-4" /> Milestone
+                  </Link>
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -144,23 +146,27 @@ function AddUpsellForm({ project }: { project: ProjectDetail }) {
   const [amountError, setAmountError] = useState<string | null>(null);
   const [date, setDate] = useState(today());
   const [note, setNote] = useState('');
+  const [due, setDue] = useState('');
   const [key, setKey] = useState(0);
 
   return (
     <form
       key={key}
-      className="grid gap-3 sm:grid-cols-[1fr_10rem_1fr_auto] sm:items-end"
+      className="grid gap-3 sm:grid-cols-[1fr_10rem_1fr_10rem_auto] sm:items-end"
       onSubmit={(e) => {
         e.preventDefault();
         if (amount === null) return setAmountError(amountError ?? 'Enter an amount');
+        if (!due) return toast.error('Choose the due date of its milestone');
+        // D-038: the upsell is billed through a milestone of its own, marked Upsell.
         add.mutate(
-          { amountMinor: amount, date, ...(note ? { note } : {}) },
+          { amountMinor: amount, date, dueDate: due, ...(note ? { note } : {}) },
           {
             onSuccess: () => {
-              toast.success('Extra work amount added');
+              toast.success('Upsell added, with its milestone');
               setKey((k) => k + 1);
               setAmount(null);
               setNote('');
+              setDue('');
             },
             onError: (err) => toast.error(err.message),
           },
@@ -187,39 +193,13 @@ function AddUpsellForm({ project }: { project: ProjectDetail }) {
         <Label htmlFor="upsell-note">Note</Label>
         <Input id="upsell-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="What was added" />
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="upsell-due">Milestone due date</Label>
+        <Input id="upsell-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+      </div>
       <Button type="submit" disabled={add.isPending}>
-        Add extra work amount
+        Add upsell
       </Button>
     </form>
-  );
-}
-
-function ParentPicker({ project }: { project: ProjectDetail }) {
-  const setParent = useSetParent(project.id);
-  const { data } = useProjects(new URLSearchParams({ clientId: project.client.id, pageSize: '100' }).toString());
-  const candidates = (data?.items ?? []).filter((p) => p.id !== project.id);
-  return (
-    <div className="max-w-md space-y-1.5">
-      <Label htmlFor="parent-project">Original project</Label>
-      <OptionSelect
-        id="parent-project"
-        className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-        value={project.parent?.id ?? ''}
-        disabled={setParent.isPending}
-        onValueChange={(v) =>
-          setParent.mutate(v || null, {
-            onSuccess: () => toast.success('Link updated'),
-            onError: (err) => toast.error(err.message),
-          })
-        }
-      >
-        <option value="">Not extra work</option>
-        {candidates.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.code} {p.name}
-          </option>
-        ))}
-      </OptionSelect>
-    </div>
   );
 }

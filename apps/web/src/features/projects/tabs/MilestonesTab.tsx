@@ -24,7 +24,11 @@ import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { MarkPaidDialog, type MarkPaidTarget } from '../../payments/MarkPaidDialog';
 import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
-import { useAddMilestone, useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
+import { projectKeys, useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
+import { projectDetailSchema } from '@salescrm/schemas';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../../../lib/api';
+import { OptionSelect } from '../../../components/OptionSelect';
 import { MoneyInput } from '../MoneyInput';
 
 type Milestone = ProjectDetail['milestones'][number];
@@ -96,7 +100,10 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
             ) : (
               <TR key={m.id}>
                 <TD className="font-medium">M{m.number}</TD>
-                <TD className="max-w-64 truncate">{m.title}</TD>
+                <TD className="max-w-64 truncate">
+                  {m.title}
+                  {m.isUpsell && <span className="ml-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium">Upsell</span>}
+                </TD>
                 <TD className="text-right tabular-nums">{money(m.amountMinor)}</TD>
                 <TD>{formatDate(m.dueDate)}</TD>
                 <TD className="text-right tabular-nums">{money(m.paidMinor)}</TD>
@@ -176,19 +183,45 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
           )}
         </TBody>
       </Table>
-      {project.canEdit && <AddMilestone project={project} />}
+      {project.canEdit && <AddMilestone project={project} openAtStart={params.has('add')} />}
       {paying && <MarkPaidDialog target={paying} onClose={() => setPaying(null)} />}
     </div>
   );
 }
 
-function AddMilestone({ project }: { project: ProjectDetail }) {
-  const add = useAddMilestone(project.id);
-  const [open, setOpen] = useState(false);
+/**
+ * D-038: a milestone is added to this project or one of its phases, and is either part of the contract or an upsell
+ * (an upsell amount billed through this new milestone).
+ */
+function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAtStart: boolean }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(openAtStart);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [due, setDue] = useState('');
+  const [target, setTarget] = useState(project.id);
+  const [kind, setKind] = useState<'CONTRACT' | 'UPSELL'>('CONTRACT');
   const [key, setKey] = useState(0);
+  const phases = project.upsellProjects;
+  const where = target === project.id ? null : phases.find((u) => u.id === target);
+  const add = useMutation({
+    mutationFn: () =>
+      kind === 'UPSELL'
+        ? apiFetch(`/projects/${target}/upsells`, {
+            method: 'POST',
+            body: { amountMinor: amount.minor!, date: new Date().toISOString().slice(0, 10), note: title.trim(), dueDate: due },
+            schema: projectDetailSchema,
+          })
+        : apiFetch(`/projects/${target}/milestones`, {
+            method: 'POST',
+            body: { title, amountMinor: amount.minor!, ...(due ? { dueDate: due } : {}) },
+            schema: projectDetailSchema,
+          }),
+    onSuccess: (updated) => {
+      qc.setQueryData(projectKeys.detail(updated.id), updated);
+      for (const k of [['projects'], ['dashboard'], ['invoices']]) void qc.invalidateQueries({ queryKey: k });
+    },
+  });
   if (!open) {
     return (
       <Button variant="outline" onClick={() => setOpen(true)}>
@@ -199,37 +232,68 @@ function AddMilestone({ project }: { project: ProjectDetail }) {
   return (
     <form
       key={key}
-      className="grid gap-2 rounded-lg bg-surface p-4 shadow-card sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-start"
+      className="space-y-3 rounded-lg bg-surface p-4 shadow-card"
       onSubmit={(e) => {
         e.preventDefault();
         if (!title.trim()) return toast.error('Enter the milestone task');
         if (amount.minor === null) return toast.error(amount.error ?? 'Enter an amount');
-        add.mutate(
-          { title, amountMinor: amount.minor, ...(due ? { dueDate: due } : {}) },
-          {
-            onSuccess: () => {
-              setTitle('');
-              setDue('');
-              setAmount({ minor: null, error: null });
-              setKey((k) => k + 1);
-              toast.success('Milestone added');
-            },
-            onError: (err) => toast.error(err.message),
+        if (!due) return toast.error('Choose a due date');
+        add.mutate(undefined, {
+          onSuccess: () => {
+            setTitle('');
+            setDue('');
+            setAmount({ minor: null, error: null });
+            setKey((k) => k + 1);
+            toast.success(where ? `Milestone added to Phase ${where.phase}` : 'Milestone added');
           },
-        );
+          onError: (err) => toast.error(err.message),
+        });
       }}
     >
-      <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <MoneyInput aria-label="New milestone amount" currency={project.currency} onValue={(minor, error) => setAmount({ minor, error })} />
-      <Input aria-label="New milestone due date" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-      <div className="flex gap-2">
-        <Button type="submit" disabled={add.isPending}>
-          Add
-        </Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-          Done
-        </Button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {phases.length > 0 && (
+          <OptionSelect
+            id="new-milestone-phase"
+            aria-label="Milestone phase"
+            className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
+            value={target}
+            onValueChange={setTarget}
+          >
+            <option value={project.id}>Phase 1 · {project.name} (this project)</option>
+            {phases.map((u) => (
+              <option key={u.id} value={u.id}>
+                Phase {u.phase} · {u.name} ({u.phaseKind === 'SCOPE' ? 'scope part' : 'upsell'})
+              </option>
+            ))}
+          </OptionSelect>
+        )}
+        <OptionSelect
+          id="new-milestone-type"
+          aria-label="Milestone type"
+          className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
+          value={kind}
+          onValueChange={(v) => setKind(v as 'CONTRACT' | 'UPSELL')}
+        >
+          <option value="CONTRACT">Contract — part of the booked amount</option>
+          <option value="UPSELL">Upsell — new work, adds to the booking</option>
+        </OptionSelect>
       </div>
+      <div className="grid gap-2 sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-start">
+        <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <MoneyInput aria-label="New milestone amount" currency={project.currency} onValue={(minor, error) => setAmount({ minor, error })} />
+        <Input aria-label="New milestone due date" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        <div className="flex gap-2">
+          <Button type="submit" disabled={add.isPending}>
+            Add
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Done
+          </Button>
+        </div>
+      </div>
+      {kind === 'UPSELL' && (
+        <p className="text-xs text-text-muted">Adds this amount to the booking as an upsell and bills it through this milestone.</p>
+      )}
     </form>
   );
 }
