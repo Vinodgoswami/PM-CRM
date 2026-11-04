@@ -18,6 +18,7 @@ import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
 import { OWNER } from '../../lib/labels';
 import { OptionSelect } from '../../components/OptionSelect';
+import { CurrencySelect } from '../../components/CurrencySelect';
 import { MoneyInput } from './MoneyInput';
 
 const selectClass = 'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm';
@@ -83,8 +84,9 @@ function CreateProject() {
   const [notice, setNotice] = useState<string | null>(null);
   const parentProjectId = params.get('parent') ?? undefined;
   const baseCurrency = useSettings().data?.baseCurrency ?? 'INR';
-  // Amounts are entered in the project's currency: the client's, or the base currency for a new client.
-  const currency = client && 'clientId' in client ? client.currency : baseCurrency;
+  // Amounts are entered in the project's currency: the one chosen here, else the client's, else the base currency.
+  const [currencyChoice, setCurrencyChoice] = useState<string | null>(null);
+  const currency = currencyChoice ?? (client && 'clientId' in client ? client.currency : baseCurrency);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +209,9 @@ function CreateProject() {
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="currency" label="Project currency">
+              <CurrencySelect id="currency" value={currency} onChange={setCurrencyChoice} />
+            </Field>
             <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
               <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
             </Field>

@@ -284,3 +284,19 @@ const doc = (name: string, type: string) => ({
   uploadedBy: { id: 'u1', name: 'Test User' },
   createdAt: '2026-10-29T10:00:00.000Z',
 });
+
+test('the project currency can be chosen; it follows the client until you pick one', async () => {
+  const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user);
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  const currency = screen.getByRole('combobox', { name: 'Project currency' });
+  expect(currency).toHaveTextContent('INR');
+  await choose(user, currency, 'USD');
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ currency: 'USD', clientId: 'c1' });
+});

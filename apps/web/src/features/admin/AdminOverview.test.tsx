@@ -9,7 +9,7 @@ test('the Admin edits the company name; currency and financial year are shown as
   vi.stubGlobal('fetch', stubApi({ 'GET /settings': { body: settings }, 'GET /users': { body: { items: [] } } }).fn);
   renderApp('/settings', sessionFor('ADMIN'));
   expect(await screen.findByLabelText('Company name')).toBeEnabled();
-  expect(screen.getByLabelText('Base currency')).toBeDisabled();
+  expect(screen.getByRole('combobox', { name: 'Dashboard currency' })).toBeDisabled();
   expect(screen.getByLabelText('Financial year starts in')).toBeDisabled();
   expect(screen.getByText('Currency, financial year, time zone and due-soon days are set by the CEO.')).toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Import data' })).toBeNull();
@@ -18,6 +18,6 @@ test('the Admin edits the company name; currency and financial year are shown as
 test('the CEO has company settings and the import', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /settings': { body: settings }, 'GET /users': { body: { items: [] } } }).fn);
   renderApp('/settings', sessionFor('CEO'));
-  expect(await screen.findByLabelText('Base currency')).toBeEnabled();
+  expect(await screen.findByRole('combobox', { name: 'Dashboard currency' })).toBeEnabled();
   expect(screen.getByRole('tab', { name: 'Import data' })).toBeInTheDocument();
 });

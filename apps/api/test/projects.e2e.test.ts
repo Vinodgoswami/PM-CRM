@@ -303,3 +303,14 @@ test('D-025 a hired project is created Active with just a booking amount; milest
   expect(undated.status).toBe(400);
   expect(undated.body.error.details).toEqual({ rule: 'PS-4' });
 });
+
+test('a project billed in USD for a new client makes that client a USD client too', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const res = await agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', csrf)
+    .send({ name: 'Dollar job', expectedAmountMinor: 500000, status: 'ACTIVE', currency: 'USD', newClient: { name: 'US Buyer' } });
+  expect(res.status).toBe(201);
+  expect(res.body.currency).toBe('USD');
+  expect((await prisma.client.findUniqueOrThrow({ where: { id: res.body.client.id } })).currency).toBe('USD');
+});

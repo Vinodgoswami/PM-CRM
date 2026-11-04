@@ -212,6 +212,8 @@ export class ProjectsService {
           // C-1: the client is created in the same transaction; if anything below fails, it is rolled back too.
           const created = await this.clients.createIn(tx, user, {
             name: input.newClient.name,
+            // A new client is billed in the currency chosen for its first project.
+            ...(input.currency ? { currency: input.currency } : {}),
             ...(input.newClient.email ? { contact: { email: input.newClient.email } } : {}),
           });
           clientId = created.id;
