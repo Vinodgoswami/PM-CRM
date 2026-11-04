@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { can } from '@salescrm/auth/permissions';
 import { useSession } from '../auth/api';
 import { OptionSelect } from '../../components/OptionSelect';
+import { CurrencySelect } from '../../components/CurrencySelect';
 import { useSettings, useUpdateSettings } from './api';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -46,14 +47,11 @@ function Form({ initial }: { initial: Settings }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="s-currency">Base currency</Label>
-            <Input
-              id="s-currency"
-              disabled={locked}
-              maxLength={3}
-              value={values.baseCurrency}
-              onChange={(e) => set('baseCurrency', e.target.value.toUpperCase())}
-            />
+            <Label htmlFor="s-currency">Dashboard currency</Label>
+            <CurrencySelect id="s-currency" disabled={locked} value={values.baseCurrency} onChange={(v) => set('baseCurrency', v)} />
+            <p className="text-xs text-text-muted">
+              Dashboard and totals are in this currency. Projects in another currency are converted at each payment’s rate.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-fy">Financial year starts in</Label>

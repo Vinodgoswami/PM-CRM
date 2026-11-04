@@ -91,3 +91,14 @@ test('audit log filters by entity and pages through results', async () => {
   await waitFor(() => expect(api.calls.at(-1)!.url.searchParams.get('page')).toBe('2'));
   expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
 });
+
+test('the CEO picks the dashboard currency from a list', async () => {
+  const api = stubApi({ ...base, 'PATCH /settings': ({ body }) => ({ body: { ...settings, ...(body as object) } }) });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/settings', sessionFor('CEO'));
+  const user = userEvent.setup();
+  await choose(user, await screen.findByRole('combobox', { name: 'Dashboard currency' }), 'USD');
+  expect(screen.getByText(/converted at each payment’s rate/)).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Save settings' }));
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ baseCurrency: 'USD' }));
+});
