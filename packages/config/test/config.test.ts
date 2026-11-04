@@ -112,3 +112,10 @@ test('D-032 email can go through the Brevo web API (no SMTP ports), which needs 
   expect(brevo.email).toEqual({ transport: 'brevo', from: 'PM CRM <crm@chicmic.test>', brevo: { apiKey: 'test-key' } });
   expect(() => loadConfig({ ...valid, EMAIL_TRANSPORT: 'brevo' })).toThrow(/BREVO_API_KEY/);
 });
+
+test('D-033 the first Admin can come from ADMIN_EMAIL, ADMIN_NAME and ADMIN_PASSWORD (all three, or none)', () => {
+  expect(loadConfig(valid).firstAdmin).toBeUndefined();
+  const c = loadConfig({ ...valid, ADMIN_EMAIL: 'owner@x.test', ADMIN_NAME: 'Owner', ADMIN_PASSWORD: 'a-long-enough-password' });
+  expect(c.firstAdmin).toEqual({ email: 'owner@x.test', name: 'Owner', password: 'a-long-enough-password' });
+  expect(() => loadConfig({ ...valid, ADMIN_EMAIL: 'owner@x.test' })).toThrow(/ADMIN_NAME.*ADMIN_PASSWORD|ADMIN_PASSWORD/);
+});
