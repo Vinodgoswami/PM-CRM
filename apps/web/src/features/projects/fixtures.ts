@@ -33,6 +33,7 @@ export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   tags: [],
   parent: null,
   phase: null,
+  phaseKind: null,
   upsellProjects: [],
   upsellEntries: [{ id: 'u1', amountMinor: 2500000, date: '2026-10-01', note: 'Extra pages' }],
   milestones: [

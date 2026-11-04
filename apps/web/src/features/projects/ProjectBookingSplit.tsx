@@ -1,11 +1,15 @@
 import { type ProjectDetail } from '@salescrm/schemas';
 import { formatApiMoney } from '../../lib/money';
 
-/** D-028: initial booking (this project) + upsell (extra-work amounts and later phases) = total booking. */
+/**
+ * D-028 / D-037: initial booking (this project plus phases that are part of its scope) + upsell (extra-work amounts
+ * and upsell phases) = total booking.
+ */
 export function projectBooking(project: ProjectDetail) {
-  const initial = project.expectedAmountMinor;
-  const upsell =
-    project.upsellEntries.reduce((s, u) => s + u.amountMinor, 0) + project.upsellProjects.reduce((s, u) => s + u.contractValueMinor, 0);
+  const phases = (kind: 'UPSELL' | 'SCOPE') =>
+    project.upsellProjects.filter((u) => u.phaseKind === kind).reduce((s, u) => s + u.contractValueMinor, 0);
+  const initial = project.expectedAmountMinor + phases('SCOPE');
+  const upsell = project.upsellEntries.reduce((s, u) => s + u.amountMinor, 0) + phases('UPSELL');
   return { initial, upsell, total: initial + upsell };
 }
 

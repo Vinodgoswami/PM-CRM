@@ -99,6 +99,7 @@ test('D-028 the Phases & upsell tab splits the booking: initial + upsell = total
         name: 'Website phase 2',
         status: 'ACTIVE',
         phase: 2,
+        phaseKind: 'UPSELL',
         expectedAmountMinor: 3000000,
         contractValueMinor: 3000000,
         collectedMinor: 1000000,
@@ -145,4 +146,43 @@ test('the overview shows the booking split and no start, duration or end', async
   expect(split).toHaveTextContent('Total booking₹1,25,000.00');
   expect(screen.queryByText('Duration')).toBeNull();
   expect(screen.queryByText('Expected amount')).toBeNull();
+});
+
+test('D-037 a scope-part phase counts as initial booking, an upsell phase as upsell', async () => {
+  const phased = detail({
+    phase: 1,
+    upsellEntries: [],
+    upsellProjects: [
+      {
+        id: 'p2',
+        code: 'PRJ-0002',
+        name: 'Phase 2',
+        status: 'ACTIVE',
+        phase: 2,
+        phaseKind: 'SCOPE',
+        expectedAmountMinor: 3000000,
+        contractValueMinor: 3000000,
+        collectedMinor: 0,
+      },
+      {
+        id: 'p3',
+        code: 'PRJ-0003',
+        name: 'Phase 3',
+        status: 'ACTIVE',
+        phase: 3,
+        phaseKind: 'UPSELL',
+        expectedAmountMinor: 2000000,
+        contractValueMinor: 2000000,
+        collectedMinor: 0,
+      },
+    ],
+  });
+  vi.stubGlobal('fetch', stubApi({ ...base, 'GET /projects/p1': { body: phased } }).fn);
+  renderApp('/projects/p1?tab=upsells', sessionFor('SALES'));
+  const split = await screen.findByRole('region', { name: 'Booking split' });
+  expect(split).toHaveTextContent('Initial booking₹1,30,000.00'); // ₹1,00,000 + scope part ₹30,000
+  expect(split).toHaveTextContent('Upsell₹20,000.00');
+  expect(split).toHaveTextContent('Total booking₹1,50,000.00');
+  expect(screen.getByRole('link', { name: /Phase 2/ })).toHaveTextContent('Scope part');
+  expect(screen.getByRole('link', { name: /Phase 3/ })).toHaveTextContent('Upsell');
 });

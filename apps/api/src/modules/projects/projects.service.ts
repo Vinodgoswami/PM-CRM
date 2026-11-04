@@ -45,7 +45,7 @@ const DETAIL_INCLUDE = {
   },
   parentProject: { select: { id: true, code: true, name: true, upsellProjects: { select: { id: true }, orderBy: { code: 'asc' } } } },
   upsellProjects: {
-    select: { id: true, code: true, name: true, status: true, expectedAmountMinor: true, ...PROJECT_MONEY_INCLUDE },
+    select: { id: true, code: true, name: true, status: true, phaseKind: true, expectedAmountMinor: true, ...PROJECT_MONEY_INCLUDE },
     orderBy: { code: 'asc' },
   },
 } satisfies Prisma.ProjectInclude;
@@ -120,6 +120,7 @@ export class ProjectsService {
       parent: p.parentProject && { id: p.parentProject.id, code: p.parentProject.code, name: p.parentProject.name },
       // D-028: the original project is Phase 1; its extra-work projects are Phase 2, 3, … in code order.
       phase: p.parentProject ? p.parentProject.upsellProjects.findIndex((u) => u.id === p.id) + 2 : p.upsellProjects.length > 0 ? 1 : null,
+      phaseKind: p.parentProject ? p.phaseKind : null,
       upsellProjects: p.upsellProjects.map((u, i) => {
         const ut = totalsFor(u, today);
         return {
@@ -128,6 +129,7 @@ export class ProjectsService {
           name: u.name,
           status: u.status,
           phase: i + 2,
+          phaseKind: u.phaseKind,
           expectedAmountMinor: minorToJson(u.expectedAmountMinor),
           contractValueMinor: minorToJson(ut.contractValueMinor),
           collectedMinor: minorToJson(ut.collectedMinor),
@@ -230,6 +232,7 @@ export class ProjectsService {
           throw new RuleViolation('PS-4', 'Give every milestone a due date.');
         }
         if (input.parentProjectId) await this.assertParent(tx, user, null, client.id, input.parentProjectId);
+        if (input.phaseKind && !input.parentProjectId) throw new RuleViolation('U-4', 'Only a phase of another project has a phase type.');
         const dates = statusDates('LEAD', input.status, { wonAt: null, closedAt: null }, today);
         const [seq] = await tx.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('project_code_seq')`;
         const nextval = seq!.nextval;
@@ -252,6 +255,7 @@ export class ProjectsService {
             wonAt: toDate(dates.wonAt),
             tags: input.tags,
             parentProjectId: input.parentProjectId ?? null,
+            phaseKind: input.phaseKind ?? 'UPSELL',
             createdById: user.id,
             milestones: {
               create: milestones.map((m) => ({
@@ -313,6 +317,7 @@ export class ProjectsService {
         throw new RuleViolation('M-3', 'The currency cannot change once the project has milestones.');
       }
       if (input.clientId && input.clientId !== before.clientId) await this.assertClientMove(tx, before, input.clientId);
+      if (input.phaseKind && !before.parentProjectId) throw new RuleViolation('U-4', 'Only a phase of another project has a phase type.');
       const startDate = input.startDate !== undefined ? input.startDate : isoDate(before.startDate);
       const durationValue = input.durationValue !== undefined ? input.durationValue : before.durationValue;
       const durationUnit = input.durationUnit !== undefined ? input.durationUnit : before.durationUnit;
@@ -324,6 +329,7 @@ export class ProjectsService {
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.tags !== undefined ? { tags: input.tags } : {}),
           ...(input.clientId !== undefined ? { clientId: input.clientId } : {}),
+          ...(input.phaseKind !== undefined ? { phaseKind: input.phaseKind } : {}),
           ...(input.currency !== undefined && input.currency !== before.currency ? { currency: input.currency, ...fx } : {}),
           ...(input.expectedAmountMinor !== undefined ? { expectedAmountMinor: minorFromJson(input.expectedAmountMinor) } : {}),
           startDate: toDate(startDate),
@@ -337,6 +343,7 @@ export class ProjectsService {
       const pick = (p: typeof after) => ({
         name: p.name,
         clientId: p.clientId,
+        phaseKind: p.phaseKind,
         description: p.description,
         tags: p.tags,
         currency: p.currency,

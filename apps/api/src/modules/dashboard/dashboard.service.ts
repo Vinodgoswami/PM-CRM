@@ -91,7 +91,8 @@ export class DashboardService {
       wonAt: isoDate(p.wonAt),
       closedAt: isoDate(p.closedAt),
       expectedAmountMinor: p.expectedAmountMinor,
-      isUpsell: p.parentProjectId !== null,
+      // D-037: a phase that is part of the original scope is initial booking, not upsell.
+      isUpsell: p.parentProjectId !== null && p.phaseKind === 'UPSELL',
       upsellEntries: p.upsellEntries.map((u) => ({ amountMinor: u.amountMinor, date: isoDate(u.date)! })),
       milestones: p.milestones.map((m) => ({
         amountMinor: m.amountMinor,

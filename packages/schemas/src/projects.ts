@@ -38,6 +38,8 @@ export const createProjectSchema = z
       .regex(/^[A-Z]{3}$/)
       .optional(),
     parentProjectId: z.string().optional(),
+    /** D-037: for a phase, extra work (UPSELL, the default) or a part of the original scope (SCOPE). */
+    phaseKind: z.enum(['UPSELL', 'SCOPE']).optional(),
     tags: z.array(text(40).min(1)).max(20).default([]),
     milestones: z.array(milestoneInputSchema).max(50).default([]),
   })
@@ -59,6 +61,7 @@ export const updateProjectSchema = z.object({
     .regex(/^[A-Z]{3}$/)
     .optional(),
   tags: z.array(text(40).min(1)).max(20).optional(),
+  phaseKind: z.enum(['UPSELL', 'SCOPE']).optional(),
   /** D-027: move the project to another client billed in the same currency. */
   clientId: z.string().min(1).optional(),
   /** Optimistic concurrency: the `updatedAt` the client last saw. */
@@ -130,6 +133,8 @@ export const projectDetailSchema = projectListItemSchema.extend({
   parent: z.object({ id: z.string(), code: z.string(), name: z.string() }).nullable(),
   /** D-028: 1 for an original project that has phases, 2.. for its phases (by code), null for a standalone project. */
   phase: z.number().nullable().default(null),
+  /** D-037: set on a phase only. */
+  phaseKind: z.enum(['UPSELL', 'SCOPE']).nullable().default(null),
   upsellProjects: z.array(
     z.object({
       id: z.string(),
@@ -137,6 +142,7 @@ export const projectDetailSchema = projectListItemSchema.extend({
       name: z.string(),
       status: projectStatusSchema,
       phase: z.number().default(0),
+      phaseKind: z.enum(['UPSELL', 'SCOPE']).default('UPSELL'),
       expectedAmountMinor: z.number().default(0),
       contractValueMinor: z.number().default(0),
       collectedMinor: z.number().default(0),

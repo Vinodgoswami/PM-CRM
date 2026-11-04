@@ -95,6 +95,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-41 | Done   | fix/stale-pages-loading-bar            | Creating or changing a project refreshes the dashboard and invoices; a top loading bar shows while data loads or saves (slow free hosting)                                                                                                                                                  |
 | P4-42 | Done   | fix/display-currency-exact             | D-036 fix: projects in the viewer's own currency are no longer round-tripped through the base currency ($38,000 + $22,000 = $60,000.00 exactly)                                                                                                                                             |
 | P4-43 | Done   | fix/error-toasts                       | New project form: server errors show as a red pop-up (top right); the duplicate-client hint stays in the form                                                                                                                                                                               |
+| P4-44 | Done   | feat/phase-type                        | D-037 `Project.phaseKind` (migration `20261104120000_phase_kind`), Phase type dropdown on new and edit, booking split and dashboard count scope parts as initial booking                                                                                                                    |
 
 ## Blockers
 
