@@ -83,6 +83,7 @@ function CreateProject() {
   const [errors, setErrors] = useState<Errors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const parentProjectId = params.get('parent') ?? undefined;
+  const [phaseKind, setPhaseKind] = useState<'UPSELL' | 'SCOPE'>('UPSELL');
   const baseCurrency = useSettings().data?.baseCurrency ?? 'INR';
   // Amounts are entered in the project's currency: the one chosen here, else the client's, else the base currency.
   const [currencyChoice, setCurrencyChoice] = useState<string | null>(null);
@@ -103,7 +104,7 @@ function CreateProject() {
       ...(isAdmin && ownerId ? { ownerId } : {}),
       expectedAmountMinor: expected.minor ?? undefined,
       currency,
-      ...(parentProjectId ? { parentProjectId } : {}),
+      ...(parentProjectId ? { parentProjectId, phaseKind } : {}),
       milestones: rows.map((r) => ({
         title: r.title,
         amountMinor: r.amountMinor ?? undefined,
@@ -209,6 +210,11 @@ function CreateProject() {
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
+            {parentProjectId && (
+              <Field id="phase-kind" label="Phase type">
+                <PhaseKindSelect id="phase-kind" value={phaseKind} onChange={setPhaseKind} />
+              </Field>
+            )}
             <Field id="currency" label="Project currency">
               <CurrencySelect id="currency" value={currency} onChange={setCurrencyChoice} />
             </Field>
@@ -285,10 +291,12 @@ function EditForm({ project }: { project: ProjectDetail }) {
     error: null,
   });
   const [errors, setErrors] = useState<Errors>({});
+  const [phaseKind, setPhaseKind] = useState<'UPSELL' | 'SCOPE'>(project.phaseKind ?? 'UPSELL');
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = updateProjectSchema.safeParse({
+      ...(project.parent && phaseKind !== project.phaseKind ? { phaseKind } : {}),
       name,
       description,
       ...(clientId && clientId !== project.client.id ? { clientId } : {}),
@@ -350,6 +358,11 @@ function EditForm({ project }: { project: ProjectDetail }) {
               onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
+          {project.parent && (
+            <Field id="phase-kind" label="Phase type">
+              <PhaseKindSelect id="phase-kind" value={phaseKind} onChange={setPhaseKind} />
+            </Field>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
               <MoneyInput
@@ -381,5 +394,20 @@ function EditForm({ project }: { project: ProjectDetail }) {
       </Card>
       {editingClient && clientDetail.data && <ClientFormDialog open onOpenChange={setEditingClient} client={clientDetail.data} />}
     </section>
+  );
+}
+
+/** D-037: whether a phase is extra work (upsell) or a part of the original project's scope. */
+function PhaseKindSelect({ id, value, onChange }: { id: string; value: 'UPSELL' | 'SCOPE'; onChange: (v: 'UPSELL' | 'SCOPE') => void }) {
+  return (
+    <>
+      <OptionSelect id={id} className={selectClass} value={value} onValueChange={(v) => onChange(v as 'UPSELL' | 'SCOPE')}>
+        <option value="UPSELL">Upsell — extra work the client added</option>
+        <option value="SCOPE">Scope part — part of the original project</option>
+      </OptionSelect>
+      <p className="text-xs text-text-muted">
+        {value === 'UPSELL' ? 'Counts as upsell on the dashboard.' : 'Counts towards the initial booking, not upsell.'}
+      </p>
+    </>
   );
 }

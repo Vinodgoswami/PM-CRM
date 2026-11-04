@@ -333,3 +333,30 @@ test('a server error on create shows as a red pop-up, not inside the form', asyn
   expect(popup.closest('[data-sonner-toast]')).toHaveAttribute('data-type', 'error');
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+test('D-037 a new phase asks whether it is an upsell or part of the original scope', async () => {
+  const api = stubApi({
+    'GET /clients': clients,
+    'GET /clients/c1': { body: { ...clients.body.items[0], contacts: [], projects: [], notes: null, country: null } },
+    'POST /projects': created,
+    ...projectRoutes,
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new?client=c1&parent=p1&name=Website%20%E2%80%93%20Phase%202', sessionFor('SALES'));
+  const user = userEvent.setup();
+  const kind = await screen.findByRole('combobox', { name: 'Phase type' });
+  expect(kind).toHaveTextContent('Upsell');
+  await choose(user, kind, 'SCOPE');
+  await user.type(screen.getByLabelText('Booking amount'), '30,000');
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Client' })).toHaveTextContent('Acme'));
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ parentProjectId: 'p1', phaseKind: 'SCOPE' });
+});
+
+test('D-037 an ordinary new project has no phase type', async () => {
+  vi.stubGlobal('fetch', stubApi({ 'GET /clients': clients, ...projectRoutes }).fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  await screen.findByLabelText('Booking amount');
+  expect(screen.queryByRole('combobox', { name: 'Phase type' })).toBeNull();
+});

@@ -83,6 +83,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 - **U-3** Upsell share = upsell booked ÷ total booked in the period.
 - **U-4** D-028: the original project is **Phase 1**; its upsell projects are **Phase 2, 3, …** in code order.
   Total booking = initial booking (Phase 1 amounts) + upsell (later phases and extra-work entries).
+- **U-5** D-037: each phase is **Upsell** (extra work the client added; counts as upsell) or **Scope part** (a part
+  of the original project; counts towards the initial booking). New phases default to Upsell.
 
 ## Periods
 

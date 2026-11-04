@@ -115,6 +115,11 @@ function Phases({ project }: { project: ProjectDetail }) {
                     <span className="font-medium">Phase {u.phase}</span> · {u.name}{' '}
                     <span className="text-xs text-text-muted">{u.code}</span>
                   </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.phaseKind === 'SCOPE' ? 'bg-primary/10 text-primary' : 'bg-warning/15'}`}
+                  >
+                    {u.phaseKind === 'SCOPE' ? 'Scope part' : 'Upsell'}
+                  </span>
                   <StatusBadge status={u.status} />
                 </span>
                 <span className="text-right tabular-nums">

@@ -44,6 +44,12 @@ enum DocumentStatus {
   READY
 }
 
+/// D-037: a phase is extra work the client added (counts as upsell) or a part of the original scope.
+enum PhaseKind {
+  UPSELL
+  SCOPE
+}
+
 enum AuthTokenKind {
   INVITE
   RESET
@@ -175,6 +181,8 @@ model Project {
   expectedAmountMinor BigInt
   currency            String
   parentProjectId     String?
+  /// D-037: only meaningful on a phase (parentProjectId set).
+  phaseKind           PhaseKind     @default(UPSELL)
   parentProject       Project?      @relation("Upsell", fields: [parentProjectId], references: [id])
   upsellProjects      Project[]     @relation("Upsell")
   wonAt               DateTime?     @db.Date
