@@ -87,6 +87,6 @@ test('D-036 a dashboard shown in your own currency says how it was converted', a
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: converted } }).fn);
   renderApp('/', sessionFor('SALES'));
   expect(await screen.findByRole('note')).toHaveTextContent(
-    'Shown in USD, converted from INR at today’s rate (1 INR = 0.012 USD). Change it in your profile.',
+    'Shown in USD. Projects in USD use their own amounts; the rest are converted from INR at today’s rate (1 INR = 0.012 USD). Change it in your profile.',
   );
 });

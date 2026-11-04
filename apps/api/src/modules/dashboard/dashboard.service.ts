@@ -20,7 +20,7 @@ import { minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
 import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
-import { inBase } from '../fx/to-base';
+import { inBase, rowInDisplay } from '../fx/to-base';
 import { can } from '@salescrm/auth/permissions';
 import { SettingsService } from '../settings/settings.service';
 
@@ -36,7 +36,11 @@ export class DashboardService {
     private readonly settings: SettingsService,
   ) {}
 
-  async get(user: SessionUser, q: DashboardQuery): Promise<Dashboard> {
+  /**
+   * `display` (D-036): show the figures in the viewer's own currency. Projects already in that currency use their own
+   * amounts; the rest go through the base currency and then today's rate (`rate` = display units per base unit).
+   */
+  async get(user: SessionUser, q: DashboardQuery, display?: { currency: string; rate: string }): Promise<Dashboard> {
     const [settings, today] = await Promise.all([this.settings.get(), this.settings.today()]);
     // Company view (CEO / Admin) may narrow to one owner; everyone else is limited to their own projects.
     const company = scopeFor(user.role, 'dashboard.company') === 'all';
@@ -72,7 +76,13 @@ export class DashboardService {
     });
     // D-020: every project is converted to the base currency at its saved rate; one without a rate is left out and
     // counted for a note (M-4).
-    const rows = all.flatMap((p) => inBase(p, settings.baseCurrency) ?? []);
+    const base = settings.baseCurrency;
+    const rows = all.flatMap((p) => {
+      if (display && p.currency === display.currency) return inBase(p, p.currency) ?? [];
+      const row = inBase(p, base);
+      if (!row) return [];
+      return display ? rowInDisplay(row, display.rate, base, display.currency) : row;
+    });
     const metric: MetricProject[] = rows.map((p) => ({
       id: p.id,
       ownerId: p.ownerId,
@@ -258,7 +268,7 @@ export class DashboardService {
     // D-022: a viewer who may not see client or project records (the Admin) gets every figure, but no names.
     const anonymous = !can(user, 'projects.read');
     const result: Dashboard = {
-      currency: settings.baseCurrency,
+      currency: display?.currency ?? settings.baseCurrency,
       conversion: null,
       anonymous,
       upcomingSummary,

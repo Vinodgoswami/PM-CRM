@@ -25,6 +25,23 @@ export type InBase<T extends Projectish> = Omit<T, 'milestones'> & {
 };
 
 /**
+ * D-036: a base-currency row (from `inBase`) re-expressed in the viewer's currency at one rate (base → display).
+ */
+export function rowInDisplay<R extends InBase<Projectish>>(row: R, rate: string, base: string, display: string): R {
+  const conv = (m: bigint) => convertMinor(m, rate, base, display);
+  return {
+    ...row,
+    expectedAmountMinor: conv(row.expectedAmountMinor),
+    upsellEntries: row.upsellEntries.map((u) => ({ ...u, amountMinor: conv(u.amountMinor) })),
+    milestones: row.milestones.map((m) => ({
+      ...m,
+      amountMinor: conv(m.amountMinor),
+      payments: m.payments.map((x) => ({ ...x, amountMinor: conv(x.amountMinor), collectedMinor: conv(x.collectedMinor) })),
+    })),
+  };
+}
+
+/**
  * A copy of the project with every amount in the base currency, or null when it has no rate (left out, counted).
  * Contract, milestone and extra-work amounts use the project's saved rate. Each payment's `amountMinor` is its share of
  * the milestone at that same rate, taken cumulatively so a fully paid milestone converts to exactly zero balance;

@@ -176,3 +176,21 @@ test('D-036 each user may view the dashboard in their own currency, converted at
   expect((await pm.agent.get('/api/v1/dashboard?period=THIS_FY')).body).toMatchObject({ currency: 'INR', conversion: null });
   expect((await pref({ displayCurrency: 'usd1' })).status).toBe(400);
 });
+
+test('D-036 projects already in your dashboard currency keep their exact amounts (no round trip through the base)', async () => {
+  const pm = await loginAs(app, prisma, 'SALES');
+  for (const [name, amount] of [
+    ['Dollar A', 3800000],
+    ['Dollar B', 2200000],
+  ] as const) {
+    await pm.agent
+      .post('/api/v1/projects')
+      .set('X-CSRF-Token', pm.csrf)
+      .send({ name, expectedAmountMinor: amount, status: 'ACTIVE', currency: 'USD', newClient: { name: `${name} Co` } })
+      .expect(201);
+  }
+  await pm.agent.patch('/api/v1/me/preferences').set('X-CSRF-Token', pm.csrf).send({ displayCurrency: 'USD' }).expect(200);
+  const d = (await pm.agent.get('/api/v1/dashboard?period=THIS_FY')).body;
+  expect(d.currency).toBe('USD');
+  expect(d.kpis.bookedMinor).toBe(6000000); // exactly $60,000.00 for $38,000 + $22,000
+});

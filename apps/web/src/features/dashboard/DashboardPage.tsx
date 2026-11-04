@@ -215,8 +215,9 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
         // D-036: this viewer sees the company totals in their own currency.
         <p role="note" className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm">
           <Info className="size-4 shrink-0 text-primary" aria-hidden />
-          Shown in {data.conversion.to}, converted from {data.conversion.from} at today’s rate (1 {data.conversion.from} ={' '}
-          {data.conversion.rate} {data.conversion.to}). Change it in your profile.
+          Shown in {data.conversion.to}. Projects in {data.conversion.to} use their own amounts; the rest are converted from{' '}
+          {data.conversion.from} at today’s rate (1 {data.conversion.from} = {data.conversion.rate} {data.conversion.to}). Change it in your
+          profile.
         </p>
       )}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
