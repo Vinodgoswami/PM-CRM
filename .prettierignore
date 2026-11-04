@@ -11,3 +11,7 @@ playwright-report
 test-results
 graphify-out
 *.pdf
+
+# Locally installed agent skills (not part of the code)
+.claude/skills
+skills-lock.json
