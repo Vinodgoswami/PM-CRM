@@ -67,7 +67,9 @@ export function SlipDropzone({
       </span>
       <span className="min-w-0 text-sm">
         <span className="font-medium text-primary">Choose a file</span> <span className="text-text-muted">or drag it here</span>
-        <span className="block text-xs text-text-muted">PDF, image or Office file · up to 25 MB</span>
+        <span className="block text-xs text-text-muted">
+          PDF, image or Office file · up to 25 MB · a PDF invoice fills the fields below
+        </span>
       </span>
       <input
         id={id}

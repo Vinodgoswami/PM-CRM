@@ -7,6 +7,8 @@ import { MoneyInput } from '../projects/MoneyInput';
 import { useSettings } from '../settings/api';
 import { useAttachSlip, useMarkPaid } from './api';
 import { SlipDropzone } from './SlipDropzone';
+import { type InvoiceFields, parseInvoiceText } from './invoice-text';
+import { readPdfText } from './readPdfText';
 import { converted, FxField } from './FxField';
 
 export interface MarkPaidTarget {
@@ -38,6 +40,40 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
   const [error, setError] = useState<string | null>(null);
   // D-026: an optional invoice or payment slip, stored with the payment once it is saved.
   const [slip, setSlip] = useState<File | null>(null);
+  // D-040: an invoice PDF fills the fields it can read; the amount box is re-created to show a filled amount.
+  const [amountShown, setAmountShown] = useState({ key: 0, minor: target.balanceMinor });
+  const [filled, setFilled] = useState<string | null>(null);
+
+  const chooseSlip = async (file: File | null) => {
+    setSlip(file);
+    setFilled(null);
+    if (!file || file.type !== 'application/pdf') return;
+    let fields: InvoiceFields = {};
+    try {
+      fields = parseInvoiceText(await readPdfText(file), target.currency);
+    } catch {
+      /* unreadable PDF: treated like one without text */
+    }
+    const got: string[] = [];
+    if (fields.invoiceId) {
+      setInvoiceId(fields.invoiceId);
+      got.push('invoice ID');
+    }
+    if (fields.amountMinor !== undefined && fields.amountMinor <= target.balanceMinor) {
+      setAmount({ minor: fields.amountMinor, error: null });
+      setAmountShown((a) => ({ key: a.key + 1, minor: fields.amountMinor! }));
+      got.push('amount');
+    }
+    if (fields.date && fields.date <= today) {
+      setDate(fields.date);
+      got.push('date');
+    }
+    setFilled(
+      got.length
+        ? `Filled from ${file.name}: ${got.join(', ')}. Check them before saving.`
+        : `No details could be read from ${file.name} (a scan or photo has no text). Enter them below.`,
+    );
+  };
   const attach = useAttachSlip();
 
   const submit = (e: React.FormEvent) => {
@@ -108,7 +144,8 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
               <MoneyInput
                 id="mp-amount"
                 currency={target.currency}
-                defaultMinor={target.balanceMinor}
+                key={amountShown.key}
+                defaultMinor={amountShown.minor}
                 onValue={(minor, err) => setAmount({ minor, error: err })}
               />
               <p className="text-xs text-text-muted">The amount can&apos;t be changed after saving.</p>
@@ -125,7 +162,12 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
             <Label htmlFor="mp-slip">
               Invoice or payment slip <span className="font-normal text-text-muted">(optional)</span>
             </Label>
-            <SlipDropzone id="mp-slip" file={slip} onChange={setSlip} onError={setError} />
+            <SlipDropzone id="mp-slip" file={slip} onChange={(f) => void chooseSlip(f)} onError={setError} />
+            {filled && (
+              <p role="status" className="text-xs text-text-muted">
+                {filled}
+              </p>
+            )}
           </div>
           {error && (
             <p role="alert" className="text-sm text-danger">
