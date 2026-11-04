@@ -85,6 +85,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-31 | Done   | feat/project-breadcrumbs               | Project page header: back arrow to Projects plus breadcrumbs (Projects › client › original project › this project), phase badge, owner under the title                                                                                                                                      |
 | P4-32 | Done   | feat/glass-ui                          | D-029 glass tokens and backdrop blur on cards / tables / overlays, tinted fixed background, sliding glass tab indicator (reduced-motion aware), calendar green-ahead / red-past tones                                                                                                       |
 | P4-33 | Done   | fix/login-single-error                 | Sign-in, invite and reset-password forms show one error at a time: editing or a failed field check clears the earlier server message                                                                                                                                                        |
+| P4-34 | Done   | feat/deploy-render                     | D-030 `render.yaml` + build/start scripts, API serves the website (`WEB_DIST_DIR`) with bucket-aware CSP, `create-admin` script, deploy guide docs/21; not deployed yet (needs GitHub repo and accounts)                                                                                    |
 
 ## Blockers
 

@@ -14,6 +14,8 @@ export interface AppConfig {
   fx: { provider: 'frankfurter' | 'fixed' | 'off' };
   /** Invite and reset emails: SMTP (any provider), written to the log (development), or not sent. */
   email: EmailConfig;
+  /** Built website to serve from the API (one-host deployment, e.g. Render); unset when a dev server or host serves it. */
+  webDistDir?: string;
 }
 
 export type EmailConfig =
@@ -57,6 +59,7 @@ const envSchema = z.object({
   S3_REGION: z.string().default('auto'),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
+  WEB_DIST_DIR: z.string().min(1).optional(),
 });
 
 // Values copied from examples or CI must never reach production.
@@ -79,6 +82,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     storage: storageFrom(e),
     fx: { provider: e.FX_PROVIDER },
     email: emailFrom(e),
+    ...(e.WEB_DIST_DIR ? { webDistDir: e.WEB_DIST_DIR } : {}),
   };
   if (config.nodeEnv === 'production') {
     const problems: string[] = [];

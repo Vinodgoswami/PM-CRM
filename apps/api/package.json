@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "seed": "node ../../scripts/with-env.mjs tsx scripts/seed.ts",
-    "clear-work": "node ../../scripts/with-env.mjs tsx scripts/clear-work-data.ts"
+    "clear-work": "node ../../scripts/with-env.mjs tsx scripts/clear-work-data.ts",
+    "create-admin": "node ../../scripts/with-env.mjs tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1158.0",
