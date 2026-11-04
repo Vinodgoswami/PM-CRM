@@ -23,6 +23,7 @@
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^1.63.0",
     "motion": "^12.43.0",
+    "pdfjs-dist": "5.4.624",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.91.0",

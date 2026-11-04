@@ -108,3 +108,20 @@ test('D-022 the Admin lands on the dashboard (figures, counts, no names) and can
   await page.goto('/projects');
   await expect(page.getByText(/permission|not allowed|access/i).first()).toBeVisible();
 });
+
+test('D-040 an invoice PDF fills the Mark-as-paid fields; typing stays possible', async ({ page }) => {
+  await signIn(page, 'pm1');
+  await page.goto('/invoices');
+  await page
+    .getByRole('button', { name: /^Mark M\d+ .+ as paid$/ })
+    .first()
+    .click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel(/Invoice or payment slip/).setInputFiles(new URL('../fixtures/invoice.pdf', import.meta.url).pathname);
+  await expect(dialog.getByLabel('Invoice ID')).toHaveValue('INV-E2E-PDF');
+  await expect(dialog.getByLabel('Amount')).toHaveValue('100.00');
+  await expect(dialog.getByLabel('Payment date')).toHaveValue('2026-11-01');
+  await expect(dialog.getByRole('status')).toContainText('Filled from invoice.pdf');
+  await dialog.getByLabel('Invoice ID').fill('INV-E2E-PDF-EDITED');
+  await expect(dialog.getByLabel('Invoice ID')).toHaveValue('INV-E2E-PDF-EDITED');
+});
