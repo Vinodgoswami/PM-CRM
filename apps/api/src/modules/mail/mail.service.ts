@@ -55,9 +55,14 @@ export class MailService {
     };
   }
 
-  reset(p: { to: string; name: string; url: string; expiresAt: Date }): Mail {
+  reset(p: { to: string; name: string; url: string; expiresAt: Date; self?: boolean }): Mail {
     const subject = `Reset your ${APP} password`;
-    const lines = [`Hello ${p.name},`, 'An administrator created a link for you to choose a new password.'];
+    const lines = [
+      `Hello ${p.name},`,
+      p.self
+        ? 'You asked to reset your password. If that was not you, ignore this email: your password stays the same.'
+        : 'An administrator created a link for you to choose a new password.',
+    ];
     const footer = `This link works once and expires on ${when(p.expiresAt)}. Using it signs you out everywhere else.`;
     return {
       to: p.to,

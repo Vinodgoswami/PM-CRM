@@ -4,6 +4,7 @@ import {
   type ResetPasswordInput,
   type SessionResponse,
   sessionResponseSchema,
+  type ForgotPasswordInput,
 } from '@salescrm/schemas';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -53,6 +54,14 @@ export function useAcceptInvite() {
     mutationFn: (input: AcceptInviteInput) =>
       apiFetch('/auth/invite/accept', { method: 'POST', body: input, schema: sessionResponseSchema }),
     onSuccess: (session) => qc.setQueryData(SESSION_KEY, session),
+  });
+}
+
+/** D-034: asks for a self-service reset link; the server answers the same for every address. */
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (input: ForgotPasswordInput) =>
+      apiFetch('/auth/password/forgot', { method: 'POST', body: input, schema: z.object({ message: z.string() }) }),
   });
 }
 

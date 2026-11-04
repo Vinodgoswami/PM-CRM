@@ -89,6 +89,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-35 | Done   | feat/neon-storage                      | D-031 Neon Object Storage in the deploy guide, `S3_REGION` from Render, `set-bucket-cors` script; local agent skills ignored by format checks                                                                                                                                               |
 | P4-36 | Done   | feat/neon-uploads-bucket               | D-032 Brevo HTTPS mailer, Render region Virginia, Brevo key in `render.yaml`, Neon project link (`neon.ts`, `uploads` bucket, `@neon/config`, `@neon/env`)                                                                                                                                  |
 | P4-37 | Done   | feat/admin-from-env                    | D-033 first Admin at startup from ADMIN_* settings (`FirstAdminOnStartup`), shared `createFirstAdmin`, guide section 6                                                                                                                                                                      |
+| P4-38 | Done   | feat/forgot-password                   | D-034 `POST /auth/password/forgot`, self-requested reset email, Forgot password page and link on sign-in                                                                                                                                                                                    |
 
 ## Blockers
 

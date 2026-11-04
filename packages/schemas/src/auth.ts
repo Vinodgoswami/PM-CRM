@@ -40,3 +40,7 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/** D-034: "Forgot password?" — the answer is the same whether or not the address has an account. */
+export const forgotPasswordSchema = z.object({ email: emailSchema });
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

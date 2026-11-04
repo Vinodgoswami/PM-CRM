@@ -109,7 +109,8 @@ settings once an Admin exists.
 DATABASE_URL="<the Neon connection string>" pnpm --filter @salescrm/api create-admin
 ```
 
-Then sign in and invite the CEO from **Users**; the CEO invites the project managers.
+Then sign in and invite the CEO from **Users**; the CEO invites the project managers. Anyone who forgets their
+password uses **Forgot password?** on the sign-in page (email needed); the Admin can also create a reset link.
 
 ## Troubleshooting
 
