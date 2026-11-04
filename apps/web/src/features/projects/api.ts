@@ -53,6 +53,9 @@ function useProjectMutation<TInput>(id: string, request: (input: TInput) => Prom
       qc.setQueryData(projectKeys.detail(id), project);
       void qc.invalidateQueries({ queryKey: ['projects', 'list'] });
       void qc.invalidateQueries({ queryKey: projectKeys.activity(id) });
+      // Status, milestones and amounts feed the dashboard and the invoice list.
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+      void qc.invalidateQueries({ queryKey: ['invoices'] });
     },
   });
 }
@@ -93,6 +96,9 @@ export function useCreateProject() {
       qc.setQueryData(projectKeys.detail(project.id), project);
       void qc.invalidateQueries({ queryKey: ['projects', 'list'] });
       void qc.invalidateQueries({ queryKey: ['clients'] });
+      // A new project changes the totals and the invoice list too; never leave them showing old numbers.
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+      void qc.invalidateQueries({ queryKey: ['invoices'] });
     },
   });
 }

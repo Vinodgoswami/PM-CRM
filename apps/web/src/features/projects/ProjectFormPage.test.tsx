@@ -300,3 +300,18 @@ test('the project currency can be chosen; it follows the client until you pick o
   await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
   expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ currency: 'USD', clientId: 'c1' });
 });
+
+test('creating a project refreshes the dashboard and upcoming invoices, so they never show old numbers', async () => {
+  const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  const { queryClient } = renderApp('/projects/new', sessionFor('SALES'));
+  queryClient.setQueryData(['dashboard', 'period=THIS_FY'], { stale: true });
+  queryClient.setQueryData(['invoices', ''], { stale: true });
+  const user = userEvent.setup();
+  await fillBasics(user);
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(queryClient.getQueryState(['dashboard', 'period=THIS_FY'])?.isInvalidated).toBe(true));
+  expect(queryClient.getQueryState(['invoices', ''])?.isInvalidated).toBe(true);
+});
