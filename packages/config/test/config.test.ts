@@ -106,3 +106,9 @@ test('email goes through SMTP when configured; log by default; SMTP needs a host
   expect(() => loadConfig({ ...valid, EMAIL_TRANSPORT: 'smtp' })).toThrow(/SMTP_HOST/);
   expect(loadConfig({ ...valid, EMAIL_TRANSPORT: 'off' }).email.transport).toBe('off');
 });
+
+test('D-032 email can go through the Brevo web API (no SMTP ports), which needs an API key and a sender', () => {
+  const brevo = loadConfig({ ...valid, EMAIL_TRANSPORT: 'brevo', BREVO_API_KEY: 'test-key', EMAIL_FROM: 'PM CRM <crm@chicmic.test>' });
+  expect(brevo.email).toEqual({ transport: 'brevo', from: 'PM CRM <crm@chicmic.test>', brevo: { apiKey: 'test-key' } });
+  expect(() => loadConfig({ ...valid, EMAIL_TRANSPORT: 'brevo' })).toThrow(/BREVO_API_KEY/);
+});

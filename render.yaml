@@ -1,12 +1,12 @@
 # Render Blueprint: one free web service runs the API and serves the built website on the same address, so the
-# session cookie stays first-party (D-011). Postgres and files are on Neon (or files on R2), email is Brevo SMTP; their
+# session cookie stays first-party (D-011). Postgres and files are on Neon (or files on R2), email is Brevo's HTTPS API; their
 # values are entered in the Render dashboard (sync: false), never committed. Guide: docs/21-deploy-render.md.
 services:
   - type: web
     name: pmcrm
     runtime: node
     plan: free
-    region: singapore
+    region: virginia # next to the Neon project (AWS us-east-1)
     branch: main
     autoDeploy: false # production deploys are manual (docs/04)
     buildCommand: bash scripts/render/build.sh
@@ -41,15 +41,9 @@ services:
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
-      - key: EMAIL_TRANSPORT
-        value: smtp
+      - key: EMAIL_TRANSPORT # brevo = HTTPS API; Render's free plan blocks SMTP ports 25/465/587 (D-032)
+        value: brevo
       - key: EMAIL_FROM # e.g. Project Management CRM <you@yourdomain.com> (a sender verified in Brevo)
         sync: false
-      - key: SMTP_HOST
-        value: smtp-relay.brevo.com
-      - key: SMTP_PORT
-        value: '587'
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
+      - key: BREVO_API_KEY # Brevo → SMTP & API → API Keys
         sync: false

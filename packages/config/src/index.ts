@@ -20,6 +20,8 @@ export interface AppConfig {
 
 export type EmailConfig =
   | { transport: 'log' | 'off'; from: string }
+  /** D-032: Brevo's HTTPS API, for hosts that block SMTP ports (Render's free plan). */
+  | { transport: 'brevo'; from: string; brevo: { apiKey: string } }
   | { transport: 'smtp'; from: string; smtp: { host: string; port: number; secure: boolean; user?: string; pass?: string } };
 
 export type StorageConfig =
@@ -43,7 +45,8 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   FX_PROVIDER: z.enum(['frankfurter', 'fixed', 'off']).default('frankfurter'),
-  EMAIL_TRANSPORT: z.enum(['smtp', 'log', 'off']).default('log'),
+  EMAIL_TRANSPORT: z.enum(['smtp', 'brevo', 'log', 'off']).default('log'),
+  BREVO_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().min(3).default('Project Management CRM <no-reply@localhost>'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
@@ -96,6 +99,10 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
 }
 
 function emailFrom(e: z.infer<typeof envSchema>): EmailConfig {
+  if (e.EMAIL_TRANSPORT === 'brevo') {
+    if (!e.BREVO_API_KEY) throw new ConfigError(['BREVO_API_KEY: required when EMAIL_TRANSPORT=brevo']);
+    return { transport: 'brevo', from: e.EMAIL_FROM, brevo: { apiKey: e.BREVO_API_KEY } };
+  }
   if (e.EMAIL_TRANSPORT !== 'smtp') return { transport: e.EMAIL_TRANSPORT, from: e.EMAIL_FROM };
   if (!e.SMTP_HOST) throw new ConfigError(['SMTP_HOST: required when EMAIL_TRANSPORT=smtp']);
   return {

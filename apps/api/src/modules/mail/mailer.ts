@@ -9,7 +9,7 @@ export interface Mail {
   html: string;
 }
 
-/** Sends one email. Implementations: SMTP (any provider), log (development and tests), off. */
+/** Sends one email. Implementations: SMTP (any provider), Brevo's HTTPS API, log (development and tests), off. */
 export interface Mailer {
   readonly enabled: boolean;
   /** True only when send() really delivers to someone's inbox (SMTP), so the screen may say "emailed". */
@@ -28,6 +28,36 @@ export class SmtpMailer implements Mailer {
   }
   async send(mail: Mail): Promise<void> {
     await this.transport.sendMail({ from: this.config.from, ...mail });
+  }
+}
+
+/** "Name <address>" or a bare address, as Brevo wants it. */
+function sender(from: string): { name?: string; email: string } {
+  const m = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  return m ? { ...(m[1] ? { name: m[1].replace(/^"|"$/g, '') } : {}), email: m[2]!.trim() } : { email: from.trim() };
+}
+
+/** D-032: sends through Brevo over HTTPS (port 443), for hosts that block SMTP ports such as Render's free plan. */
+export class BrevoMailer implements Mailer {
+  readonly enabled = true;
+  readonly delivers = true;
+  constructor(private readonly config: Extract<EmailConfig, { transport: 'brevo' }>) {}
+  async send(mail: Mail): Promise<void> {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': this.config.brevo.apiKey, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        sender: sender(this.config.from),
+        to: [{ email: mail.to }],
+        subject: mail.subject,
+        htmlContent: mail.html,
+        textContent: mail.text,
+      }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(`Brevo refused the email (${res.status}): ${body.message ?? res.statusText}`);
+    }
   }
 }
 
@@ -53,5 +83,6 @@ export class OffMailer implements Mailer {
 
 export function mailerFor(config: EmailConfig): Mailer {
   if (config.transport === 'smtp') return new SmtpMailer(config);
+  if (config.transport === 'brevo') return new BrevoMailer(config);
   return config.transport === 'log' ? new LogMailer() : new OffMailer();
 }
