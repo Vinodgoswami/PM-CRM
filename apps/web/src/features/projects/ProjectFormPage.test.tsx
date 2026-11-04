@@ -315,3 +315,21 @@ test('creating a project refreshes the dashboard and upcoming invoices, so they 
   await waitFor(() => expect(queryClient.getQueryState(['dashboard', 'period=THIS_FY'])?.isInvalidated).toBe(true));
   expect(queryClient.getQueryState(['invoices', ''])?.isInvalidated).toBe(true);
 });
+
+test('a server error on create shows as a red pop-up, not inside the form', async () => {
+  const api = stubApi({
+    'GET /clients': clients,
+    'POST /projects': { status: 500, body: { error: { code: 'INTERNAL', message: 'Something went wrong' } } },
+    ...projectRoutes,
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user);
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  const popup = await screen.findByText('Something went wrong');
+  expect(popup.closest('[data-sonner-toast]')).toHaveAttribute('data-type', 'error');
+  expect(screen.queryByRole('alert')).toBeNull();
+});

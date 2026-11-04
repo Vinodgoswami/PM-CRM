@@ -153,7 +153,7 @@ function CreateProject() {
             `A client called ${client.newClient.name} already exists. Using the existing client ${client.newClient.name} — submit again to continue.`,
           );
         } else {
-          setNotice(err.message);
+          toast.error(err.message);
         }
       },
     });
@@ -195,7 +195,7 @@ function CreateProject() {
             </div>
           )}
           {notice && (
-            <p role="alert" className="rounded-md bg-accent px-3 py-2 text-sm">
+            <p role="status" className="rounded-md bg-accent px-3 py-2 text-sm">
               {notice}
             </p>
           )}
