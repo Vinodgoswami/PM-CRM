@@ -25,7 +25,17 @@ export const sessionUserSchema = z.object({
   role: roleSchema,
   /** Address of the profile photo (changes when the photo does); null shows initials. */
   avatarUrl: z.string().nullable().default(null),
+  /** D-036: currency this person views the dashboard in; null = the company base currency. */
+  displayCurrency: z.string().nullable().default(null),
 });
+
+export const preferencesSchema = z.object({
+  displayCurrency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, 'Use a 3-letter currency code')
+    .nullable(),
+});
+export type PreferencesInput = z.infer<typeof preferencesSchema>;
 export type SessionUserDto = z.infer<typeof sessionUserSchema>;
 
 export const sessionResponseSchema = z.object({

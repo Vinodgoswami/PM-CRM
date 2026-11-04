@@ -21,7 +21,10 @@ export function renderApp(path: string, session: SessionResponse | null | undefi
 }
 
 export function sessionFor(role: 'ADMIN' | 'SALES' | 'CEO'): SessionResponse {
-  return { user: { id: 'u1', name: 'Test User', email: 'test@example.com', role, avatarUrl: null }, csrfToken: 'csrf-token' };
+  return {
+    user: { id: 'u1', name: 'Test User', email: 'test@example.com', role, avatarUrl: null, displayCurrency: null },
+    csrfToken: 'csrf-token',
+  };
 }
 
 export function stubFetch(status: number, body: unknown) {

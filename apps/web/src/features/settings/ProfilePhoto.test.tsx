@@ -52,7 +52,7 @@ test('files that are not small images are refused before uploading', async () =>
   const user = userEvent.setup({ applyAccept: false });
   await user.upload(await screen.findByLabelText('Change photo'), new File(['%PDF'], 'cv.pdf', { type: 'application/pdf' }));
   expect(await screen.findByText('Use a JPEG, PNG or WebP image up to 2 MB.')).toBeInTheDocument();
-  expect(api.calls).toHaveLength(0);
+  expect(api.calls.filter((c) => c.method !== 'GET')).toHaveLength(0);
 });
 
 test('a photo can be removed', async () => {

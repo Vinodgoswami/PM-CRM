@@ -1,7 +1,7 @@
 import { can } from '@salescrm/auth/permissions';
 import { type Dashboard } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
-import { ArrowUpRight, CalendarClock, Download, FileDown, Plus, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, Download, FileDown, Info, Plus, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
@@ -211,6 +211,14 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
     <div className="space-y-5">
       {showCounts && <AdminCounts />}
       <CurrencyNote count={data.otherCurrencyProjects} noun="project" currency={data.currency} />
+      {data.conversion && (
+        // D-036: this viewer sees the company totals in their own currency.
+        <p role="note" className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm">
+          <Info className="size-4 shrink-0 text-primary" aria-hidden />
+          Shown in {data.conversion.to}, converted from {data.conversion.from} at today’s rate (1 {data.conversion.from} ={' '}
+          {data.conversion.rate} {data.conversion.to}). Change it in your profile.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <motion.section
           aria-label="Collected"

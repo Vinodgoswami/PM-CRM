@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Res } from '@nestjs/common';
-import { AVATAR_MAX_BYTES, AVATAR_TYPES, avatarUploadSchema, setAvatarSchema } from '@salescrm/schemas';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Res } from '@nestjs/common';
+import { AVATAR_MAX_BYTES, AVATAR_TYPES, avatarUploadSchema, preferencesSchema, setAvatarSchema } from '@salescrm/schemas';
 import { type Response } from 'express';
 import { type z } from 'zod';
 import { CurrentUser, type SessionUser } from '../../common/current-user';
@@ -21,6 +21,16 @@ export class MeController {
     private readonly audit: AuditService,
     @Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
   ) {}
+
+  /** D-036: your own dashboard currency (null = the company base currency). */
+  @Patch('me/preferences')
+  async preferences(
+    @CurrentUser() user: SessionUser,
+    @Body(new ZodValidationPipe(preferencesSchema)) body: z.infer<typeof preferencesSchema>,
+  ) {
+    await this.prisma.user.update({ where: { id: user.id }, data: { displayCurrency: body.displayCurrency } });
+    return { displayCurrency: body.displayCurrency };
+  }
 
   @Post('me/avatar/upload-url')
   async uploadUrl(

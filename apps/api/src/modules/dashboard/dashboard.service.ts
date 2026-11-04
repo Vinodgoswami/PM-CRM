@@ -259,6 +259,7 @@ export class DashboardService {
     const anonymous = !can(user, 'projects.read');
     const result: Dashboard = {
       currency: settings.baseCurrency,
+      conversion: null,
       anonymous,
       upcomingSummary,
       otherCurrencyProjects: all.length - rows.length,

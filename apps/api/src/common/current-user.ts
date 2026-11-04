@@ -8,6 +8,8 @@ export interface SessionUser {
   email: string;
   role: Role;
   avatarKey: string | null;
+  /** D-036: dashboard shown in this currency; null or absent = the company base currency. */
+  displayCurrency?: string | null;
   sessionId: string;
 }
 

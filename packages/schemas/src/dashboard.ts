@@ -29,6 +29,8 @@ const kpis = z.object({
 
 export const dashboardSchema = z.object({
   currency: z.string(),
+  /** D-036: set when the figures were converted from the base currency into the viewer's own, at today's rate. */
+  conversion: z.object({ from: z.string(), to: z.string(), rate: z.string(), date: isoDateSchema }).nullable().default(null),
   /** D-022: true for a viewer who may not see client or project records; every named list is then empty. */
   anonymous: z.boolean().default(false),
   /** Unpaid balances by when they fall due (base currency), for everyone including the Admin. */

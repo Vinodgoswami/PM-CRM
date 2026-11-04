@@ -155,3 +155,24 @@ test('upcoming bookings list projects not yet confirmed, biggest first, with the
     expect.objectContaining({ name: 'Small enquiry', status: 'LEAD', expectedAmountMinor: 10000 }),
   ]);
 });
+
+test('D-036 each user may view the dashboard in their own currency, converted at today’s rate', async () => {
+  const pm = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(pm.agent, pm.csrf, 'Rupee Co', 100000); // ₹1,000 booked, ₹500 paid; company base is INR
+  const pref = (body: object) => pm.agent.patch('/api/v1/me/preferences').set('X-CSRF-Token', pm.csrf).send(body);
+
+  expect((await pref({ displayCurrency: 'USD' })).status).toBe(200);
+  expect((await pm.agent.get('/api/v1/auth/session')).body.user.displayCurrency).toBe('USD');
+  const usd = (await pm.agent.get('/api/v1/dashboard?period=THIS_FY')).body;
+  expect(usd.currency).toBe('USD');
+  expect(usd.conversion).toMatchObject({ from: 'INR', to: 'USD', rate: '0.012' });
+  expect(usd.kpis).toMatchObject({ bookedMinor: 1200, collectedMinor: 600 }); // $12.00 and $6.00
+
+  const ceo = await loginAs(app, prisma, 'CEO');
+  const theirs = (await ceo.agent.get('/api/v1/dashboard?period=THIS_FY')).body;
+  expect([theirs.currency, theirs.conversion]).toEqual(['INR', null]);
+
+  expect((await pref({ displayCurrency: null })).status).toBe(200);
+  expect((await pm.agent.get('/api/v1/dashboard?period=THIS_FY')).body).toMatchObject({ currency: 'INR', conversion: null });
+  expect((await pref({ displayCurrency: 'usd1' })).status).toBe(400);
+});

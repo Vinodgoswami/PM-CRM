@@ -66,14 +66,28 @@ export class AuthService {
     const { token } = await this.sessions.create(user.id, ip, userAgent);
     return {
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatarUrl: avatarUrlFor(user.id, user.avatarKey),
+        displayCurrency: user.displayCurrency ?? null,
+      },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
   }
 
   sessionResponse(user: SessionUser, token: string): SessionResponse {
     return {
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatarUrl: avatarUrlFor(user.id, user.avatarKey),
+        displayCurrency: user.displayCurrency ?? null,
+      },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
   }
@@ -111,7 +125,14 @@ export class AuthService {
     const { token } = await this.sessions.create(user.id, ip, userAgent);
     return {
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: avatarUrlFor(user.id, user.avatarKey) },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatarUrl: avatarUrlFor(user.id, user.avatarKey),
+        displayCurrency: user.displayCurrency ?? null,
+      },
       csrfToken: csrfTokenFor(token, this.config.sessionSecret),
     };
   }
