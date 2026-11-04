@@ -57,6 +57,8 @@ model User {
   role         Role
   /// Profile photo in private storage (avatars/<userId>/…); null = initials are shown.
   avatarKey    String?
+  /// D-036: the currency this person views the dashboard in; null = the company base currency.
+  displayCurrency String?
   active       Boolean   @default(true)
   /// D-024: the CEO a project manager reports to (their team); null for everyone else, or a PM not yet assigned.
   managerId    String?

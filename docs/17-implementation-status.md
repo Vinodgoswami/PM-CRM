@@ -91,6 +91,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-37 | Done   | feat/admin-from-env                    | D-033 first Admin at startup from ADMIN_* settings (`FirstAdminOnStartup`), shared `createFirstAdmin`, guide section 6                                                                                                                                                                      |
 | P4-38 | Done   | feat/forgot-password                   | D-034 `POST /auth/password/forgot`, self-requested reset email, Forgot password page and link on sign-in                                                                                                                                                                                    |
 | P4-39 | Done   | feat/currency-choices                  | D-035 Project currency dropdown, new client takes the project's currency, Dashboard currency dropdown in Settings                                                                                                                                                                           |
+| P4-40 | Done   | feat/personal-dashboard-currency       | D-036 per-user dashboard currency: migration `20261104090000_user_display_currency`, preferences endpoint, dashboard conversion + note, Profile dropdown                                                                                                                                    |
 
 ## Blockers
 

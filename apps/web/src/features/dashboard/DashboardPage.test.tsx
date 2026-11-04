@@ -81,3 +81,12 @@ test('D-028 the dashboard splits total booking into initial booking and upsell',
   expect(split).toHaveTextContent('Upsell₹25,00,000.00');
   expect(split).toHaveTextContent('Total booking₹2,50,00,000.00');
 });
+
+test('D-036 a dashboard shown in your own currency says how it was converted', async () => {
+  const converted = { ...dashboard(), currency: 'USD', conversion: { from: 'INR', to: 'USD', rate: '0.012', date: '2026-11-04' } };
+  vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: converted } }).fn);
+  renderApp('/', sessionFor('SALES'));
+  expect(await screen.findByRole('note')).toHaveTextContent(
+    'Shown in USD, converted from INR at today’s rate (1 INR = 0.012 USD). Change it in your profile.',
+  );
+});

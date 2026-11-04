@@ -9,6 +9,9 @@ import { ROLE_LABEL } from '../../lib/labels';
 import { SESSION_KEY, useSession } from '../auth/api';
 import { Avatar } from '../auth/Avatar';
 import { Field } from '../auth/Field';
+import { OptionSelect } from '../../components/OptionSelect';
+import { CURRENCIES } from '../../components/CurrencySelect';
+import { useSettings } from './api';
 
 /** Your own account: who you are, and changing your password (other devices are signed out). */
 export function ProfilePage() {
@@ -54,6 +57,7 @@ export function ProfilePage() {
             <dt className="text-text-muted">Role</dt>
             <dd>{ROLE_LABEL[me.role]}</dd>
           </dl>
+          <DashboardCurrency current={me.displayCurrency} />
           <form onSubmit={submit} className="space-y-4 rounded-xl bg-surface p-5 shadow-card" noValidate>
             <h2 className="font-bold">Change password</h2>
             <Field
@@ -102,6 +106,50 @@ const MAX_BYTES = 2 * 1024 * 1024;
 const slotSchema = z.object({ key: z.string(), url: z.string(), headers: z.record(z.string(), z.string()) });
 
 /** Left column: the photo, large, with change / remove. The top bar shows the same photo. */
+/** D-036: the currency your own dashboard is shown in; other people's views are not affected. */
+function DashboardCurrency({ current }: { current: string | null }) {
+  const qc = useQueryClient();
+  const base = useSettings().data?.baseCurrency ?? '…';
+  const save = useMutation({
+    mutationFn: (displayCurrency: string | null) =>
+      apiFetch('/me/preferences', {
+        method: 'PATCH',
+        body: { displayCurrency },
+        schema: z.object({ displayCurrency: z.string().nullable() }),
+      }),
+    onSuccess: ({ displayCurrency }) => {
+      qc.setQueryData<SessionResponse | null>(SESSION_KEY, (s) => (s ? { ...s, user: { ...s.user, displayCurrency } } : s));
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+  return (
+    <div className="space-y-2 rounded-xl bg-surface p-5 shadow-card">
+      <label htmlFor="my-currency" className="font-bold">
+        My dashboard currency
+      </label>
+      <OptionSelect
+        id="my-currency"
+        className="h-10 w-full rounded-full border border-border bg-surface px-4 text-sm"
+        value={current ?? ''}
+        onValueChange={(v) => save.mutate(v || null)}
+        disabled={save.isPending}
+      >
+        <option value="">Company currency ({base})</option>
+        {CURRENCIES.filter((c) => c.code !== base).map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.code} — {c.name}
+          </option>
+        ))}
+      </OptionSelect>
+      <p className="text-xs text-text-muted">
+        Your dashboard shows the company figures in this currency, converted at today’s rate. Payments keep the rate of the day they
+        arrived; nothing stored changes.
+      </p>
+      {save.error && <p className="text-sm text-danger">{save.error.message}</p>}
+    </div>
+  );
+}
+
 function PhotoPanel({ name, url }: { name: string; url: string | null }) {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);

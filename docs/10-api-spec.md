@@ -31,14 +31,15 @@ Permission keys from [07](07-roles-and-permissions.md).
 
 ### Auth
 
-| Method | Path                  | Permission | Notes                                      |
-| ------ | --------------------- | ---------- | ------------------------------------------ |
-| POST   | /auth/login           | public     | email, password                            |
-| POST   | /auth/logout          | session    |                                            |
-| GET    | /auth/session         | session    | user, role, permissions, csrf              |
-| POST   | /auth/invite/accept   | public     | token, name, password                      |
-| POST   | /auth/password/forgot | public     | email (same answer for any address; D-034) |
-| POST   | /auth/password/reset  | public     | token, password                            |
+| Method | Path                  | Permission | Notes                                                          |
+| ------ | --------------------- | ---------- | -------------------------------------------------------------- |
+| POST   | /auth/login           | public     | email, password                                                |
+| POST   | /auth/logout          | session    |                                                                |
+| GET    | /auth/session         | session    | user, role, permissions, csrf                                  |
+| POST   | /auth/invite/accept   | public     | token, name, password                                          |
+| POST   | /auth/password/forgot | public     | email (same answer for any address; D-034)                     |
+| PATCH  | /me/preferences       | signed in  | displayCurrency (3 letters, or null = company currency; D-036) |
+| POST   | /auth/password/reset  | public     | token, password                                                |
 
 ### Users & settings
 
