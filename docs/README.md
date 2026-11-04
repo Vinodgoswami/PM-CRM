@@ -39,6 +39,7 @@ Everything about SalesCRM lives in this folder. Humans and AI agents read the sa
 | 18  | [18-plan-phase-1-foundation.md](18-plan-phase-1-foundation.md)                 | Step-by-step implementation plan for Phase 1                     |
 | 19  | [19-plan-phase-2-clients-projects.md](19-plan-phase-2-clients-projects.md)     | Implementation plan for Phase 2                                  |
 | 20  | [20-plan-phase-3-milestones-billing.md](20-plan-phase-3-milestones-billing.md) | Implementation plan for Phase 3                                  |
+| 21  | [21-deploy-render.md](21-deploy-render.md)                                     | Free deployment: Render + Neon + R2 + Brevo, first Admin         |
 
 ## Rules for these docs
 

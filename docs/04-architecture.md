@@ -103,11 +103,10 @@ presigned URLs. The bucket's CORS must allow `PUT` from the web origin with the 
 
 ## Environments
 
-| Env        | Web             | API + DB                      | Files               |
-| ---------- | --------------- | ----------------------------- | ------------------- |
-| Local      | Vite dev server | Nest + local Postgres         | `./uploads`         |
-| Staging    | Netlify/Vercel  | Render/Railway                | R2 bucket (staging) |
-| Production | Netlify/Vercel  | Render/Railway, daily backups | R2 bucket (prod)    |
+| Env        | Web                       | API + DB                           | Files       |
+| ---------- | ------------------------- | ---------------------------------- | ----------- |
+| Local      | Vite dev server           | Nest + local Postgres              | `./uploads` |
+| Production | Served by the API (D-030) | Render web service + Neon Postgres | R2 bucket   |
 
 Production deploys are manual after CI passes (auto-deploy off).
 
