@@ -99,10 +99,12 @@ export function ClientsListPage() {
                   <TD>{c.company ?? '—'}</TD>
                   <TD>{c.primaryEmail ?? '—'}</TD>
                   <TD className="text-right tabular-nums">{c.projects}</TD>
-                  <TD className="text-right tabular-nums">{formatApiMoney(c.bookedMinor, c.currency)}</TD>
-                  <TD className="text-right tabular-nums text-success">{formatApiMoney(c.collectedMinor, c.currency)}</TD>
+                  <TD className="text-right tabular-nums">{formatApiMoney(c.bookedMinor, c.totalsCurrency ?? c.currency)}</TD>
+                  <TD className="text-right tabular-nums text-success">
+                    {formatApiMoney(c.collectedMinor, c.totalsCurrency ?? c.currency)}
+                  </TD>
                   <TD className={`text-right tabular-nums ${c.outstandingMinor > 0 ? 'font-medium text-danger' : ''}`}>
-                    {formatApiMoney(c.outstandingMinor, c.currency)}
+                    {formatApiMoney(c.outstandingMinor, c.totalsCurrency ?? c.currency)}
                   </TD>
                 </TR>
                 {open === c.id && (

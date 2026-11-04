@@ -2,7 +2,7 @@ import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMe
 import { LogOut, Menu, UserRound, X } from 'lucide-react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
 import { useLogout, useSession } from '../features/auth/api';
 import { APP_NAME } from '../lib/brand';
 import { ROLE_LABEL } from '../lib/labels';
@@ -140,11 +140,21 @@ export function AppLayout() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
           >
-            <Outlet />
+            <FrozenOutlet />
           </motion.main>
         </AnimatePresence>
       </div>
       <Toaster />
     </MotionConfig>
   );
+}
+
+/**
+ * The page this transition was created for. While a page fades out it keeps showing itself instead of the next page,
+ * so the next page is built once (a dialog or tab opened on it at once is not thrown away when the fade ends).
+ */
+function FrozenOutlet() {
+  const outlet = useOutlet();
+  const [page] = useState(outlet);
+  return page;
 }

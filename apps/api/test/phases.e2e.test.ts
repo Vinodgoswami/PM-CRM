@@ -76,3 +76,65 @@ test('D-037 a phase is either an upsell or a part of the original scope, and onl
   expect(root.phaseKind ?? null).toBeNull();
   expect((await create({ name: 'Solo', expectedAmountMinor: 10, clientId, phaseKind: 'SCOPE' })).status).toBe(400);
 });
+
+test('D-038 an upsell amount with a due date becomes its own Upsell milestone; removing it removes the unpaid milestone', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const root = (
+    await agent
+      .post('/api/v1/projects')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'App',
+        expectedAmountMinor: 1000,
+        status: 'ACTIVE',
+        newClient: { name: 'U Co' },
+        milestones: [{ title: 'Build', amountMinor: 1000, dueDate: '2026-12-01' }],
+      })
+      .expect(201)
+  ).body;
+  const today = new Date().toISOString().slice(0, 10);
+  const withUpsell = (
+    await agent
+      .post(`/api/v1/projects/${root.id}/upsells`)
+      .set('X-CSRF-Token', csrf)
+      .send({ amountMinor: 400, date: today, note: 'Computer vision', dueDate: '2026-12-20' })
+      .expect(201)
+  ).body;
+  expect(withUpsell.milestones.map((m: { number: number; title: string; isUpsell: boolean }) => [m.number, m.title, m.isUpsell])).toEqual([
+    [1, 'Build', false],
+    [2, 'Computer vision', true],
+  ]);
+  expect(withUpsell).toMatchObject({ contractValueMinor: 1400, unscheduledMinor: 0 });
+  const entry = withUpsell.upsellEntries[0];
+  expect(entry.milestoneId).toBe(withUpsell.milestones[1].id);
+
+  await agent.delete(`/api/v1/projects/${root.id}/upsells/${entry.id}`).set('X-CSRF-Token', csrf).expect(204);
+  const after = (await agent.get(`/api/v1/projects/${root.id}`)).body;
+  expect(after.milestones.map((m: { title: string }) => m.title)).toEqual(['Build']);
+});
+
+test('D-038 milestones of an upsell phase are marked Upsell; a scope part’s are not', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const create = (body: object) =>
+    agent
+      .post('/api/v1/projects')
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'ACTIVE', ...body })
+      .expect(201);
+  const root = (await create({ name: 'App', expectedAmountMinor: 1000, newClient: { name: 'P Co' } })).body;
+  const m = [{ title: 'Part', amountMinor: 100, dueDate: '2026-12-01' }];
+  const up = (await create({ name: 'P2', expectedAmountMinor: 100, clientId: root.client.id, parentProjectId: root.id, milestones: m }))
+    .body;
+  const scope = (
+    await create({
+      name: 'P3',
+      expectedAmountMinor: 100,
+      clientId: root.client.id,
+      parentProjectId: root.id,
+      phaseKind: 'SCOPE',
+      milestones: m,
+    })
+  ).body;
+  expect(up.milestones[0].isUpsell).toBe(true);
+  expect(scope.milestones[0].isUpsell).toBe(false);
+});

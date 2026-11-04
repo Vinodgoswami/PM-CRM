@@ -116,8 +116,9 @@ export function Select({
           side="bottom"
           align="start"
           sideOffset={6}
-          // Always below the field, as asked; the list scrolls instead of flipping above.
-          avoidCollisions={false}
+          // Below the field when it fits; near the bottom of the page it opens upwards instead of being cut off.
+          avoidCollisions
+          collisionPadding={8}
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             listRef.current?.focus();

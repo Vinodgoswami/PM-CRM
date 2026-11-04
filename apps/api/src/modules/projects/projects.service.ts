@@ -38,9 +38,17 @@ const LIST_INCLUDE = {
 
 const DETAIL_INCLUDE = {
   ...LIST_INCLUDE,
-  upsellEntries: { select: { id: true, amountMinor: true, date: true, note: true }, orderBy: { date: 'asc' } },
+  upsellEntries: { select: { id: true, amountMinor: true, date: true, note: true, milestoneId: true }, orderBy: { date: 'asc' } },
   milestones: {
-    select: { id: true, number: true, title: true, amountMinor: true, dueDate: true, payments: { select: { amountMinor: true } } },
+    select: {
+      id: true,
+      number: true,
+      title: true,
+      amountMinor: true,
+      dueDate: true,
+      payments: { select: { amountMinor: true } },
+      upsellEntry: { select: { id: true } },
+    },
     orderBy: { number: 'asc' },
   },
   parentProject: { select: { id: true, code: true, name: true, upsellProjects: { select: { id: true }, orderBy: { code: 'asc' } } } },
@@ -140,6 +148,7 @@ export class ProjectsService {
         amountMinor: minorToJson(u.amountMinor),
         date: isoDate(u.date)!,
         note: u.note,
+        milestoneId: u.milestoneId,
       })),
       milestones: p.milestones.map((m) => ({
         id: m.id,
@@ -147,6 +156,8 @@ export class ProjectsService {
         title: m.title,
         amountMinor: minorToJson(m.amountMinor),
         dueDate: isoDate(m.dueDate),
+        // D-038: billed through an upsell amount, or part of a phase that is an upsell.
+        isUpsell: m.upsellEntry !== null || (p.parentProjectId !== null && p.phaseKind === 'UPSELL'),
         paidMinor: minorToJson(paidOf(m)),
         balanceMinor: minorToJson(m.amountMinor - paidOf(m)),
         status: milestoneStatus({ amountMinor: m.amountMinor, paidMinor: paidOf(m), dueDate: isoDate(m.dueDate) }, today, dueSoonDays),
@@ -478,12 +489,26 @@ export class ProjectsService {
       const p = await this.loadForWrite(id, user, tx);
       if (!p.wonAt) throw new RuleViolation('U-1', 'Extra work amounts can only be added to a confirmed project.');
       if (input.date > today) throw new RuleViolation('U-1', 'The extra work date cannot be in the future.');
+      // D-038: with a due date the amount is billed through a new milestone of its own.
+      const milestone = input.dueDate
+        ? await tx.milestone.create({
+            data: {
+              projectId: id,
+              number: p.milestones.length + 1,
+              title: input.note?.trim() || 'Upsell',
+              amountMinor: minorFromJson(input.amountMinor),
+              dueDate: toDate(input.dueDate),
+              createdById: user.id,
+            },
+          })
+        : null;
       const entry = await tx.upsellEntry.create({
         data: {
           projectId: id,
           amountMinor: minorFromJson(input.amountMinor),
           date: toDate(input.date)!,
           note: input.note ?? null,
+          milestoneId: milestone?.id ?? null,
           createdById: user.id,
         },
       });
@@ -501,9 +526,22 @@ export class ProjectsService {
   async removeUpsell(user: SessionUser, id: string, entryId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.loadForWrite(id, user, tx);
-      const entry = await tx.upsellEntry.findFirst({ where: { id: entryId, projectId: id } });
+      const entry = await tx.upsellEntry.findFirst({
+        where: { id: entryId, projectId: id },
+        include: { milestone: { select: { id: true, _count: { select: { payments: true } } } } },
+      });
       if (!entry) throw notFound();
+      if (entry.milestone && entry.milestone._count.payments > 0) {
+        throw new RuleViolation('MS-1', 'This upsell is already being paid through its milestone, so it cannot be removed.');
+      }
       await tx.upsellEntry.delete({ where: { id: entryId } });
+      if (entry.milestone) {
+        // D-038: its own milestone goes with it; the rest keep 1..n without gaps (MS-1).
+        await tx.milestone.delete({ where: { id: entry.milestone.id } });
+        const rest = await tx.milestone.findMany({ where: { projectId: id }, orderBy: { number: 'asc' }, select: { id: true } });
+        for (const [i, m] of rest.entries()) await tx.milestone.update({ where: { id: m.id }, data: { number: 1000 + i } });
+        for (const [i, m] of rest.entries()) await tx.milestone.update({ where: { id: m.id }, data: { number: i + 1 } });
+      }
       await this.audit.record(tx, {
         actorId: user.id,
         action: 'project.upsell.remove',
