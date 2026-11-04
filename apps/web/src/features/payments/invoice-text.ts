@@ -5,6 +5,8 @@ export interface InvoiceFields {
   invoiceId?: string;
   amountMinor?: number;
   date?: string;
+  /** D-041: when the invoice asks to be paid, for a new milestone's due date. */
+  dueDate?: string;
 }
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -74,10 +76,12 @@ export function parseInvoiceText(text: string, currency: string): InvoiceFields 
   const amountMinor = findAmount(text, currency);
   if (amountMinor !== undefined) out.amountMinor = amountMinor;
   // Prefer the date next to a date label; otherwise the first date on the page.
-  const labelled = /(?:invoice\s+date|date\s+of\s+issue|issued(?:\s+on)?|dated?|payment\s+date|paid\s+on)\s*[:-]?\s*([^\n]{6,30})/i.exec(
-    text,
-  );
+  const labelled =
+    /(?<!due\s)(?:invoice\s+date|date\s+of\s+issue|issued(?:\s+on)?|dated?|payment\s+date|paid\s+on)\s*[:-]?\s*([^\n]{6,30})/i.exec(text);
   const date = (labelled && findDate(labelled[1]!)) || findDate(text);
   if (date) out.date = date;
+  const due = /(?:due\s+date|payment\s+due|due\s+(?:on|by)|pay\s+by)\s*[:-]?\s*([^\n]{6,30})/i.exec(text);
+  const dueDate = due && findDate(due[1]!);
+  if (dueDate) out.dueDate = dueDate;
   return out;
 }

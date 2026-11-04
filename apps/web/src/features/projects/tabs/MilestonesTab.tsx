@@ -24,7 +24,10 @@ import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { MarkPaidDialog, type MarkPaidTarget } from '../../payments/MarkPaidDialog';
 import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
-import { projectKeys, useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
+import { parseInvoiceText } from '../../payments/invoice-text';
+import { readPdfText } from '../../payments/readPdfText';
+import { SlipDropzone } from '../../payments/SlipDropzone';
+import { projectKeys, uploadDocument, useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
 import { projectDetailSchema } from '@salescrm/schemas';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../lib/api';
@@ -202,6 +205,9 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const [target, setTarget] = useState(project.id);
   const [kind, setKind] = useState<'CONTRACT' | 'UPSELL'>('CONTRACT');
   const [key, setKey] = useState(0);
+  const [invoice, setInvoice] = useState<File | null>(null);
+  const [filled, setFilled] = useState<string | null>(null);
+  const [amountShown, setAmountShown] = useState<{ key: number; minor?: number }>({ key: 0 });
   const phases = project.upsellProjects;
   const where = target === project.id ? null : phases.find((u) => u.id === target);
   const add = useMutation({
@@ -222,6 +228,37 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
       for (const k of [['projects'], ['dashboard'], ['invoices']]) void qc.invalidateQueries({ queryKey: k });
     },
   });
+  // D-041: an invoice PDF fills the fields (read in the browser); it is stored on Add. No payment is recorded.
+  const chooseInvoice = async (file: File | null) => {
+    setInvoice(file);
+    setFilled(null);
+    if (!file || file.type !== 'application/pdf') return;
+    let fields: ReturnType<typeof parseInvoiceText> = {};
+    try {
+      fields = parseInvoiceText(await readPdfText(file), project.currency);
+    } catch {
+      /* unreadable PDF: treated like one without text */
+    }
+    const got: string[] = [];
+    if (fields.invoiceId && !title.trim()) {
+      setTitle(`Invoice ${fields.invoiceId}`);
+      got.push('task');
+    }
+    if (fields.amountMinor !== undefined) {
+      setAmount({ minor: fields.amountMinor, error: null });
+      setAmountShown((a) => ({ key: a.key + 1, minor: fields.amountMinor }));
+      got.push('amount');
+    }
+    if (fields.dueDate) {
+      setDue(fields.dueDate);
+      got.push('due date');
+    }
+    setFilled(
+      got.length
+        ? `Filled from ${file.name}: ${got.join(', ')}. Check them before adding.`
+        : `No details could be read from ${file.name} (a scan or photo has no text). Enter them below.`,
+    );
+  };
   if (!open) {
     return (
       <Button variant="outline" onClick={() => setOpen(true)}>
@@ -240,6 +277,16 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
         if (!due) return toast.error('Choose a due date');
         add.mutate(undefined, {
           onSuccess: () => {
+            if (invoice) {
+              const stored = invoice;
+              uploadDocument(target, stored, 'INVOICE').then(
+                () => void qc.invalidateQueries({ queryKey: projectKeys.documents(target) }),
+                (err: Error) => toast.error(`Milestone added, but ${stored.name} could not be stored: ${err.message}`),
+              );
+            }
+            setInvoice(null);
+            setFilled(null);
+            setAmountShown((a) => ({ key: a.key + 1 }));
             setTitle('');
             setDue('');
             setAmount({ minor: null, error: null });
@@ -278,9 +325,29 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           <option value="UPSELL">Upsell — new work, adds to the booking</option>
         </OptionSelect>
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="new-milestone-invoice">Milestone invoice (optional)</Label>
+        <SlipDropzone
+          id="new-milestone-invoice"
+          file={invoice}
+          onChange={(f) => void chooseInvoice(f)}
+          onError={(m) => m && toast.error(m)}
+        />
+        {filled && (
+          <p role="status" className="text-xs text-text-muted">
+            {filled}
+          </p>
+        )}
+      </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-start">
         <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <MoneyInput aria-label="New milestone amount" currency={project.currency} onValue={(minor, error) => setAmount({ minor, error })} />
+        <MoneyInput
+          key={amountShown.key}
+          aria-label="New milestone amount"
+          currency={project.currency}
+          defaultMinor={amountShown.minor}
+          onValue={(minor, error) => setAmount({ minor, error })}
+        />
         <Input aria-label="New milestone due date" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
         <div className="flex gap-2">
           <Button type="submit" disabled={add.isPending}>
