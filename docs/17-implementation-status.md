@@ -93,6 +93,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-39 | Done   | feat/currency-choices                  | D-035 Project currency dropdown, new client takes the project's currency, Dashboard currency dropdown in Settings                                                                                                                                                                           |
 | P4-40 | Done   | feat/personal-dashboard-currency       | D-036 per-user dashboard currency: migration `20261104090000_user_display_currency`, preferences endpoint, dashboard conversion + note, Profile dropdown                                                                                                                                    |
 | P4-41 | Done   | fix/stale-pages-loading-bar            | Creating or changing a project refreshes the dashboard and invoices; a top loading bar shows while data loads or saves (slow free hosting)                                                                                                                                                  |
+| P4-42 | Done   | fix/display-currency-exact             | D-036 fix: projects in the viewer's own currency are no longer round-tripped through the base currency ($38,000 + $22,000 = $60,000.00 exactly)                                                                                                                                             |
 
 ## Blockers
 
