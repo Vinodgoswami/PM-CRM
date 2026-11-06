@@ -137,7 +137,7 @@ test('each broken row is reported with its line number and rule', () => {
     { line: 4, message: 'P-2: payments on milestone "M" add up to more than its amount.' },
     { line: 5, message: 'P-6: paid_date 2026-12-01 is in the future.' },
     { line: 6, message: 'P-8: payments can only be recorded on Confirmed, Active, On hold or Completed projects.' },
-    { line: 7, message: 'PS-4: an Active project needs at least one milestone, and every milestone needs a due date.' },
+    { line: 7, message: 'PS-4: every milestone of an Active project needs a due date.' },
     { line: 8, message: 'confirmed_date is required for status Confirmed.' },
     { line: 9, message: 'status "MAYBE" is not one of Enquiry, Quoted, Confirmed, Active, On hold, Completed, Cancelled.' },
     { line: 10, message: 'PS-6: a Cancelled project cannot have payments.' },

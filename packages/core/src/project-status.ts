@@ -36,8 +36,9 @@ export function checkTransition(
   if (!ctx.isAdmin && !ALLOWED_TRANSITIONS[from].includes(to)) {
     return { ok: false, rule: 'PS-1', message: `A project cannot move from ${STATUS_NAME[from]} to ${STATUS_NAME[to]}.` };
   }
-  if (to === 'ACTIVE' && (ctx.milestones.length === 0 || ctx.milestones.some((m) => !m.dueDate))) {
-    return { ok: false, rule: 'PS-4', message: 'Add at least one milestone and give every milestone a due date first.' };
+  // D-045: an active project may have no milestones yet; the ones it has need a due date.
+  if (to === 'ACTIVE' && ctx.milestones.some((m) => !m.dueDate)) {
+    return { ok: false, rule: 'PS-4', message: 'Give every milestone a due date first.' };
   }
   if (to === 'LOST' && ctx.hasPayments) {
     return { ok: false, rule: 'PS-6', message: 'This project has payments. Reverse them before cancelling it.' };

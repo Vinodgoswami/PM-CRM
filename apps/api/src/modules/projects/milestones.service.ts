@@ -114,9 +114,6 @@ export class MilestonesService {
     const projectId = await this.prisma.$transaction(async (tx) => {
       const { milestone, project } = await this.loadForWrite(tx, user, milestoneId);
       if (milestone.payments.length > 0) throw new RuleViolation('MS-1', 'This milestone has payments and cannot be deleted.');
-      if (project.status === 'ACTIVE' && project.milestones.length === 1) {
-        throw new RuleViolation('PS-4', 'An active project needs at least one milestone.');
-      }
       await tx.milestone.delete({ where: { id: milestoneId } });
       await this.renumber(
         tx,
