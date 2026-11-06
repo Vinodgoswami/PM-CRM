@@ -30,7 +30,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 - **PS-2** `wonAt` is set the first time status becomes WON (or ACTIVE if WON was skipped). It is the date the
   project counts as **booked**.
 - **PS-3** LEAD and PROPOSAL projects form the **pipeline**; they are not booked sales.
-- **PS-4** Moving to ACTIVE requires at least one milestone and every milestone to have a due date.
+- **PS-4** Every milestone of an ACTIVE project has a due date. D-045: an active project may have no milestones (it
+  can be created without any, and its last milestone can be deleted).
   D-025: a project _created_ ACTIVE (hired work, the only kind the form enters) needs just the booking amount;
   milestones may follow, but each one it is created with needs a due date.
 - **PS-5** Moving to COMPLETED is allowed with unpaid milestones (they stay in Upcoming/Overdue).

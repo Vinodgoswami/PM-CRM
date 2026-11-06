@@ -292,9 +292,9 @@ export function parseImport(
   // PS-4 needs the whole project, so it is checked once every row is in.
   for (const [key, p] of projects) {
     if (broken.has(key)) continue;
-    if (p.status === 'ACTIVE' && (p.milestones.length === 0 || p.milestones.some((m) => !m.dueDate))) {
+    if (p.status === 'ACTIVE' && p.milestones.some((m) => !m.dueDate)) {
       broken.add(key);
-      errors.push({ line: p.line, message: 'PS-4: an Active project needs at least one milestone, and every milestone needs a due date.' });
+      errors.push({ line: p.line, message: 'PS-4: every milestone of an Active project needs a due date.' });
     }
   }
   errors.sort((a, b) => a.line - b.line);

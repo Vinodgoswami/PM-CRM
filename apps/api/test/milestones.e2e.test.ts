@@ -97,7 +97,7 @@ test('reordering renumbers; a foreign or missing id is refused', async () => {
   expect((await call(agent, csrf, 'put', `/projects/${p.id}/milestones/order`, { ids: [b, 'other'] })).status).toBe(400);
 });
 
-test('PS-4 an ACTIVE project keeps dated milestones and at least one milestone', async () => {
+test('PS-4 an ACTIVE project keeps dated milestones, and may delete its last one (D-045)', async () => {
   const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const p = await project(agent, csrf, 'ACTIVE');
   const undate = await call(agent, csrf, 'patch', `/milestones/${p.milestones[0]!.id}`, { dueDate: null });
@@ -107,7 +107,8 @@ test('PS-4 an ACTIVE project keeps dated milestones and at least one milestone',
   expect(undatedNew.body.error.details).toEqual({ rule: 'PS-4' });
   await call(agent, csrf, 'delete', `/milestones/${p.milestones[0]!.id}`).expect(200);
   const last = await call(agent, csrf, 'delete', `/milestones/${p.milestones[1]!.id}`);
-  expect(last.body.error.details).toEqual({ rule: 'PS-4' });
+  expect(last.status).toBe(200);
+  expect(last.body.milestones).toEqual([]);
 });
 
 test('other reps cannot change milestones; the CEO can (D-018)', async () => {

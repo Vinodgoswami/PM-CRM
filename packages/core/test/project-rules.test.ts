@@ -38,13 +38,15 @@ describe('PS-1 transitions', () => {
   });
 });
 
-test('PS-4 ACTIVE needs at least one milestone, all dated', () => {
-  expect(checkTransition('WON', 'ACTIVE', { ...sales, milestones: [] })).toMatchObject({ ok: false, rule: 'PS-4' });
+test('PS-4 ACTIVE needs every milestone dated; none at all is fine (D-045)', () => {
+  expect(checkTransition('WON', 'ACTIVE', { ...sales, milestones: [] })).toEqual({ ok: true });
   expect(checkTransition('WON', 'ACTIVE', { ...sales, milestones: [{ dueDate: '2026-11-01' }, { dueDate: null }] })).toMatchObject({
     ok: false,
     rule: 'PS-4',
   });
-  expect(checkTransition('LEAD', 'ACTIVE', { isAdmin: true, milestones: [], hasPayments: false })).toMatchObject({ rule: 'PS-4' });
+  expect(checkTransition('LEAD', 'ACTIVE', { isAdmin: true, milestones: [{ dueDate: null }], hasPayments: false })).toMatchObject({
+    rule: 'PS-4',
+  });
 });
 
 test('PS-6 LOST is refused while payments exist', () => {
