@@ -175,14 +175,13 @@ test('amounts follow the chosen client currency and the currency is sent', async
   expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ currency: 'JPY', expectedAmountMinor: 100000 });
 });
 
-test('D-025 a new project is hired work: no status, start date or duration; it is created Active', async () => {
+test('D-025 a new project is hired work: no status or duration; it is created Active', async () => {
   const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/new', sessionFor('SALES'));
   const user = userEvent.setup();
   await fillBasics(user);
   expect(screen.queryByLabelText('Status')).toBeNull();
-  expect(screen.queryByLabelText('Start date')).toBeNull();
   expect(screen.queryByLabelText('Duration')).toBeNull();
   await user.click(screen.getByRole('combobox', { name: 'Client' }));
   await user.type(screen.getByPlaceholderText('Search clients…'), 'ac');
@@ -191,8 +190,25 @@ test('D-025 a new project is hired work: no status, start date or duration; it i
   await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
   const body = api.calls.find((c) => c.method === 'POST')!.body as Record<string, unknown>;
   expect(body).toMatchObject({ status: 'ACTIVE', expectedAmountMinor: 10000000 });
-  expect(body).not.toHaveProperty('startDate');
   expect(body).not.toHaveProperty('durationValue');
+});
+
+test('D-042 the start date defaults to today and is sent with the new project', async () => {
+  const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user);
+  const start = screen.getByLabelText('Start date');
+  expect(start).toHaveValue(new Date().toISOString().slice(0, 10));
+  await user.clear(start);
+  await user.type(start, '2026-03-15');
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.type(screen.getByPlaceholderText('Search clients…'), 'ac');
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({ startDate: '2026-03-15' });
 });
 
 test('D-025 the booking amount is required, and every milestone needs a due date', async () => {
@@ -210,12 +226,18 @@ test('D-025 the booking amount is required, and every milestone needs a due date
   expect(api.calls.some((c) => c.method === 'POST')).toBe(false);
 });
 
-test('D-025 editing a project has no start date or duration either', async () => {
-  vi.stubGlobal('fetch', stubApi({ ...projectRoutes }).fn);
+test('D-042 editing a project shows and saves its start date, still with no duration', async () => {
+  const api = stubApi({ ...projectRoutes, 'PATCH /projects/p9': { body: detail({ id: 'p9' }) } });
+  vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p9/edit', sessionFor('SALES'));
-  expect(await screen.findByLabelText('Booking amount')).toBeInTheDocument();
-  expect(screen.queryByLabelText('Start date')).toBeNull();
+  const user = userEvent.setup();
+  const start = await screen.findByLabelText('Start date');
+  expect(start).toHaveValue('2026-09-01');
   expect(screen.queryByLabelText('Duration')).toBeNull();
+  await user.clear(start);
+  await user.type(start, '2026-08-20');
+  await user.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({ startDate: '2026-08-20' }));
 });
 
 test('D-027 the edit page edits the whole project: client, booking amount and milestones', async () => {

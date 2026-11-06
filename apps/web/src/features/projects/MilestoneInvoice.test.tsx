@@ -4,8 +4,8 @@ import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
 import { detail } from './fixtures';
 
-// D-041: an invoice PDF dropped on Add milestone fills task, amount and due date and is stored with the project.
-// No payment is recorded: the milestone stays unpaid until someone marks it paid.
+// D-041: an invoice PDF dropped on Add milestone fills task, amount and due date. D-043: for now it is only read, not
+// stored. No payment is recorded: the milestone stays unpaid until someone marks it paid.
 vi.mock('../payments/readPdfText', () => ({
   readPdfText: vi.fn(async () => 'Invoice Number: INV-88\nInvoice Date: 01/11/2026\nDue Date: 20/11/2026\nTotal Due: ₹40,000.00'),
 }));
@@ -33,7 +33,7 @@ const routes = {
   },
 };
 
-test('an invoice PDF fills the new milestone, and adding it stores the PDF without any payment', async () => {
+test('an invoice PDF fills the new milestone; adding it stores neither the PDF nor any payment', async () => {
   const api = stubApi(routes);
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p1?tab=milestones&add=1', sessionFor('SALES'));
@@ -45,16 +45,13 @@ test('an invoice PDF fills the new milestone, and adding it stores the PDF witho
   expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: task, amount, due date. Check them before adding.');
 
   await user.click(screen.getByRole('button', { name: 'Add' }));
-  await waitFor(() => expect(api.calls.some((c) => c.path === '/documents/d9/confirm')).toBe(true));
+  await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
   expect(api.calls.find((c) => c.path === '/projects/p1/milestones')?.body).toEqual({
     title: 'Invoice INV-88',
     amountMinor: 4000000,
     dueDate: '2026-11-20',
   });
-  expect(api.calls.find((c) => c.path === '/projects/p1/documents/upload-url')?.body).toMatchObject({
-    name: 'INV-88.pdf',
-    type: 'INVOICE',
-  });
+  expect(api.calls.some((c) => c.path.includes('/documents'))).toBe(false);
   expect(api.calls.some((c) => c.method === 'POST' && c.path.includes('/payments'))).toBe(false);
 });
 

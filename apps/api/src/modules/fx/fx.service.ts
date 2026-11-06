@@ -34,15 +34,18 @@ export class FxService {
   }
 
   /**
-   * D-039: for each project without a saved rate into `to`, the rate of the day it was created; projects in `to`
-   * itself or with no rate available are left out of the map.
+   * D-039/D-042: for each project without a saved rate into `to`, the rate of its start date (else the day it was
+   * created); projects in `to` itself or with no rate available are left out of the map.
    */
-  async startRates(projects: { id: string; currency: string; createdAt: Date }[], to: string): Promise<Map<string, string>> {
+  async startRates(
+    projects: { id: string; currency: string; createdAt: Date; startDate: Date | null }[],
+    to: string,
+  ): Promise<Map<string, string>> {
     const out = new Map<string, string>();
     const byKey = new Map<string, Promise<FxRateDto | null>>();
     for (const p of projects) {
       if (p.currency === to) continue;
-      const day = p.createdAt.toISOString().slice(0, 10);
+      const day = (p.startDate ?? p.createdAt).toISOString().slice(0, 10);
       const key = `${p.currency}>${day}`;
       if (!byKey.has(key)) byKey.set(key, this.find(p.currency, to, day));
       const found = await byKey.get(key)!;

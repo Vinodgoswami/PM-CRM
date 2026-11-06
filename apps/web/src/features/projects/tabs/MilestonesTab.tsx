@@ -27,7 +27,7 @@ import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
 import { parseInvoiceText } from '../../payments/invoice-text';
 import { readPdfText } from '../../payments/readPdfText';
 import { SlipDropzone } from '../../payments/SlipDropzone';
-import { projectKeys, uploadDocument, useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
+import { projectKeys, /* uploadDocument, */ useDeleteMilestone, useReorderMilestones, useResetMilestone, useUpdateMilestone } from '../api';
 import { projectDetailSchema } from '@salescrm/schemas';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../lib/api';
@@ -228,7 +228,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
       for (const k of [['projects'], ['dashboard'], ['invoices']]) void qc.invalidateQueries({ queryKey: k });
     },
   });
-  // D-041: an invoice PDF fills the fields (read in the browser); it is stored on Add. No payment is recorded.
+  // D-041: an invoice PDF fills the fields (read in the browser). No payment is recorded. D-043: not stored for now.
   const chooseInvoice = async (file: File | null) => {
     setInvoice(file);
     setFilled(null);
@@ -277,13 +277,14 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
         if (!due) return toast.error('Choose a due date');
         add.mutate(undefined, {
           onSuccess: () => {
-            if (invoice) {
-              const stored = invoice;
-              uploadDocument(target, stored, 'INVOICE').then(
-                () => void qc.invalidateQueries({ queryKey: projectKeys.documents(target) }),
-                (err: Error) => toast.error(`Milestone added, but ${stored.name} could not be stored: ${err.message}`),
-              );
-            }
+            // D-043: storing the invoice is paused for now; it is only read. Uncomment to store it again.
+            // if (invoice) {
+            //   const stored = invoice;
+            //   uploadDocument(target, stored, 'INVOICE').then(
+            //     () => void qc.invalidateQueries({ queryKey: projectKeys.documents(target) }),
+            //     (err: Error) => toast.error(`Milestone added, but ${stored.name} could not be stored: ${err.message}`),
+            //   );
+            // }
             setInvoice(null);
             setFilled(null);
             setAmountShown((a) => ({ key: a.key + 1 }));

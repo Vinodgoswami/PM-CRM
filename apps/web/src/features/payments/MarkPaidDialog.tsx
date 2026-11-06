@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { formatApiMoney } from '../../lib/money';
 import { MoneyInput } from '../projects/MoneyInput';
 import { useSettings } from '../settings/api';
-import { useAttachSlip, useMarkPaid } from './api';
+import { /* useAttachSlip, */ useMarkPaid } from './api';
 import { SlipDropzone } from './SlipDropzone';
 import { type InvoiceFields, parseInvoiceText } from './invoice-text';
 import { readPdfText } from './readPdfText';
@@ -74,7 +74,8 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
         : `No details could be read from ${file.name} (a scan or photo has no text). Enter them below.`,
     );
   };
-  const attach = useAttachSlip();
+  // D-043: storing the invoice is paused for now; the file is only read to fill the fields. Uncomment to store it again.
+  // const attach = useAttachSlip();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,20 +96,23 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
     markPaid.mutate(
       { input: parsed.data, key },
       {
-        onSuccess: (payment) => {
-          if (!slip) {
-            toast.success(`${label} marked as paid`);
-            return onClose();
-          }
-          attach.mutate(
-            { file: slip, payment },
-            {
-              onSuccess: () => toast.success(`${label} marked as paid, ${slip.name} stored`),
-              onError: (err) =>
-                toast.error(`Payment saved, but ${slip.name} did not upload (${err.message}). Attach it from the Payments tab.`),
-              onSettled: onClose,
-            },
-          );
+        onSuccess: () => {
+          toast.success(`${label} marked as paid`);
+          onClose();
+          // D-043: paused, see above (takes `(payment) =>` again when restored).
+          // if (!slip) {
+          //   toast.success(`${label} marked as paid`);
+          //   return onClose();
+          // }
+          // attach.mutate(
+          //   { file: slip, payment },
+          //   {
+          //     onSuccess: () => toast.success(`${label} marked as paid, ${slip.name} stored`),
+          //     onError: (err) =>
+          //       toast.error(`Payment saved, but ${slip.name} did not upload (${err.message}). Attach it from the Payments tab.`),
+          //     onSettled: onClose,
+          //   },
+          // );
         },
         onError: (err) => setError(err.message),
         onSettled: () => {
@@ -178,8 +182,9 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={markPaid.isPending || attach.isPending}>
-              {attach.isPending ? 'Uploading…' : 'Save payment'}
+            <Button type="submit" disabled={markPaid.isPending /* || attach.isPending */}>
+              {/* {attach.isPending ? 'Uploading…' : 'Save payment'} */}
+              Save payment
             </Button>
           </div>
         </form>
