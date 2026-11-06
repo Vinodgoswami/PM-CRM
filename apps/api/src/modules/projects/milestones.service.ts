@@ -64,6 +64,7 @@ export class MilestonesService {
         entityId: projectId,
         after: { milestoneId: created.id, number: created.number, title: created.title, amountMinor: created.amountMinor.toString() },
       });
+      await this.projects.assertMilestonesWithinValue(tx, projectId);
     });
     return this.projects.get(projectId, user);
   }
@@ -86,6 +87,7 @@ export class MilestonesService {
           ...(input.dueDate !== undefined ? { dueDate: toDate(input.dueDate) } : {}),
         },
       });
+      if (input.amountMinor !== undefined) await this.projects.assertMilestonesWithinValue(tx, project.id);
       const pick = (m: typeof after) => ({
         title: m.title,
         description: m.description,

@@ -19,7 +19,7 @@ import {
   type UpdateProjectInput,
   type UpsellEntryInput,
 } from '@salescrm/schemas';
-import { minorFromJson, minorToJson } from '@salescrm/types';
+import { formatMoney, minorFromJson, minorToJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
 import { AppError, conflict, notFound, RuleViolation } from '../../common/errors';
 import { assertCanAccess, ownerWhere } from '../../common/ownership';
@@ -292,6 +292,7 @@ export class ProjectsService {
             expectedAmountMinor: project.expectedAmountMinor.toString(),
           },
         });
+        await this.assertMilestonesWithinValue(tx, project.id);
         return project.id;
       });
       return this.get(id, user);
@@ -365,8 +366,34 @@ export class ProjectsService {
       });
       const diff = changedFields(pick(before), pick(after));
       if (diff) await this.audit.record(tx, { actorId: user.id, action: 'project.update', entity: 'Project', entityId: id, ...diff });
+      if (input.expectedAmountMinor !== undefined) await this.assertMilestonesWithinValue(tx, id);
     });
     return this.get(id, user);
+  }
+
+  /**
+   * MS-5 (D-044): a project's (or phase's) milestones add up to at most its contract value, the booking plus upsells.
+   * Called inside the writing transaction, after the change, so a refusal rolls the change back.
+   */
+  async assertMilestonesWithinValue(tx: Prisma.TransactionClient, projectId: string): Promise<void> {
+    const p = await tx.project.findUniqueOrThrow({
+      where: { id: projectId },
+      select: {
+        currency: true,
+        expectedAmountMinor: true,
+        upsellEntries: { select: { amountMinor: true } },
+        milestones: { select: { amountMinor: true } },
+      },
+    });
+    const value = p.upsellEntries.reduce((s, u) => s + u.amountMinor, p.expectedAmountMinor);
+    const scheduled = p.milestones.reduce((s, m) => s + m.amountMinor, 0n);
+    if (scheduled > value) {
+      throw new RuleViolation(
+        'MS-5',
+        `Milestones add up to ${formatMoney(scheduled, p.currency)}, more than the project's value of ${formatMoney(value, p.currency)}. ` +
+          'Lower a milestone or raise the booking amount.',
+      );
+    }
   }
 
   /** D-027: a project may move to another active client billed in its currency; extra-work links stay within one client (U-2). */
@@ -542,6 +569,7 @@ export class ProjectsService {
         for (const [i, m] of rest.entries()) await tx.milestone.update({ where: { id: m.id }, data: { number: 1000 + i } });
         for (const [i, m] of rest.entries()) await tx.milestone.update({ where: { id: m.id }, data: { number: i + 1 } });
       }
+      await this.assertMilestonesWithinValue(tx, id);
       await this.audit.record(tx, {
         actorId: user.id,
         action: 'project.upsell.remove',

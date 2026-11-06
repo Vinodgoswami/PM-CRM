@@ -24,7 +24,7 @@ const call = (agent: Agent, csrf: string, method: 'post' | 'patch' | 'put' | 'de
 async function project(agent: Agent, csrf: string, status = 'WON') {
   const res = await call(agent, csrf, 'post', '/projects', {
     name: 'P',
-    expectedAmountMinor: 100000,
+    expectedAmountMinor: 110000, // MS-5: room for the milestones the tests add
     status,
     newClient: { name: `C ${Math.random()}` },
     milestones: [

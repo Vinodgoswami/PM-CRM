@@ -104,6 +104,12 @@ test('D-027 a project moves to another client billed in the same currency', asyn
 test('the project list gives milestone progress and the initial booking for the client accordion', async () => {
   const { agent, csrf } = await loginAs(app, prisma, 'SALES');
   const { project } = await paidProject(agent, csrf);
+  // MS-5: an upsell makes room for a second milestone beyond the 1,000 booking.
+  await agent
+    .post(`/api/v1/projects/${project.id}/upsells`)
+    .set('X-CSRF-Token', csrf)
+    .send({ amountMinor: 400, date: '2026-10-01' })
+    .expect(201);
   await agent
     .post(`/api/v1/projects/${project.id}/milestones`)
     .set('X-CSRF-Token', csrf)
