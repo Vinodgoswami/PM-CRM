@@ -382,3 +382,23 @@ test('D-037 an ordinary new project has no phase type', async () => {
   await screen.findByLabelText('Booking amount');
   expect(screen.queryByRole('combobox', { name: 'Phase type' })).toBeNull();
 });
+
+test('MS-5 milestones adding up to more than the booking amount stop the project from being created', async () => {
+  const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await fillBasics(user);
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.type(screen.getByPlaceholderText('Search clients…'), 'ac');
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.click(screen.getByRole('button', { name: 'Add milestone' }));
+  await user.type(screen.getByLabelText('Milestone 1 task'), 'All');
+  await user.type(screen.getByLabelText('Milestone 1 amount'), '1,00,001');
+  await user.type(screen.getByLabelText('Milestone 1 due date'), '2026-12-15');
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  expect(
+    await screen.findByText('Milestones add up to more than the booking amount. Lower a milestone or raise the booking.'),
+  ).toBeInTheDocument();
+  expect(api.calls.some((c) => c.method === 'POST')).toBe(false);
+});

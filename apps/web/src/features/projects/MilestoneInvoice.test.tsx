@@ -7,7 +7,7 @@ import { detail } from './fixtures';
 // D-041: an invoice PDF dropped on Add milestone fills task, amount and due date. D-043: for now it is only read, not
 // stored. No payment is recorded: the milestone stays unpaid until someone marks it paid.
 vi.mock('../payments/readPdfText', () => ({
-  readPdfText: vi.fn(async () => 'Invoice Number: INV-88\nInvoice Date: 01/11/2026\nDue Date: 20/11/2026\nTotal Due: ₹40,000.00'),
+  readPdfText: vi.fn(async () => 'Invoice Number: INV-88\nInvoice Date: 01/11/2026\nDue Date: 20/11/2026\nTotal Due: ₹20,000.00'),
 }));
 
 const routes = {
@@ -40,7 +40,7 @@ test('an invoice PDF fills the new milestone; adding it stores neither the PDF n
   const user = userEvent.setup();
   await user.upload(await screen.findByLabelText(/Milestone invoice/), new File(['%PDF'], 'INV-88.pdf', { type: 'application/pdf' }));
   await waitFor(() => expect(screen.getByLabelText('New milestone task')).toHaveValue('Invoice INV-88'));
-  expect(screen.getByLabelText('New milestone amount')).toHaveValue('40000.00');
+  expect(screen.getByLabelText('New milestone amount')).toHaveValue('20000.00');
   expect(screen.getByLabelText('New milestone due date')).toHaveValue('2026-11-20');
   expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: task, amount, due date. Check them before adding.');
 
@@ -48,7 +48,7 @@ test('an invoice PDF fills the new milestone; adding it stores neither the PDF n
   await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
   expect(api.calls.find((c) => c.path === '/projects/p1/milestones')?.body).toEqual({
     title: 'Invoice INV-88',
-    amountMinor: 4000000,
+    amountMinor: 2000000,
     dueDate: '2026-11-20',
   });
   expect(api.calls.some((c) => c.path.includes('/documents'))).toBe(false);

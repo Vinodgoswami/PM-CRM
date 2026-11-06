@@ -210,6 +210,9 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const [amountShown, setAmountShown] = useState<{ key: number; minor?: number }>({ key: 0 });
   const phases = project.upsellProjects;
   const where = target === project.id ? null : phases.find((u) => u.id === target);
+  // MS-5: a contract milestone fits in what is left of the project's value; a phase's own limit is checked by the server.
+  const left = target === project.id ? Math.max(0, project.unscheduledMinor) : null;
+  const money = (m: number) => formatApiMoney(m, project.currency);
   const add = useMutation({
     mutationFn: () =>
       kind === 'UPSELL'
@@ -275,6 +278,8 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
         if (!title.trim()) return toast.error('Enter the milestone task');
         if (amount.minor === null) return toast.error(amount.error ?? 'Enter an amount');
         if (!due) return toast.error('Choose a due date');
+        if (kind === 'CONTRACT' && left !== null && amount.minor > left)
+          return toast.error(`That's more than the ${money(left)} left in this project's value. Lower it, or add the extra as an Upsell.`);
         add.mutate(undefined, {
           onSuccess: () => {
             // D-043: storing the invoice is paused for now; it is only read. Uncomment to store it again.
@@ -359,6 +364,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           </Button>
         </div>
       </div>
+      {kind === 'CONTRACT' && left !== null && <p className="text-xs text-text-muted">{money(left)} left to put in milestones</p>}
       {kind === 'UPSELL' && (
         <p className="text-xs text-text-muted">Adds this amount to the booking as an upsell and bills it through this milestone.</p>
       )}
@@ -405,6 +411,10 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
           disabled={update.isPending || reset.isPending}
           onClick={() => {
             if (amount.minor === null) return toast.error(amount.error ?? 'Enter an amount');
+            // MS-5: the milestones together stay within the project's value.
+            const room = project.unscheduledMinor + milestone.amountMinor;
+            if (amount.minor > room)
+              return toast.error(`That's more than the project's value allows: M${milestone.number} can be at most ${money(room)}.`);
             // D-027: a paid milestone's amount changes only after its payments are reset (reversed, kept in history).
             if (amount.minor !== milestone.amountMinor && milestone.paidMinor > 0) return setConfirming(true);
             save(amount.minor);

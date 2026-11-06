@@ -123,6 +123,9 @@ function CreateProject() {
       if (r.amountMinor === null) found[`milestones.${i}.amountMinor`] = r.amountError ?? 'Enter an amount';
       if (!r.dueDate) found[`milestones.${i}.dueDate`] = 'Choose a due date';
     });
+    // MS-5: milestones may not add up to more than the booking amount.
+    if (expected.minor !== null && rows.reduce((t, r) => t + (r.amountMinor ?? 0), 0) > expected.minor)
+      found.expectedAmountMinor = 'Milestones add up to more than the booking amount. Lower a milestone or raise the booking.';
     setErrors(found);
     if (!parsed.success || Object.keys(found).length) return;
 

@@ -60,6 +60,9 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 
 - **MS-4** If milestones don't add up to the contract value, the project shows an "unscheduled ₹X" warning; this is
   allowed (D-005).
+- **MS-5** (D-044) Milestones may add up to less than the contract value (MS-4) but never more. The contract value is
+  the booking plus upsells, per project; a phase is its own project with its own limit. Checked on project create,
+  booking edit, milestone add/edit and upsell removal; an upsell with a milestone raises both together.
 
 ## Payments ("Mark as paid")
 

@@ -102,6 +102,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-48 | Done   | feat/invoice-autofill                  | D-040 `parseInvoiceText` + `readPdfText` (pdfjs-dist 5.4.624), Mark-as-paid fills fields from a PDF, E2E with a real PDF fixture                                                                                                                                                            |
 | P4-49 | Done   | feat/milestone-invoice                 | D-041 invoice PDF on Add milestone fills task, amount, due date; stored as INVOICE document; no payment; parser reads due dates; E2E                                                                                                                                                        |
 | P4-50 | Done   | feat/start-date-read-only-invoice      | D-042 start date on project forms + start-date FX rate; D-043 invoice drop is read-only (storage commented out); tests updated                                                                                                                                                              |
+| P4-51 | Done   | feat/milestone-cap                     | D-044 / MS-5 `assertMilestonesWithinValue` on create, booking edit, milestone add/edit, upsell removal; form checks and "left" hint; tests                                                                                                                                                  |
 
 ## Blockers
 
