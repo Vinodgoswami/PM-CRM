@@ -164,26 +164,19 @@ const slipRoutes = {
   },
 };
 
-test('D-026 an invoice or payment slip chosen in the dialog is stored with the new payment', async () => {
+test('D-043 an invoice chosen in the dialog is only read: the payment is saved and the file is not stored', async () => {
   const api = stubApi({ ...routes, ...slipRoutes, 'POST /milestones/m1/payments': { status: 201, body: { ...payment, id: 'pay2' } } });
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p1', sessionFor('SALES'));
   const user = await openMarkPaid();
   const dialog = await screen.findByRole('dialog');
-  await user.upload(
-    within(dialog).getByLabelText(/Invoice or payment slip/),
-    new File(['%PDF'], 'INV-200.pdf', { type: 'application/pdf' }),
-  );
-  expect(within(dialog).getByText('INV-200.pdf')).toBeInTheDocument();
+  await user.upload(within(dialog).getByLabelText(/Invoice or payment slip/), new File(['%PDF'], 'INV-200.png', { type: 'image/png' }));
+  expect(within(dialog).getByText('INV-200.png')).toBeInTheDocument();
+  expect(within(dialog).getByText(/read here, not stored/)).toBeInTheDocument();
   await user.click(within(dialog).getByRole('button', { name: 'Save payment' }));
-  await waitFor(() => expect(api.calls.some((c) => c.path === '/documents/d9/confirm')).toBe(true));
-  const paths = api.calls.map((c) => c.path);
-  expect(paths.indexOf('/milestones/m1/payments')).toBeLessThan(paths.indexOf('/projects/p1/documents/upload-url'));
-  expect(api.calls.find((c) => c.path === '/projects/p1/documents/upload-url')!.body).toMatchObject({
-    name: 'INV-200.pdf',
-    type: 'INVOICE',
-    paymentId: 'pay2',
-  });
+  await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  expect(api.calls.some((c) => c.path === '/milestones/m1/payments')).toBe(true);
+  expect(api.calls.some((c) => c.path.includes('/documents'))).toBe(false);
 });
 
 test('D-026 a file type that cannot be stored is refused before saving', async () => {

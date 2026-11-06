@@ -126,7 +126,7 @@ test('D-040 an invoice PDF fills the Mark-as-paid fields; typing stays possible'
   await expect(dialog.getByLabel('Invoice ID')).toHaveValue('INV-E2E-PDF-EDITED');
 });
 
-test('D-041 an invoice PDF fills a new milestone and is stored with no payment', async ({ page }) => {
+test('D-041 an invoice PDF fills a new milestone, with no payment (D-043: not stored)', async ({ page }) => {
   await signIn(page, 'pm1');
   await page.goto('/projects');
   await page.getByRole('table').getByRole('link').first().click();
@@ -138,6 +138,4 @@ test('D-041 an invoice PDF fills a new milestone and is stored with no payment',
   await page.getByLabel('New milestone due date').fill('2026-12-20');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'Invoice INV-E2E-PDF' })).toBeVisible();
-  await page.getByRole('tab', { name: 'Documents' }).click();
-  await expect(page.getByText('invoice.pdf').first()).toBeVisible();
 });

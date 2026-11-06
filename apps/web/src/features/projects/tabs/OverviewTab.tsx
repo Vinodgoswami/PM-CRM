@@ -12,6 +12,7 @@ export function OverviewTab({ project }: { project: ProjectDetail }) {
       {project.description && <p className="max-w-prose whitespace-pre-line">{project.description}</p>}
       <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
         <Item label="Hired on">{formatDate(project.wonAt)}</Item>
+        <Item label="Start date">{project.startDate ? formatDate(project.startDate) : '—'}</Item>
         {project.parent && (
           <Item label="Phase">
             <Link className="text-primary hover:underline" to={`/projects/${project.parent.id}`}>

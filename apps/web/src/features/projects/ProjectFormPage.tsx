@@ -75,6 +75,7 @@ function CreateProject() {
 
   const [name, setName] = useState(params.get('name') ?? '');
   const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [ownerId, setOwnerId] = useState('');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [rows, setRows] = useState<MilestoneRow[]>([]);
@@ -97,6 +98,7 @@ function CreateProject() {
       description,
       // D-025: only hired work is entered here, so it starts Active and is marked complete from its page.
       status: 'ACTIVE' as const,
+      ...(startDate ? { startDate } : {}),
       ...(client && 'clientId' in client ? { clientId: client.clientId } : {}),
       ...(client && 'newClient' in client
         ? { newClient: { name: client.newClient.name, ...(client.newClient.email ? { email: client.newClient.email } : {}) } }
@@ -221,6 +223,10 @@ function CreateProject() {
             <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
               <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
             </Field>
+            {/* D-042: when the work starts; amounts in other currencies are converted at that day's rate. */}
+            <Field id="start-date" label="Start date" error={errors.startDate}>
+              <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </Field>
             {isAdmin && (
               <Field id="owner" label={OWNER} error={errors.ownerId}>
                 <OptionSelect
@@ -286,6 +292,7 @@ function EditForm({ project }: { project: ProjectDetail }) {
   const clientDetail = useClient(clientId ?? '');
   const [editingClient, setEditingClient] = useState(false);
   const [description, setDescription] = useState(project.description);
+  const [startDate, setStartDate] = useState(project.startDate ?? '');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({
     minor: project.expectedAmountMinor,
     error: null,
@@ -300,6 +307,7 @@ function EditForm({ project }: { project: ProjectDetail }) {
       name,
       description,
       ...(clientId && clientId !== project.client.id ? { clientId } : {}),
+      ...(startDate !== (project.startDate ?? '') ? { startDate: startDate || null } : {}),
       expectedAmountMinor: expected.minor ?? undefined,
       updatedAt: project.updatedAt,
     });
@@ -371,6 +379,9 @@ function EditForm({ project }: { project: ProjectDetail }) {
                 defaultMinor={project.expectedAmountMinor}
                 onValue={(minor, error) => setExpected({ minor, error })}
               />
+            </Field>
+            <Field id="start-date" label="Start date" error={errors.startDate}>
+              <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </Field>
           </div>
           <div className="flex justify-end gap-2">

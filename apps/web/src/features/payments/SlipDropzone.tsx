@@ -35,7 +35,7 @@ export function SlipDropzone({
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
-          <p className="text-xs text-text-muted">{size(file.size)} · stored when you save</p>
+          <p className="text-xs text-text-muted">{size(file.size)} · read here, not stored</p>
         </div>
         <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${file.name}`} onClick={() => onChange(null)}>
           <X className="size-4" />
@@ -67,9 +67,7 @@ export function SlipDropzone({
       </span>
       <span className="min-w-0 text-sm">
         <span className="font-medium text-primary">Choose a file</span> <span className="text-text-muted">or drag it here</span>
-        <span className="block text-xs text-text-muted">
-          PDF, image or Office file · up to 25 MB · a PDF invoice fills the fields below
-        </span>
+        <span className="block text-xs text-text-muted">PDF invoice · read to fill the fields below, not stored</span>
       </span>
       <input
         id={id}
