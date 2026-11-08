@@ -14,6 +14,12 @@ export function databaseUrlWithTimeouts(url: string): string {
   return parsed.toString();
 }
 
+/**
+ * D-052: Prisma gives an interactive transaction 2 s to get a connection and 5 s to finish; a waking or busy database
+ * on a free plan can need more, and a cut-off transaction is a 500 for the user.
+ */
+export const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 20_000 };
+
 const WAKE_UP_CODES = new Set(['P1001', 'P1002', 'P1017', 'P2024']);
 const WAKE_UP_MESSAGE = /can't reach database server|server has closed the connection|connection terminated unexpectedly|ECONNRESET/i;
 

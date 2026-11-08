@@ -2,7 +2,7 @@ import { type CallHandler, type ExecutionContext } from '@nestjs/common';
 import { Prisma } from '@salescrm/database';
 import { defer, firstValueFrom } from 'rxjs';
 import { expect, test } from 'vitest';
-import { databaseUrlWithTimeouts, isDatabaseWakeUpError, RetryOnDatabaseWakeUp, withWakeUpRetry } from './wake-up';
+import { TRANSACTION_OPTIONS, databaseUrlWithTimeouts, isDatabaseWakeUpError, RetryOnDatabaseWakeUp, withWakeUpRetry } from './wake-up';
 
 // D-050: Neon pauses when idle; the first requests after that may hit stale or slow connections.
 const known = (code: string) => new Prisma.PrismaClientKnownRequestError('db', { code, clientVersion: 'test' });
@@ -58,4 +58,8 @@ test('withWakeUpRetry runs a single lookup again (the session check runs before 
   let m = 0;
   await expect(withWakeUpRetry(async () => (++m, Promise.reject(known('P2002'))), 1)).rejects.toThrow();
   expect(m).toBe(1);
+});
+
+test('transactions may wait 10 s for a connection and run for 20 s (Prisma: 2 s and 5 s)', () => {
+  expect(TRANSACTION_OPTIONS).toEqual({ maxWait: 10_000, timeout: 20_000 });
 });

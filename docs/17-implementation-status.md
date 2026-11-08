@@ -110,6 +110,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-56 | Done   | feat/one-click-paid                    | D-049 `useMarkPaidFlow` (Milestones + Upcoming Invoices), invoice items carry invoiceId, optional Invoice ID on Add milestone, crash ref in all-exceptions filter; tests                                                                                                                    |
 | P4-57 | Done   | fix/db-wake-up                         | D-050 `wake-up.ts` (URL timeouts, `isDatabaseWakeUpError`, `withWakeUpRetry`, `RetryOnDatabaseWakeUp` interceptor), session guard retry; tests                                                                                                                                              |
 | P4-58 | Done   | feat/keep-awake                        | D-051 `keepAwake` config, `startKeepAwake` started in main.ts; tests                                                                                                                                                                                                                        |
+| P4-59 | Done   | fix/tx-limits                          | D-052 `TRANSACTION_OPTIONS` on PrismaService, DB code in 500 message; tests                                                                                                                                                                                                                 |
 
 ## Blockers
 

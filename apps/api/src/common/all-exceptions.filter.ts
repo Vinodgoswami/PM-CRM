@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Logger } from '@nestjs/common';
+import { Prisma } from '@salescrm/database';
 import { type Response } from 'express';
 import { AppError } from './errors';
 
@@ -37,6 +38,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // The reference is shown to the user and logged with the stack, so the log line for a report is easy to find.
     const ref = randomBytes(4).toString('hex');
     this.logger.error(`[ref ${ref}] ${exception instanceof Error ? exception.stack : String(exception)}`);
-    res.status(500).json({ error: { code: 'INTERNAL', message: `Something went wrong (ref ${ref})` } });
+    // D-052: a database error code (e.g. P2028) says what failed without revealing any data.
+    const dbCode =
+      exception instanceof Prisma.PrismaClientKnownRequestError
+        ? exception.code
+        : exception instanceof Prisma.PrismaClientInitializationError
+          ? (exception.errorCode ?? 'DB_INIT')
+          : null;
+    res.status(500).json({ error: { code: 'INTERNAL', message: `Something went wrong (ref ${ref}${dbCode ? `, ${dbCode}` : ''})` } });
   }
 }
