@@ -17,27 +17,67 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (y: number, m: number, d: number) =>
   y > 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31 ? `${y}-${pad(m)}-${pad(d)}` : undefined;
 
-/** The first date in `text`: ISO, day/month/year (month/day when the day is over 12), or a written month. */
-function findDate(text: string): string | undefined {
-  const isoDate = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(text);
-  if (isoDate) return iso(+isoDate[1]!, +isoDate[2]!, +isoDate[3]!);
-  const numeric = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b/.exec(text);
-  if (numeric) {
-    const [a, b, y] = [+numeric[1]!, +numeric[2]!, +numeric[3]!];
-    // Day first (India, UK); month first only when the second part cannot be a month.
-    return b > 12 ? iso(y, a, b) : iso(y, b, a);
+const SEP = String.raw`\s*[/.-]\s*`; // pdf.js may split "05/11/2026" into "05 / 11 / 2026"
+const fullYear = (y: string) => (y.length === 2 ? 2000 + +y : +y);
+const monthOf = (name: string) => MONTHS.indexOf(name.slice(0, 3).toLowerCase()) + 1;
+
+interface FoundDate {
+  at: number;
+  date: string;
+}
+
+/**
+ * Every date in `text`, in page order: year first, day/month/year (month first when the second part is over 12, or
+ * when `today` is given and only the month-first reading is not in the future), or a written month; 2-digit years too.
+ */
+function allDates(text: string, today?: string): FoundDate[] {
+  const found: (FoundDate & { end: number })[] = [];
+  const add = (m: RegExpMatchArray, date: string | undefined) => {
+    if (date) found.push({ at: m.index!, end: m.index! + m[0].length, date });
+  };
+  for (const m of text.matchAll(new RegExp(String.raw`\b(\d{4})${SEP}(\d{1,2})${SEP}(\d{1,2})\b`, 'g')))
+    add(m, iso(+m[1]!, +m[2]!, +m[3]!));
+  for (const m of text.matchAll(new RegExp(String.raw`\b(\d{1,2})${SEP}(\d{1,2})${SEP}(\d{4}|\d{2})\b`, 'g'))) {
+    const [a, b, y] = [+m[1]!, +m[2]!, fullYear(m[3]!)];
+    const dayFirst = iso(y, b, a);
+    const monthFirst = iso(y, a, b);
+    // Day first (India, UK) unless it cannot be, or (for an issue date) it would be in the future and month first is not.
+    const futureOnly = !!today && !!dayFirst && dayFirst > today && !!monthFirst && monthFirst <= today;
+    add(m, b > 12 || futureOnly ? monthFirst : dayFirst);
   }
-  const dayMonth = /\b(\d{1,2})(?:st|nd|rd|th)?[\s-]+([A-Za-z]{3,9})\.?,?[\s-]+(\d{4})\b/.exec(text);
-  if (dayMonth) {
-    const m = MONTHS.indexOf(dayMonth[2]!.slice(0, 3).toLowerCase()) + 1;
-    if (m) return iso(+dayMonth[3]!, m, +dayMonth[1]!);
+  for (const m of text.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)?[\s-]+([A-Za-z]{3,9})\.?,?[\s-]+(\d{4}|\d{2})\b/g)) {
+    const month = monthOf(m[2]!);
+    if (month) add(m, iso(fullYear(m[3]!), month, +m[1]!));
   }
-  const monthDay = /\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/.exec(text);
-  if (monthDay) {
-    const m = MONTHS.indexOf(monthDay[1]!.slice(0, 3).toLowerCase()) + 1;
-    if (m) return iso(+monthDay[3]!, m, +monthDay[2]!);
+  for (const m of text.matchAll(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/g)) {
+    const month = monthOf(m[1]!);
+    if (month) add(m, iso(+m[3]!, month, +m[2]!));
   }
-  return undefined;
+  found.sort((x, y) => x.at - y.at);
+  // A match inside an earlier one (e.g. "26-11-05" within "2026-11-05") is not a date of its own.
+  return found.filter((f, i) => !found.slice(0, i).some((g) => f.at < g.end));
+}
+
+const ISSUE_LABEL = String.raw`(?<!due\s)\b(?:invoice\s+date|date\s+of\s+issue|issue\s+date|bill\s+date|issued(?:\s+on)?|dated?|payment\s+date|paid\s+on)\b`;
+const DUE_LABEL = String.raw`\b(?:due\s+date|payment\s+due|due\s+(?:on|by)|pay\s+by)\b`;
+
+/**
+ * The date that belongs to the first `label`: on the same line, else (a table header) the date in the same column on
+ * the next line, else the first date shortly after it.
+ */
+function dateAfter(text: string, label: string, dates: FoundDate[]): string | undefined {
+  const m = new RegExp(label, 'i').exec(text);
+  if (!m) return undefined;
+  const from = m.index + m[0].length;
+  const lineEnd = text.indexOf('\n', from) === -1 ? text.length : text.indexOf('\n', from);
+  const sameLine = dates.find((d) => d.at >= from && d.at < lineEnd);
+  if (sameLine) return sameLine.date;
+  const lineStart = text.lastIndexOf('\n', m.index) + 1;
+  const column = [...text.slice(lineStart, m.index).matchAll(new RegExp(`${ISSUE_LABEL}|${DUE_LABEL}`, 'gi'))].length;
+  const nextEnd = text.indexOf('\n', lineEnd + 1) === -1 ? text.length : text.indexOf('\n', lineEnd + 1);
+  const nextLine = dates.filter((d) => d.at > lineEnd && d.at < nextEnd);
+  if (nextLine.length > 1 && nextLine[column]) return nextLine[column].date;
+  return dates.find((d) => d.at >= from && d.at - from <= 60)?.date;
 }
 
 /** The amount after the most specific total label (amount due, grand total, total), the last one on the page. */
@@ -68,20 +108,21 @@ function findInvoiceId(text: string): string | undefined {
   return bare?.[0];
 }
 
-/** Reads invoice ID, total and date from an invoice's text (D-040). Unknown fields are left out. */
-export function parseInvoiceText(text: string, currency: string): InvoiceFields {
+/**
+ * Reads invoice ID, total, date and due date from an invoice's text (D-040, D-041, D-046). Unknown fields are left out.
+ * `today` lets an ambiguous issue date (10/12) be read month-first when day-first would be in the future.
+ */
+export function parseInvoiceText(text: string, currency: string, today?: string): InvoiceFields {
   const out: InvoiceFields = {};
   const invoiceId = findInvoiceId(text);
   if (invoiceId) out.invoiceId = invoiceId;
   const amountMinor = findAmount(text, currency);
   if (amountMinor !== undefined) out.amountMinor = amountMinor;
-  // Prefer the date next to a date label; otherwise the first date on the page.
-  const labelled =
-    /(?<!due\s)(?:invoice\s+date|date\s+of\s+issue|issued(?:\s+on)?|dated?|payment\s+date|paid\s+on)\s*[:-]?\s*([^\n]{6,30})/i.exec(text);
-  const date = (labelled && findDate(labelled[1]!)) || findDate(text);
+  // Prefer the date that belongs to a date label; otherwise the first date on the page.
+  const issueDates = allDates(text, today);
+  const date = dateAfter(text, ISSUE_LABEL, issueDates) ?? issueDates[0]?.date;
   if (date) out.date = date;
-  const due = /(?:due\s+date|payment\s+due|due\s+(?:on|by)|pay\s+by)\s*[:-]?\s*([^\n]{6,30})/i.exec(text);
-  const dueDate = due && findDate(due[1]!);
+  const dueDate = dateAfter(text, DUE_LABEL, allDates(text));
   if (dueDate) out.dueDate = dueDate;
   return out;
 }
