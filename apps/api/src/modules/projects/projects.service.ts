@@ -9,6 +9,7 @@ import {
   type ProjectStatus,
   statusDates,
   wouldCreateCycle,
+  recurringDates,
 } from '@salescrm/core';
 import { type Prisma } from '@salescrm/database';
 import {
@@ -51,9 +52,11 @@ const DETAIL_INCLUDE = {
         select: { id: true, amountMinor: true, paymentDate: true, reversesPaymentId: true, reversedBy: { select: { id: true } } },
       },
       upsellEntry: { select: { id: true } },
+      recurringSeriesId: true,
     },
     orderBy: { number: 'asc' },
   },
+  recurringSeries: { orderBy: { createdAt: 'asc' } },
   parentProject: { select: { id: true, code: true, name: true, upsellProjects: { select: { id: true }, orderBy: { code: 'asc' } } } },
   upsellProjects: {
     select: { id: true, code: true, name: true, status: true, phaseKind: true, expectedAmountMinor: true, ...PROJECT_MONEY_INCLUDE },
@@ -65,6 +68,9 @@ type ListRow = Prisma.ProjectGetPayload<{ include: typeof LIST_INCLUDE }>;
 type DetailRow = Prisma.ProjectGetPayload<{ include: typeof DETAIL_INCLUDE }>;
 
 const toDate = (d: IsoDate | null | undefined) => (d ? new Date(`${d}T00:00:00Z`) : null);
+/** D-063: the amount of a recurring series' months still to be created. */
+const pendingOf = (r: { amountMinor: bigint; count: number; createdCount: number }) => r.amountMinor * BigInt(r.count - r.createdCount);
+
 const paidOf = (m: { payments: { amountMinor: bigint }[] }) => m.payments.reduce((s, p) => s + p.amountMinor, 0n);
 
 /** D-055: the latest payment still standing (not a reversal, not reversed): when the milestone was paid, and which payment to edit. */
@@ -165,6 +171,7 @@ export class ProjectsService {
         number: m.number,
         title: m.title,
         invoiceId: m.invoiceId,
+        recurringSeriesId: m.recurringSeriesId,
         amountMinor: minorToJson(m.amountMinor),
         dueDate: isoDate(m.dueDate),
         // D-038: billed through an upsell amount, or part of a phase that is an upsell.
@@ -175,7 +182,20 @@ export class ProjectsService {
         status: milestoneStatus({ amountMinor: m.amountMinor, paidMinor: paidOf(m), dueDate: isoDate(m.dueDate) }, today, dueSoonDays),
       })),
       scheduledMinor: minorToJson(t.scheduledMinor),
-      unscheduledMinor: minorToJson(t.unscheduledMinor),
+      // D-063: months a recurring series will still create are not "not yet in milestones".
+      unscheduledMinor: minorToJson(t.unscheduledMinor - p.recurringSeries.reduce((s, r) => s + pendingOf(r), 0n)),
+      recurring: p.recurringSeries.map((r) => {
+        const start = isoDate(r.startDate)!;
+        return {
+          id: r.id,
+          title: r.title,
+          amountMinor: minorToJson(r.amountMinor),
+          startDate: start,
+          count: r.count,
+          createdCount: r.createdCount,
+          nextDate: r.createdCount < r.count ? recurringDates(start, r.count)[r.createdCount]! : null,
+        };
+      }),
       updatedAt: p.updatedAt.toISOString(),
       canEdit: can(user, 'projects.write', { ownerId: p.ownerId }),
     };
@@ -396,10 +416,12 @@ export class ProjectsService {
         expectedAmountMinor: true,
         upsellEntries: { select: { amountMinor: true } },
         milestones: { select: { amountMinor: true } },
+        recurringSeries: { select: { amountMinor: true, count: true, createdCount: true } },
       },
     });
     const value = p.upsellEntries.reduce((s, u) => s + u.amountMinor, p.expectedAmountMinor);
-    const scheduled = p.milestones.reduce((s, m) => s + m.amountMinor, 0n);
+    // D-063: recurring months not created yet already hold their place.
+    const scheduled = p.milestones.reduce((s, m) => s + m.amountMinor, 0n) + p.recurringSeries.reduce((s, r) => s + pendingOf(r), 0n);
     if (scheduled > value) {
       const [total, limit] = [formatMoney(scheduled, p.currency), formatMoney(value, p.currency)];
       // D-059: removing an upsell gets its own wording, so it is clear what blocks it.

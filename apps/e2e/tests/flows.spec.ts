@@ -140,3 +140,29 @@ test('D-041 an invoice PDF fills a new milestone, with no payment (D-043: not st
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'E2E sprint' })).toBeVisible();
 });
+
+test('D-063 a recurring milestone creates every invoice due so far and lists its progress', async ({ page }) => {
+  await signIn(page, 'pm1');
+  await page.goto('/projects/new');
+  await page.getByRole('combobox', { name: 'Client' }).click();
+  await page.getByPlaceholder('Search clients…').fill(uniq('Retainer Client'));
+  await page.getByRole('option', { name: /add new client/i }).click();
+  await page.getByLabel('Project name').fill('E2E Retainer');
+  await page.getByLabel('Booking amount').fill('12,000');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('heading', { name: /E2E Retainer/ })).toBeVisible();
+  await page.goto(`${page.url()}?tab=milestones&add=1`);
+  await page.getByRole('checkbox', { name: 'Recurring monthly' }).check();
+  await page.getByLabel('New milestone task').fill('Retainer');
+  await page.getByLabel('Amount per invoice').fill('1,000');
+  await page.getByLabel('First invoice date').fill('2026-04-01');
+  await page.getByLabel('Number of invoices').fill('12');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  const list = page.getByRole('region', { name: 'Recurring milestones' });
+  await expect(list).toBeVisible();
+  // Every month from April up to today exists; the rest come on their dates.
+  const today = new Date().toISOString().slice(0, 10);
+  const due = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(2026, 3 + i, 1)).toISOString().slice(0, 10)).filter((d) => d <= today);
+  await expect(list).toContainText(`${due.length} of 12 created`);
+  await expect(page.getByRole('cell', { name: 'Retainer (1/12)' })).toBeVisible();
+});

@@ -67,6 +67,8 @@ LEAD → PROPOSAL → WON → ACTIVE → COMPLETED
 
 ## Payments ("Mark as paid")
 
+- **MS-6** (D-063) A recurring series makes one milestone a month on its start date's day, each created once due and
+  never twice (a deleted one is not recreated); the series' months still to come count towards MS-5.
 - **P-1** The dialog pre-fills: milestone label `M{n}`, today's date, amount = remaining balance.
 - **P-2** `0 < amount ≤ balance`. Over-payment is rejected (record the extra as a separate milestone).
 - **P-3** Partial payments are allowed; a milestone may have many payments until `PAID`.
