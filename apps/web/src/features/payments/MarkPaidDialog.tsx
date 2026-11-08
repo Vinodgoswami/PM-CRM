@@ -50,7 +50,7 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
     if (!file || file.type !== 'application/pdf') return;
     let fields: InvoiceFields = {};
     try {
-      fields = parseInvoiceText(await readPdfText(file), target.currency);
+      fields = parseInvoiceText(await readPdfText(file), target.currency, today);
     } catch {
       /* unreadable PDF: treated like one without text */
     }
