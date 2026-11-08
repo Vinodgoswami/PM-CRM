@@ -30,6 +30,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { SettingsService } from '../settings/settings.service';
 import { FxService } from '../fx/fx.service';
 import { isoDate, PROJECT_MONEY_INCLUDE, totalsFor } from './project-money';
+import { generateRecurring } from './recurring-generate';
 
 const LIST_INCLUDE = {
   ...PROJECT_MONEY_INCLUDE,
@@ -325,6 +326,20 @@ export class ProjectsService {
             expectedAmountMinor: project.expectedAmountMinor.toString(),
           },
         });
+        if (input.recurring) {
+          // D-064: a project billed monthly gets its recurring series in the same transaction.
+          const series = await tx.recurringSeries.create({
+            data: {
+              projectId: project.id,
+              title: input.name,
+              amountMinor: minorFromJson(input.recurring.amountMinor),
+              startDate: toDate(input.recurring.startDate)!,
+              count: input.recurring.count,
+              createdById: user.id,
+            },
+          });
+          await generateRecurring(tx, series.id, today);
+        }
         await this.assertMilestonesWithinValue(tx, project.id);
         return project.id;
       });

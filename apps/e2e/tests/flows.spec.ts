@@ -166,3 +166,23 @@ test('D-063 a recurring milestone creates every invoice due so far and lists its
   await expect(list).toContainText(`${due.length} of 12 created`);
   await expect(page.getByRole('cell', { name: 'Retainer (1/12)' })).toBeVisible();
 });
+
+test('D-064 a new project billed monthly gets its booking and recurring milestones', async ({ page }) => {
+  await signIn(page, 'pm1');
+  await page.goto('/projects/new');
+  await page.getByLabel('Project name').fill('E2E Monthly');
+  await page.getByRole('combobox', { name: 'Client' }).click();
+  await page.getByPlaceholder('Search clients…').fill(uniq('Monthly Client'));
+  await page.getByRole('option', { name: /add new client/i }).click();
+  await page.getByRole('radio', { name: 'Recurring monthly' }).click();
+  await page.getByLabel('Amount per invoice').fill('1,000');
+  await page.getByLabel('Number of invoices').fill('12');
+  await page.getByLabel('First invoice date').fill('2026-04-01');
+  await expect(page.getByText(/Booking .*12,000\.00 \(12 × /)).toBeVisible();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('heading', { name: /E2E Monthly/ })).toBeVisible();
+  await page.goto(`${page.url()}?tab=milestones`);
+  const list = page.getByRole('region', { name: 'Recurring milestones' });
+  await expect(list).toContainText('of 12 created');
+  await expect(page.getByRole('cell', { name: 'E2E Monthly (1/12)' })).toBeVisible();
+});

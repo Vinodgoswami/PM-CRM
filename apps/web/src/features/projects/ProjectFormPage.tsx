@@ -17,6 +17,7 @@ import { uploadDocument, useCreateProject, useProject, useUpdateProject } from '
 import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
 import { OWNER } from '../../lib/labels';
+import { formatApiMoney } from '../../lib/money';
 import { OptionSelect } from '../../components/OptionSelect';
 import { CurrencySelect } from '../../components/CurrencySelect';
 import { MoneyInput } from './MoneyInput';
@@ -78,6 +79,16 @@ function CreateProject() {
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [ownerId, setOwnerId] = useState('');
   const [expected, setExpected] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
+  // D-064: a project billed monthly: amount per invoice × number of invoices is its booking.
+  const [billing, setBilling] = useState<'FIXED' | 'RECURRING'>('FIXED');
+  const [perInvoice, setPerInvoice] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
+  const [invoices, setInvoices] = useState('12');
+  // null: follows the start date until the first invoice date is changed.
+  const [firstInvoice, setFirstInvoice] = useState<string | null>(null);
+  const monthly = billing === 'RECURRING';
+  const invoiceCount = Number(invoices);
+  const recurringTotal =
+    perInvoice.minor !== null && Number.isInteger(invoiceCount) && invoiceCount > 0 ? perInvoice.minor * invoiceCount : null;
   const [rows, setRows] = useState<MilestoneRow[]>([]);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -104,25 +115,35 @@ function CreateProject() {
         ? { newClient: { name: client.newClient.name, ...(client.newClient.email ? { email: client.newClient.email } : {}) } }
         : {}),
       ...(isAdmin && ownerId ? { ownerId } : {}),
-      expectedAmountMinor: expected.minor ?? undefined,
+      expectedAmountMinor: (monthly ? recurringTotal : expected.minor) ?? undefined,
       currency,
       ...(parentProjectId ? { parentProjectId, phaseKind } : {}),
-      milestones: rows.map((r) => ({
-        title: r.title,
-        amountMinor: r.amountMinor ?? undefined,
-        ...(r.dueDate ? { dueDate: r.dueDate } : {}),
-      })),
+      ...(monthly && perInvoice.minor !== null
+        ? { recurring: { amountMinor: perInvoice.minor, startDate: firstInvoice ?? startDate, count: invoiceCount } }
+        : {}),
+      milestones: monthly
+        ? []
+        : rows.map((r) => ({
+            title: r.title,
+            amountMinor: r.amountMinor ?? undefined,
+            ...(r.dueDate ? { dueDate: r.dueDate } : {}),
+          })),
     };
     const parsed = createProjectSchema.safeParse(input);
     const found: Errors = parsed.success ? {} : issuesToErrors(parsed.error.issues);
     // Zod skips the object-level client refine while other fields fail, so check it here as well.
     if (!client) found.clientId = 'Choose an existing client or add a new one';
-    if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter the booking amount';
+    if (monthly) {
+      if (perInvoice.minor === null) found['recurring.amountMinor'] = perInvoice.error ?? 'Enter the amount per invoice';
+      if (!Number.isInteger(invoiceCount) || invoiceCount < 1 || invoiceCount > 120) found['recurring.count'] = 'Enter 1–120 invoices';
+      if (!(firstInvoice ?? startDate)) found['recurring.startDate'] = 'Choose the first invoice date';
+    } else if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter the booking amount';
     if (mustChoose && !ownerId) found.ownerId = 'Choose the project manager for this project.';
-    rows.forEach((r, i) => {
-      if (r.amountMinor === null) found[`milestones.${i}.amountMinor`] = r.amountError ?? 'Enter an amount';
-      if (!r.dueDate) found[`milestones.${i}.dueDate`] = 'Choose a due date';
-    });
+    if (!monthly)
+      rows.forEach((r, i) => {
+        if (r.amountMinor === null) found[`milestones.${i}.amountMinor`] = r.amountError ?? 'Enter an amount';
+        if (!r.dueDate) found[`milestones.${i}.dueDate`] = 'Choose a due date';
+      });
     // MS-5: milestones may not add up to more than the booking amount.
     if (expected.minor !== null && rows.reduce((t, r) => t + (r.amountMinor ?? 0), 0) > expected.minor)
       found.expectedAmountMinor = 'Milestones add up to more than the booking amount. Lower a milestone or raise the booking.';
@@ -220,12 +241,65 @@ function CreateProject() {
                 <PhaseKindSelect id="phase-kind" value={phaseKind} onChange={setPhaseKind} />
               </Field>
             )}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label id="billing-label">Billing</Label>
+              <div role="radiogroup" aria-labelledby="billing-label" className="flex w-fit rounded-full bg-background p-1 text-sm">
+                {(
+                  [
+                    ['FIXED', 'Fixed amount'],
+                    ['RECURRING', 'Recurring monthly'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={billing === value}
+                    onClick={() => setBilling(value)}
+                    className={`rounded-full px-4 py-1.5 ${billing === value ? 'bg-primary font-semibold text-primary-contrast' : 'text-text-muted'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Field id="currency" label="Project currency">
               <CurrencySelect id="currency" value={currency} onChange={setCurrencyChoice} />
             </Field>
-            <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
-              <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
-            </Field>
+            {monthly ? (
+              <>
+                <Field id="per-invoice" label="Amount per invoice" error={errors['recurring.amountMinor']}>
+                  <MoneyInput id="per-invoice" currency={currency} onValue={(minor, error) => setPerInvoice({ minor, error })} />
+                </Field>
+                <Field id="invoice-count" label="Number of invoices" error={errors['recurring.count']}>
+                  <Input
+                    id="invoice-count"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={invoices}
+                    onChange={(e) => setInvoices(e.target.value)}
+                  />
+                </Field>
+                <Field id="first-invoice" label="First invoice date" error={errors['recurring.startDate']}>
+                  <Input
+                    id="first-invoice"
+                    type="date"
+                    value={firstInvoice ?? startDate}
+                    onChange={(e) => setFirstInvoice(e.target.value)}
+                  />
+                </Field>
+                <p className="self-end pb-2 text-sm text-text-muted">
+                  {recurringTotal !== null
+                    ? `Booking ${formatApiMoney(recurringTotal, currency)} (${invoiceCount} × ${formatApiMoney(perInvoice.minor!, currency)})`
+                    : 'The booking is the amount per invoice × the number of invoices.'}
+                </p>
+              </>
+            ) : (
+              <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
+                <MoneyInput id="expected" currency={currency} onValue={(minor, error) => setExpected({ minor, error })} />
+              </Field>
+            )}
             {/* D-042: when the work starts; amounts in other currencies are converted at that day's rate. */}
             <Field id="start-date" label="Start date" error={errors.startDate}>
               <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -251,7 +325,14 @@ function CreateProject() {
           </div>
         </Card>
         <Card>
-          <MilestoneRowsEditor rows={rows} onChange={setRows} expectedMinor={expected.minor} currency={currency} errors={errors} />
+          {monthly ? (
+            <p className="text-sm text-text-muted">
+              Monthly milestones are created from the first invoice date: every invoice due up to today when you create the project, then
+              one on the same day each month. Other milestones can be added later on the project page.
+            </p>
+          ) : (
+            <MilestoneRowsEditor rows={rows} onChange={setRows} expectedMinor={expected.minor} currency={currency} errors={errors} />
+          )}
         </Card>
         <Card className="space-y-3">
           <div>

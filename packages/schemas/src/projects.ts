@@ -44,6 +44,14 @@ export const createProjectSchema = z
     phaseKind: z.enum(['UPSELL', 'SCOPE']).optional(),
     tags: z.array(text(40).min(1)).max(20).default([]),
     milestones: z.array(milestoneInputSchema).max(50).default([]),
+    /** D-064: billed monthly: a recurring series named after the project is created with it. */
+    recurring: z
+      .object({
+        amountMinor: positiveMinorSchema,
+        startDate: isoDateSchema,
+        count: z.number().int().min(1, 'At least one invoice').max(120, 'At most 120 invoices'),
+      })
+      .optional(),
   })
   .refine((v) => (v.clientId ? 1 : 0) + (v.newClient ? 1 : 0) === 1, {
     message: 'Choose an existing client or add a new one',
