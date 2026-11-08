@@ -15,6 +15,8 @@ export interface MarkPaidTarget {
   milestoneId: string;
   number: number;
   title: string;
+  /** D-047: the milestone's own invoice ID, used as the starting value. */
+  invoiceId?: string | null;
   balanceMinor: number;
   currency: string;
 }
@@ -33,7 +35,7 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
   const [key] = useState(() => crypto.randomUUID());
   const sending = useRef(false);
   const [label, setLabel] = useState(`M${target.number}`);
-  const [invoiceId, setInvoiceId] = useState('');
+  const [invoiceId, setInvoiceId] = useState(target.invoiceId ?? '');
   const [date, setDate] = useState(today);
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: target.balanceMinor, error: null });

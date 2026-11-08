@@ -65,6 +65,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
         <THead>
           <TR>
             <TH>#</TH>
+            <TH>Invoice ID</TH>
             <TH>Task</TH>
             <TH className="text-right">Amount</TH>
             <TH>Due</TH>
@@ -77,7 +78,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
         <TBody>
           {project.milestones.length === 0 && (
             <TR>
-              <TD colSpan={8} className="py-6 text-center text-text-muted">
+              <TD colSpan={9} className="py-6 text-center text-text-muted">
                 No milestones yet.
               </TD>
             </TR>
@@ -103,6 +104,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
             ) : (
               <TR key={m.id}>
                 <TD className="font-medium">M{m.number}</TD>
+                <TD className="whitespace-nowrap">{m.invoiceId ?? <span className="text-text-muted">—</span>}</TD>
                 <TD className="max-w-64 truncate">
                   {m.title}
                   {m.isUpsell && <span className="ml-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium">Upsell</span>}
@@ -124,6 +126,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                           milestoneId: m.id,
                           number: m.number,
                           title: m.title,
+                          invoiceId: m.invoiceId,
                           balanceMinor: m.balanceMinor,
                           currency: project.currency,
                         })
@@ -176,7 +179,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
           )}
           {project.milestones.length > 0 && (
             <TR className="font-semibold hover:bg-transparent">
-              <TD colSpan={2}>Total</TD>
+              <TD colSpan={3}>Total</TD>
               <TD className="text-right tabular-nums">{money(totals.amount)}</TD>
               <TD />
               <TD className="text-right tabular-nums">{money(totals.paid)}</TD>
@@ -200,6 +203,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const qc = useQueryClient();
   const [open, setOpen] = useState(openAtStart);
   const [title, setTitle] = useState('');
+  const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [due, setDue] = useState('');
   const [target, setTarget] = useState(project.id);
@@ -223,7 +227,12 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           })
         : apiFetch(`/projects/${target}/milestones`, {
             method: 'POST',
-            body: { title, amountMinor: amount.minor!, ...(due ? { dueDate: due } : {}) },
+            body: {
+              title,
+              ...(invoiceId.trim() ? { invoiceId: invoiceId.trim() } : {}),
+              amountMinor: amount.minor!,
+              ...(due ? { dueDate: due } : {}),
+            },
             schema: projectDetailSchema,
           }),
     onSuccess: (updated) => {
@@ -243,9 +252,10 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
       /* unreadable PDF: treated like one without text */
     }
     const got: string[] = [];
-    if (fields.invoiceId && !title.trim()) {
-      setTitle(`Invoice ${fields.invoiceId}`);
-      got.push('task');
+    // D-047: the invoice ID has its own field; the task stays as typed.
+    if (fields.invoiceId) {
+      setInvoiceId(fields.invoiceId);
+      got.push('invoice ID');
     }
     if (fields.amountMinor !== undefined) {
       setAmount({ minor: fields.amountMinor, error: null });
@@ -294,6 +304,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
             setFilled(null);
             setAmountShown((a) => ({ key: a.key + 1 }));
             setTitle('');
+            setInvoiceId('');
             setDue('');
             setAmount({ minor: null, error: null });
             setKey((k) => k + 1);
@@ -345,7 +356,13 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           </p>
         )}
       </div>
-      <div className="grid gap-2 sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-start">
+      <div className="grid gap-2 sm:grid-cols-[10rem_1fr_12rem_10rem_auto] sm:items-start">
+        <Input
+          aria-label="New milestone invoice ID"
+          placeholder="Invoice ID"
+          value={invoiceId}
+          onChange={(e) => setInvoiceId(e.target.value)}
+        />
         <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
         <MoneyInput
           key={amountShown.key}
@@ -376,6 +393,7 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
   const update = useUpdateMilestone(project.id);
   const reset = useResetMilestone();
   const [title, setTitle] = useState(milestone.title);
+  const [invoiceId, setInvoiceId] = useState(milestone.invoiceId ?? '');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: milestone.amountMinor, error: null });
   const [due, setDue] = useState(milestone.dueDate ?? '');
   const [confirming, setConfirming] = useState(false);
@@ -384,13 +402,16 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
 
   const save = (minor: number) =>
     update.mutate(
-      { milestoneId: milestone.id, title, amountMinor: minor, dueDate: due || null },
+      { milestoneId: milestone.id, title, invoiceId: invoiceId.trim() || null, amountMinor: minor, dueDate: due || null },
       { onSuccess: onDone, onError: (e) => toast.error(e.message) },
     );
 
   return (
     <TR className="bg-accent/40">
       <TD className="font-medium">M{milestone.number}</TD>
+      <TD>
+        <Input aria-label={`M${milestone.number} invoice ID`} value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} />
+      </TD>
       <TD>
         <Input aria-label={`M${milestone.number} task`} value={title} onChange={(e) => setTitle(e.target.value)} />
       </TD>

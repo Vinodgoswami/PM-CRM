@@ -51,6 +51,7 @@ export class MilestonesService {
           projectId,
           number: project.milestones.length + 1,
           title: input.title,
+          invoiceId: input.invoiceId || null,
           description: input.description ?? null,
           amountMinor: minorFromJson(input.amountMinor),
           dueDate: toDate(input.dueDate),
@@ -82,6 +83,7 @@ export class MilestonesService {
         where: { id: milestoneId },
         data: {
           ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.invoiceId !== undefined ? { invoiceId: input.invoiceId || null } : {}),
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.amountMinor !== undefined ? { amountMinor: minorFromJson(input.amountMinor) } : {}),
           ...(input.dueDate !== undefined ? { dueDate: toDate(input.dueDate) } : {}),
@@ -90,6 +92,7 @@ export class MilestonesService {
       if (input.amountMinor !== undefined) await this.projects.assertMilestonesWithinValue(tx, project.id);
       const pick = (m: typeof after) => ({
         title: m.title,
+        invoiceId: m.invoiceId,
         description: m.description,
         amountMinor: m.amountMinor,
         dueDate: isoDate(m.dueDate),
