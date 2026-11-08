@@ -215,3 +215,21 @@ test('D-039 the clients list is in your currency, each project converted at its 
   const usd = (await pm.agent.get('/api/v1/clients')).body.items[0];
   expect(usd).toMatchObject({ currency: 'INR', totalsCurrency: 'USD', bookedMinor: 1200, collectedMinor: 600 });
 });
+
+test('D-057 the chart series follows the period: weeks of a month, months of a year', async () => {
+  const rep = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(rep.agent, rep.csrf, 'Acme', 100000);
+  const month = (await rep.agent.get('/api/v1/dashboard?period=THIS_MONTH')).body.periodSeries as {
+    from: string;
+    to: string;
+    collectedMinor: number;
+  }[];
+  expect(month.length).toBeGreaterThanOrEqual(4);
+  expect(month.length).toBeLessThanOrEqual(5);
+  const week = month.find((b) => b.from <= today() && today() <= b.to)!;
+  expect(week.collectedMinor).toBe(50000);
+  expect(month.reduce((s, b) => s + b.collectedMinor, 0)).toBe(50000);
+  const year = (await rep.agent.get('/api/v1/dashboard?period=THIS_FY')).body.periodSeries;
+  expect(year).toHaveLength(12);
+  expect(year[0]).toMatchObject({ label: expect.any(String), from: expect.stringMatching(/-01$/) });
+});

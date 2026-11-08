@@ -1,5 +1,6 @@
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { fyOf, quarterOf, todayIn } from '../src/period';
+import { periodBuckets } from '../src/period-presets';
 
 test('PR-1 fyOf with April start', () => {
   expect(fyOf('2026-03-31', 4)).toEqual({ label: '2025-26', start: '2025-04-01', end: '2026-03-31' });
@@ -50,4 +51,42 @@ test('TWO_FY covers last and this financial year; its comparison is the two year
   const { periodRange, previousRange } = await import('../src/period-presets');
   expect(periodRange('TWO_FY', '2026-10-30', 4)).toEqual({ from: '2025-04-01', to: '2027-03-31' });
   expect(previousRange('TWO_FY', '2026-10-30', 4)).toEqual({ from: '2023-04-01', to: '2025-03-31' });
+});
+
+// D-057: the dashboard chart's bars follow the selected period.
+describe('periodBuckets', () => {
+  const today = '2026-11-08';
+  const labels = (key: Parameters<typeof periodBuckets>[0]) => periodBuckets(key, today, 4).map((b) => b.label);
+
+  test('a month is split into weeks', () => {
+    expect(periodBuckets('THIS_MONTH', today, 4)).toEqual([
+      { label: '1–7 Nov', from: '2026-11-01', to: '2026-11-07' },
+      { label: '8–14 Nov', from: '2026-11-08', to: '2026-11-14' },
+      { label: '15–21 Nov', from: '2026-11-15', to: '2026-11-21' },
+      { label: '22–28 Nov', from: '2026-11-22', to: '2026-11-28' },
+      { label: '29–30 Nov', from: '2026-11-29', to: '2026-11-30' },
+    ]);
+  });
+
+  test('a quarter, year to date and whole financial years go by month', () => {
+    expect(labels('THIS_QUARTER')).toEqual(['Oct', 'Nov', 'Dec']);
+    expect(labels('FY_TO_DATE')).toEqual(['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov']);
+    expect(labels('THIS_FY')).toEqual(['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']);
+    expect(periodBuckets('LAST_FY', today, 4)[0]).toEqual({ label: 'Apr', from: '2025-04-01', to: '2025-04-30' });
+    expect(periodBuckets('LAST_FY', today, 4).at(-1)).toEqual({ label: 'Mar', from: '2026-03-01', to: '2026-03-31' });
+  });
+
+  test('two financial years go by quarter, and all time is the last 12 months', () => {
+    expect(labels('TWO_FY')).toEqual([
+      "Apr–Jun '25",
+      "Jul–Sep '25",
+      "Oct–Dec '25",
+      "Jan–Mar '26",
+      "Apr–Jun '26",
+      "Jul–Sep '26",
+      "Oct–Dec '26",
+      "Jan–Mar '27",
+    ]);
+    expect(labels('ALL')).toEqual(['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov']);
+  });
 });

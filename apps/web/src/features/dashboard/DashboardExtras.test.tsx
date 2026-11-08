@@ -164,3 +164,27 @@ test('D-029 calendar days still ahead are tinted green and days already past red
   const ahead = new Date() < new Date('2026-12-15T00:00:00');
   expect(day).toHaveAttribute('data-tone', ahead ? 'upcoming' : 'past');
 });
+
+test('D-057 the chart follows the period: a month shows weeks, and a week bar drills into its dates', async () => {
+  const weeks = [
+    { label: '1–7 Nov', from: '2026-11-01', to: '2026-11-07' },
+    { label: '8–14 Nov', from: '2026-11-08', to: '2026-11-14' },
+    { label: '15–21 Nov', from: '2026-11-15', to: '2026-11-21' },
+    { label: '22–28 Nov', from: '2026-11-22', to: '2026-11-28' },
+    { label: '29–30 Nov', from: '2026-11-29', to: '2026-11-30' },
+  ].map((w, i) => ({ ...w, bookedMinor: 0, collectedMinor: (i + 1) * 100000, expectedMinor: 0 }));
+  const api = stubApi({
+    ...routes,
+    'GET /dashboard': { body: dashboard({ period: { key: 'THIS_MONTH', from: '2026-11-01', to: '2026-11-30' }, periodSeries: weeks }) },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/', sessionFor('CEO'));
+  const user = userEvent.setup();
+  expect(await screen.findByText('This month, by week')).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /^(1–7|8–14|15–21|22–28|29–30) Nov: / })).toHaveLength(5);
+  await user.click(screen.getByRole('button', { name: /^8–14 Nov: / }));
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent('Collected 8 Nov 2026 – 14 Nov 2026');
+  const q = api.calls.filter((c) => c.path === '/payments').at(-1)!.url.searchParams;
+  expect([q.get('from'), q.get('to')]).toEqual(['2026-11-08', '2026-11-14']);
+});

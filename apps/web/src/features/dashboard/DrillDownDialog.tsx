@@ -10,35 +10,41 @@ import { projectsQuery } from '../projects/api';
 const monthName = (ym: string) =>
   new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
-function monthRange(ym: string) {
+const monthEnd = (ym: string) => {
   const [y, m] = ym.split('-').map(Number) as [number, number];
-  return { from: `${ym}-01`, to: new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10) };
-}
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+};
 
-/** What is behind one monthly bar (docs/09 C1 drill-down): the payments, or the projects confirmed. */
+/** "in December 2026" for a whole month, else the dates (D-057: a bar can be a week or a quarter). */
+const rangeText = ({ from, to }: { from: string; to: string }) =>
+  from.endsWith('-01') && to === monthEnd(from.slice(0, 7))
+    ? `in ${monthName(from.slice(0, 7))}`
+    : `${formatDate(from)} – ${formatDate(to)}`;
+
+/** What is behind one bar (docs/09 C1 drill-down): the payments, or the projects confirmed. */
 export function DrillDownDialog({
-  month,
+  range,
   series,
   ownerId,
   onClose,
 }: {
-  month: string;
+  range: { from: string; to: string };
   series: 'collected' | 'booked';
   ownerId: string;
   onClose: () => void;
 }) {
-  const { from, to } = monthRange(month);
+  const { from, to } = range;
   const owner: Record<string, string> = ownerId ? { ownerId } : {};
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogTitle>
-          {series === 'collected' ? 'Collected' : 'Confirmed'} in {monthName(month)}
+          {series === 'collected' ? 'Collected' : 'Confirmed'} {rangeText(range)}
         </DialogTitle>
         <DialogDescription>
           {series === 'collected'
-            ? 'Every payment received this month.'
-            : 'Projects confirmed this month (extra work amounts count towards Contracted too).'}
+            ? 'Every payment received in this period.'
+            : 'Projects confirmed in this period (extra work amounts count towards Contracted too).'}
         </DialogDescription>
         <div className="mt-4 max-h-[60dvh] overflow-y-auto">
           {series === 'collected' ? (

@@ -41,6 +41,19 @@ export const dashboardSchema = z.object({
   kpis,
   previous: z.object({ bookedMinor: minorSchema, collectedMinor: minorSchema }).nullable(),
   monthly: z.array(z.object({ month: z.string(), bookedMinor: minorSchema, collectedMinor: minorSchema, expectedMinor: minorSchema })),
+  /** D-057: the dashboard chart's bars for the selected period: weeks of a month, months, or quarters of two years. */
+  periodSeries: z
+    .array(
+      z.object({
+        label: z.string(),
+        from: isoDateSchema,
+        to: isoDateSchema,
+        bookedMinor: minorSchema,
+        collectedMinor: minorSchema,
+        expectedMinor: minorSchema,
+      }),
+    )
+    .default([]),
   forecast: z.array(z.object({ month: z.string(), scheduledMinor: minorSchema })),
   aging: z.object({ d1_30: minorSchema, d31_60: minorSchema, d61_90: minorSchema, d90plus: minorSchema }),
   /** C2: quarters of the selected FY against the same quarters a year earlier. */

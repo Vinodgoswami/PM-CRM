@@ -55,6 +55,16 @@ const CornerLink = ({ to, label }: { to: string; label: string }) => (
   </Link>
 );
 
+/** D-057: what the chart's bars are for each period button. */
+const CHART_SUBTITLE: Record<string, string> = {
+  THIS_MONTH: 'This month, by week',
+  THIS_QUARTER: 'This quarter, by month',
+  FY_TO_DATE: 'Year to date, by month',
+  THIS_FY: 'This financial year, by month',
+  LAST_FY: 'Last financial year, by month',
+  TWO_FY: 'Last 2 financial years, by quarter',
+  ALL: 'Last 12 months',
+};
 export function DashboardPage() {
   const { data: session } = useSession();
   // Filters live in the address (?period=&ownerId=) so a view can be bookmarked or shared.
@@ -164,17 +174,24 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
   const collected = useCountUp(k.collectedMinor);
   const outstanding = useCountUp(k.outstandingMinor);
   const [series, setSeries] = useState<'collected' | 'booked'>('collected');
-  const [drill, setDrill] = useState<string | null>(null);
+  const [drill, setDrill] = useState<{ from: string; to: string } | null>(null);
   // D-022: the Admin sees every figure but no client or project names, and cannot open the lists behind them.
   const anon = data.anonymous;
   const { data: session } = useSession();
   const showCounts = !!session && can(session.user, 'admin.overview');
   const [qSeries, setQSeries] = useState<'booked' | 'collected'>('booked');
-  const bars = data.monthly.map((m) => ({
-    key: m.month,
-    label: monthLabel(m.month),
-    value: series === 'collected' ? m.collectedMinor : m.bookedMinor,
+  // D-057: the bars follow the selected period (weeks of a month, months, or quarters of two years).
+  const buckets = data.periodSeries.length
+    ? data.periodSeries
+    : data.monthly.map((m) => ({ ...m, label: monthLabel(m.month), from: `${m.month}-01`, to: `${m.month}-31` }));
+  const bars = buckets.map((b) => ({
+    key: `${b.from}|${b.to}`,
+    label: b.label,
+    value: series === 'collected' ? b.collectedMinor : b.bookedMinor,
   }));
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const current = buckets.findIndex((b) => b.from <= todayIso && todayIso <= b.to);
+  const chartSubtitle = CHART_SUBTITLE[data.period.key] ?? 'Last 12 months';
   const agingRows = [
     { label: '1–30 days', value: data.aging.d1_30 },
     { label: '31–60 days', value: data.aging.d31_60 },
@@ -255,8 +272,8 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
         </motion.section>
 
         <Panel
-          title="Monthly performance"
-          subtitle="Last 12 months"
+          title="Performance"
+          subtitle={chartSubtitle}
           className="lg:col-span-5"
           action={
             <div role="radiogroup" aria-label="Series" className="flex rounded-full bg-background p-1 text-xs print:hidden">
@@ -276,14 +293,21 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
           }
         >
           <HatchedBars
-            key={series}
+            key={`${series}-${data.period.key}`}
             data={bars}
             currency={data.currency}
-            highlightIndex={bars.length - 1}
-            label={`Monthly ${series}`}
-            onSelect={anon ? undefined : setDrill}
+            highlightIndex={current}
+            label={`${chartSubtitle}: ${series}`}
+            onSelect={
+              anon
+                ? undefined
+                : (key) => {
+                    const [from, to] = key.split('|') as [string, string];
+                    setDrill({ from, to });
+                  }
+            }
           />
-          {drill && <DrillDownDialog month={drill} series={series} ownerId={ownerId} onClose={() => setDrill(null)} />}
+          {drill && <DrillDownDialog range={drill} series={series} ownerId={ownerId} onClose={() => setDrill(null)} />}
         </Panel>
 
         <Panel
