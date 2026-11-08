@@ -203,7 +203,6 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const qc = useQueryClient();
   const [open, setOpen] = useState(openAtStart);
   const [title, setTitle] = useState('');
-  const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [due, setDue] = useState('');
   const [target, setTarget] = useState(project.id);
@@ -227,12 +226,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           })
         : apiFetch(`/projects/${target}/milestones`, {
             method: 'POST',
-            body: {
-              title,
-              ...(invoiceId.trim() ? { invoiceId: invoiceId.trim() } : {}),
-              amountMinor: amount.minor!,
-              ...(due ? { dueDate: due } : {}),
-            },
+            body: { title, amountMinor: amount.minor!, ...(due ? { dueDate: due } : {}) },
             schema: projectDetailSchema,
           }),
     onSuccess: (updated) => {
@@ -252,11 +246,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
       /* unreadable PDF: treated like one without text */
     }
     const got: string[] = [];
-    // D-047: the invoice ID has its own field; the task stays as typed.
-    if (fields.invoiceId) {
-      setInvoiceId(fields.invoiceId);
-      got.push('invoice ID');
-    }
+    // D-048: a milestone gets its invoice ID when the invoice comes in with a payment, not when it is created.
     if (fields.amountMinor !== undefined) {
       setAmount({ minor: fields.amountMinor, error: null });
       setAmountShown((a) => ({ key: a.key + 1, minor: fields.amountMinor }));
@@ -304,7 +294,6 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
             setFilled(null);
             setAmountShown((a) => ({ key: a.key + 1 }));
             setTitle('');
-            setInvoiceId('');
             setDue('');
             setAmount({ minor: null, error: null });
             setKey((k) => k + 1);
@@ -356,13 +345,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           </p>
         )}
       </div>
-      <div className="grid gap-2 sm:grid-cols-[10rem_1fr_12rem_10rem_auto] sm:items-start">
-        <Input
-          aria-label="New milestone invoice ID"
-          placeholder="Invoice ID"
-          value={invoiceId}
-          onChange={(e) => setInvoiceId(e.target.value)}
-        />
+      <div className="grid gap-2 sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-start">
         <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
         <MoneyInput
           key={amountShown.key}

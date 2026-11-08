@@ -106,6 +106,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-52 | Done   | fix/active-zero-milestones             | D-045 PS-4 drops "at least one milestone" (delete, status change, import); tests updated                                                                                                                                                                                                    |
 | P4-53 | Done   | fix/invoice-dates                      | D-046 `allDates` + `dateAfter` in invoice-text.ts; 6 new parser tests                                                                                                                                                                                                                       |
 | P4-54 | Done   | feat/milestone-invoice-id              | D-047 `Milestone.invoiceId` + migration `20261108120000_milestone_invoice_id`; list column, add/edit fields, PDF fill, Mark-as-paid prefill; tests                                                                                                                                          |
+| P4-55 | Done   | feat/invoice-id-from-payment           | D-048 Add milestone without Invoice ID; payment create copies its invoice ID to the milestone when empty; tests                                                                                                                                                                             |
 
 ## Blockers
 
