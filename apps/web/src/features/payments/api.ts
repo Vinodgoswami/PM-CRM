@@ -17,7 +17,7 @@ export function usePayments(search: string, enabled = true) {
 }
 
 /** A payment changes the project totals, milestone status, billing and invoices: refresh all of them. */
-function useRefreshAfterPayment() {
+export function useRefreshAfterPayment() {
   const qc = useQueryClient();
   return () => {
     void qc.invalidateQueries({ queryKey: ['projects'] });

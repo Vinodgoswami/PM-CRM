@@ -73,4 +73,6 @@ test('unexpected errors hide their message', async () => {
   expect(res.status).toBe(500);
   expect(res.body.error.code).toBe('INTERNAL');
   expect(JSON.stringify(res.body)).not.toContain('boom');
+  // A short reference ties the message the user sees to the logged stack trace.
+  expect(res.body.error.message).toMatch(/^Something went wrong \(ref [0-9a-f]{8}\)$/);
 });

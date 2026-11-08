@@ -8,7 +8,7 @@ import { Link } from 'react-router';
 import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
 import { formatApiMoney } from '../../lib/money';
-import { MarkPaidDialog, type MarkPaidTarget } from '../payments/MarkPaidDialog';
+import { useMarkPaidFlow } from '../payments/useMarkPaidFlow';
 import { CurrencyNote } from '../dashboard/CurrencyNote';
 import { useClientOptions, useOwners } from '../filters/api';
 import { FilterSelect } from '../filters/FilterSelect';
@@ -43,7 +43,7 @@ export function InvoicesPage() {
     queryKey: ['invoices', search],
     queryFn: () => apiFetch(`/invoices${search ? `?${search}` : ''}`, { schema: invoicesResponseSchema }),
   });
-  const [paying, setPaying] = useState<MarkPaidTarget | null>(null);
+  const pay = useMarkPaidFlow();
   const grandTotal = data?.groups.reduce((s, g) => s + g.totalMinor, 0) ?? 0;
 
   return (
@@ -107,10 +107,11 @@ export function InvoicesPage() {
                   item={i}
                   base={data.currency}
                   onPay={() =>
-                    setPaying({
+                    pay.start({
                       milestoneId: i.milestoneId,
                       number: i.number,
                       title: i.title,
+                      invoiceId: i.invoiceId,
                       balanceMinor: i.balanceMinor,
                       currency: i.currency,
                     })
@@ -121,7 +122,7 @@ export function InvoicesPage() {
           </motion.section>
         ))
       )}
-      {paying && <MarkPaidDialog target={paying} onClose={() => setPaying(null)} />}
+      {pay.dialog}
     </section>
   );
 }

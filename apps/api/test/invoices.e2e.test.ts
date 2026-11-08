@@ -88,3 +88,11 @@ test('each invoice says whether the viewer may edit its milestone', async () => 
   const items = (await pm.agent.get('/api/v1/invoices')).body.groups.flatMap((g: { items: unknown[] }) => g.items);
   expect(items).toMatchObject([{ title: 'Build', canEdit: true }]);
 });
+
+test("D-049 each invoice carries its milestone's invoice ID, so it can be paid in one click", async () => {
+  const pm = await loginAs(app, prisma, 'SALES');
+  const p = await project(pm.agent, pm.csrf, 'ACTIVE', [{ title: 'Build', amountMinor: 100000, dueDate: shift(10) }]);
+  await prisma.milestone.update({ where: { id: p.milestones[0]!.id }, data: { invoiceId: 'CHS/2026-27/72' } });
+  const items = (await pm.agent.get('/api/v1/invoices')).body.groups.flatMap((g: { items: unknown[] }) => g.items);
+  expect(items).toMatchObject([{ title: 'Build', invoiceId: 'CHS/2026-27/72' }]);
+});

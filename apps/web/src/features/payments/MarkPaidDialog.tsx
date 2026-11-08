@@ -22,7 +22,16 @@ export interface MarkPaidTarget {
 }
 
 /** docs/08 S6 / flow F2. The amount defaults to the remaining balance and is locked once saved (P-4). */
-export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; onClose: () => void }) {
+export function MarkPaidDialog({
+  target,
+  initialError,
+  onClose,
+}: {
+  target: MarkPaidTarget;
+  /** D-049: why a one-click payment was refused, shown when the form opens. */
+  initialError?: string;
+  onClose: () => void;
+}) {
   const markPaid = useMarkPaid(target.milestoneId);
   const settings = useSettings().data;
   const timezone = settings?.timezone ?? 'Asia/Kolkata';
@@ -39,7 +48,7 @@ export function MarkPaidDialog({ target, onClose }: { target: MarkPaidTarget; on
   const [date, setDate] = useState(today);
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: target.balanceMinor, error: null });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
   // D-026: an optional invoice or payment slip, stored with the payment once it is saved.
   const [slip, setSlip] = useState<File | null>(null);
   // D-040: an invoice PDF fills the fields it can read; the amount box is re-created to show a filled amount.
