@@ -128,3 +128,11 @@ Neon's free compute pauses after about 5 minutes without queries. The API waits 
 (`connect_timeout` / `pool_timeout`, added to `DATABASE_URL` unless you set them) and runs a request again, up to twice,
 when it meets a stale or not-yet-ready connection. The log shows `Database not ready …; retry 1` when that happens.
 If requests still fail, check the Neon console for a suspended compute or a used-up monthly allowance.
+
+## Staying awake (D-051)
+
+Render's free plan stops a service after 15 minutes without requests; the next visitor then waits about a minute.
+On Render the API pings its own `/api/v1/health` every 10 minutes (using `RENDER_EXTERNAL_URL`, which Render sets), so
+it keeps running. One service running all month uses about 744 of the 750 free hours. The ping does not touch the
+database, so Neon still pauses when nobody uses the app and stays within its free compute hours. To switch it off, add
+`KEEP_AWAKE=false`; to ping another URL, set `KEEP_AWAKE_URL`.
