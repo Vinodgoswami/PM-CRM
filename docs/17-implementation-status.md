@@ -120,6 +120,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-66 | Done   | fix/upsell-remove-feedback             | D-059 upsell removal error shown; MS-5 wording for removal; tests                                                                                                                                                                                                                           |
 | P4-67 | Done   | feat/confirm-delete                    | D-060 `ConfirmProvider` / `useConfirm` (components/ConfirmDialog.tsx) mounted in main and test render; six call sites; tests                                                                                                                                                                |
 | P4-68 | Done   | fix/outstanding-formula                | D-061 `projectTotals` (booked flag) and `summarise` outstanding = contract − collected; docs 05/09; tests updated                                                                                                                                                                           |
+| P4-69 | Done   | feat/bulk-pay-ui                       | D-062 BulkPayDialog layout, total, per-row progress; test                                                                                                                                                                                                                                   |
 
 ## Blockers
 

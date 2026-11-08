@@ -94,3 +94,30 @@ test('a refused one stays in the popup with its reason; the others are paid', as
   expect(within(dialog).queryByLabelText('M1 paid on')).toBeNull();
   expect(within(dialog).getByLabelText('M2 paid on')).toBeInTheDocument();
 });
+
+test('D-062 the popup names each milestone, shows the total, and counts progress while saving', async () => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  const base = stubApi({
+    ...routes,
+    'POST /milestones/m1/payments': { status: 201, body: payment('p1', 'm1') },
+    'POST /milestones/m2/payments': { status: 201, body: payment('p2', 'm2') },
+  });
+  vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
+    if (String(input).includes('/milestones/m2/payments')) await gate;
+    return base.fn(input, init);
+  });
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('checkbox', { name: 'Select all unpaid' }));
+  await user.click(screen.getByRole('button', { name: 'Mark 2 as paid' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Mark 2 milestones as paid' });
+  expect(within(dialog).getByText('Design')).toBeInTheDocument();
+  expect(within(dialog).getByText('Build')).toBeInTheDocument();
+  expect(within(dialog).getByText('₹80,000.00')).toBeInTheDocument(); // 50,000 + 30,000
+  await user.click(within(dialog).getByRole('button', { name: 'Mark all as paid' }));
+  expect(await within(dialog).findByRole('button', { name: 'Saving 2 of 2…' })).toBeDisabled();
+  expect(within(dialog).getByText('Paid')).toBeInTheDocument(); // M1 done while M2 is still saving
+  release();
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+});
