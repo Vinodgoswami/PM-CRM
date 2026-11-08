@@ -47,7 +47,9 @@ const DETAIL_INCLUDE = {
       invoiceId: true,
       amountMinor: true,
       dueDate: true,
-      payments: { select: { amountMinor: true } },
+      payments: {
+        select: { id: true, amountMinor: true, paymentDate: true, reversesPaymentId: true, reversedBy: { select: { id: true } } },
+      },
       upsellEntry: { select: { id: true } },
     },
     orderBy: { number: 'asc' },
@@ -64,6 +66,13 @@ type DetailRow = Prisma.ProjectGetPayload<{ include: typeof DETAIL_INCLUDE }>;
 
 const toDate = (d: IsoDate | null | undefined) => (d ? new Date(`${d}T00:00:00Z`) : null);
 const paidOf = (m: { payments: { amountMinor: bigint }[] }) => m.payments.reduce((s, p) => s + p.amountMinor, 0n);
+
+/** D-055: the latest payment still standing (not a reversal, not reversed): when the milestone was paid, and which payment to edit. */
+function lastPayment(payments: { id: string; paymentDate: Date; reversesPaymentId: string | null; reversedBy: { id: string } | null }[]) {
+  const live = payments.filter((p) => !p.reversesPaymentId && !p.reversedBy);
+  const last = live.reduce<(typeof live)[number] | null>((a, p) => (!a || p.paymentDate >= a.paymentDate ? p : a), null);
+  return { paidOn: last ? isoDate(last.paymentDate) : null, paidPaymentId: last?.id ?? null };
+}
 
 function toListItem(p: ListRow, today: IsoDate): ProjectListItem {
   const t = totalsFor(p, today);
@@ -162,6 +171,7 @@ export class ProjectsService {
         isUpsell: m.upsellEntry !== null || (p.parentProjectId !== null && p.phaseKind === 'UPSELL'),
         paidMinor: minorToJson(paidOf(m)),
         balanceMinor: minorToJson(m.amountMinor - paidOf(m)),
+        ...lastPayment(m.payments),
         status: milestoneStatus({ amountMinor: m.amountMinor, paidMinor: paidOf(m), dueDate: isoDate(m.dueDate) }, today, dueSoonDays),
       })),
       scheduledMinor: minorToJson(t.scheduledMinor),

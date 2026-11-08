@@ -22,6 +22,7 @@ import { useSearchParams } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
+import { useEditPayment } from '../../payments/api';
 import { useMarkPaidFlow } from '../../payments/useMarkPaidFlow';
 import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
 import { parseInvoiceText } from '../../payments/invoice-text';
@@ -70,6 +71,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
             <TH className="text-right">Amount</TH>
             <TH>Due</TH>
             <TH className="text-right">Paid</TH>
+            <TH>Paid on</TH>
             <TH className="text-right">Balance</TH>
             <TH>Status</TH>
             <TH />
@@ -78,7 +80,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
         <TBody>
           {project.milestones.length === 0 && (
             <TR>
-              <TD colSpan={9} className="py-6 text-center text-text-muted">
+              <TD colSpan={10} className="py-6 text-center text-text-muted">
                 No milestones yet.
               </TD>
             </TR>
@@ -112,6 +114,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                 <TD className="text-right tabular-nums">{money(m.amountMinor)}</TD>
                 <TD>{formatDate(m.dueDate)}</TD>
                 <TD className="text-right tabular-nums">{money(m.paidMinor)}</TD>
+                <TD className="whitespace-nowrap">{m.paidOn ? formatDate(m.paidOn) : <span className="text-text-muted">—</span>}</TD>
                 <TD className="text-right font-medium tabular-nums">{money(m.balanceMinor)}</TD>
                 <TD>
                   <MilestoneStatusBadge status={m.status} />
@@ -184,6 +187,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
               <TD className="text-right tabular-nums">{money(totals.amount)}</TD>
               <TD />
               <TD className="text-right tabular-nums">{money(totals.paid)}</TD>
+              <TD />
               <TD className="text-right tabular-nums">{money(totals.amount - totals.paid)}</TD>
               <TD colSpan={2} />
             </TR>
@@ -397,15 +401,22 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
   const [invoiceId, setInvoiceId] = useState(milestone.invoiceId ?? '');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: milestone.amountMinor, error: null });
   const [due, setDue] = useState(milestone.dueDate ?? '');
+  // D-055: when it was paid is the date of its latest payment; changing it here corrects that payment (and the charts).
+  const [paidOn, setPaidOn] = useState(milestone.paidOn ?? '');
+  const editPayment = useEditPayment(milestone.paidPaymentId ?? '');
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState('');
   const money = (m: number) => formatApiMoney(m, project.currency);
 
-  const save = (minor: number) =>
+  const saveMilestone = (minor: number) =>
     update.mutate(
       { milestoneId: milestone.id, title, invoiceId: invoiceId.trim() || null, amountMinor: minor, dueDate: due || null },
       { onSuccess: onDone, onError: (e) => toast.error(e.message) },
     );
+  const save = (minor: number) => {
+    if (!milestone.paidPaymentId || !paidOn || paidOn === milestone.paidOn) return saveMilestone(minor);
+    editPayment.mutate({ paymentDate: paidOn }, { onSuccess: () => saveMilestone(minor), onError: (e) => toast.error(e.message) });
+  };
 
   return (
     <TR className="bg-accent/40">
@@ -427,10 +438,16 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
       <TD>
         <Input aria-label={`M${milestone.number} due date`} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
       </TD>
-      <TD colSpan={4} className="space-x-2 text-right">
+      <TD className="text-right tabular-nums">{money(milestone.paidMinor)}</TD>
+      <TD>
+        {milestone.paidPaymentId && (
+          <Input aria-label={`M${milestone.number} paid on`} type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} />
+        )}
+      </TD>
+      <TD colSpan={3} className="space-x-2 text-right">
         <Button
           size="sm"
-          disabled={update.isPending || reset.isPending}
+          disabled={update.isPending || reset.isPending || editPayment.isPending}
           onClick={() => {
             if (amount.minor === null) return toast.error(amount.error ?? 'Enter an amount');
             // MS-5: the milestones together stay within the project's value.
@@ -467,7 +484,7 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
                     {
                       onSuccess: () => {
                         setConfirming(false);
-                        save(amount.minor!);
+                        saveMilestone(amount.minor!);
                       },
                       onError: (e) => toast.error(e.message),
                     },

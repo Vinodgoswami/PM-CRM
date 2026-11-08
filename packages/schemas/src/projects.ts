@@ -169,6 +169,9 @@ export const projectDetailSchema = projectListItemSchema.extend({
       dueDate: isoDateSchema.nullable(),
       paidMinor: z.number(),
       balanceMinor: z.number(),
+      /** D-055: date of the latest payment still standing, and that payment (its date can be changed). */
+      paidOn: isoDateSchema.nullable().default(null),
+      paidPaymentId: z.string().nullable().default(null),
       isUpsell: z.boolean().default(false),
       status: z.enum(['PAID', 'OVERDUE', 'PARTIALLY_PAID', 'DUE_SOON', 'SCHEDULED', 'UNSCHEDULED']),
     }),

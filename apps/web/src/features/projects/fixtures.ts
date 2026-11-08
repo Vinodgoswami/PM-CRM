@@ -47,6 +47,8 @@ export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
       isUpsell: false,
       paidMinor: 5000000,
       balanceMinor: 5000000,
+      paidOn: null,
+      paidPaymentId: null,
       status: 'OVERDUE',
     },
   ],
