@@ -127,3 +127,18 @@ test('the dashboard, billing and invoices total everything in the base currency'
   expect(invoices.otherCurrencyItems).toBe(0);
   expect(invoices.groups.find((g: { key: string }) => g.key === 'OVERDUE').totalMinor).toBe(12000);
 });
+
+test('D-066 Upcoming Invoices totals in the currency the viewer chose for the dashboard', async () => {
+  await prisma.setting.update({ where: { id: 1 }, data: { baseCurrency: 'INR' } });
+  const { agent, csrf, user } = await loginAs(app, prisma, 'SALES');
+  await inrProject(agent, csrf, 'ACTIVE');
+  const inBase = (await agent.get('/api/v1/invoices')).body;
+  expect(inBase.currency).toBe('INR');
+  expect(inBase.groups[0].totalMinor).toBe(10000000);
+  await prisma.user.update({ where: { id: user.id }, data: { displayCurrency: 'USD' } });
+  const mine = (await agent.get('/api/v1/invoices')).body;
+  expect(mine.currency).toBe('USD');
+  expect(mine.groups[0].totalMinor).toBe(120000); // ₹1,00,000 at the fixed test rate 0.012
+  expect(mine.groups[0].items[0]).toMatchObject({ currency: 'INR', balanceMinor: 10000000, baseBalanceMinor: 120000 });
+  expect(mine.otherCurrencyItems).toBe(0);
+});

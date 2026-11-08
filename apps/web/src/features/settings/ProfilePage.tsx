@@ -120,7 +120,8 @@ function DashboardCurrency({ current }: { current: string | null }) {
       }),
     onSuccess: ({ displayCurrency }) => {
       qc.setQueryData<SessionResponse | null>(SESSION_KEY, (s) => (s ? { ...s, user: { ...s.user, displayCurrency } } : s));
-      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+      // D-066: every page that totals money in the viewer's currency.
+      for (const key of ['dashboard', 'invoices', 'clients']) void qc.invalidateQueries({ queryKey: [key] });
     },
   });
   return (
