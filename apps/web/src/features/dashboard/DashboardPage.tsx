@@ -312,7 +312,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
 
         <Panel
           title="Outstanding"
-          subtitle="Due and unpaid today"
+          subtitle="Still to be paid on confirmed work"
           className="flex flex-col lg:col-span-3"
           action={<CornerLink to="/invoices" label="Open upcoming invoices" />}
         >

@@ -128,7 +128,8 @@ test('detail returns contacts, projects and money totals', async () => {
   });
   const res = await agent.get(`/api/v1/clients/${c.body.id}`);
   expect(res.status).toBe(200);
-  expect(res.body).toMatchObject({ bookedMinor: 100000, collectedMinor: 20000, outstandingMinor: 40000, currency: 'INR' });
+  // D-061: outstanding = contract value − collected (1,00,000 − 20,000), due or not.
+  expect(res.body).toMatchObject({ bookedMinor: 100000, collectedMinor: 20000, outstandingMinor: 80000, currency: 'INR' });
   expect(res.body.projects).toEqual([{ id: project.id, code: 'PRJ-0001', name: 'Website', status: 'ACTIVE', parentProjectId: null }]);
 });
 
@@ -193,5 +194,6 @@ test('client list items carry booking, paid and outstanding totals', async () =>
     .set('X-CSRF-Token', csrf)
     .send({ name: 'Lead', expectedAmountMinor: 999, clientId: p.body.client.id });
   const [row] = (await agent.get('/api/v1/clients')).body.items;
-  expect(row).toMatchObject({ name: 'Acme', projects: 2, bookedMinor: 100000, collectedMinor: 20000, outstandingMinor: 40000 });
+  // D-061: the unconfirmed Lead owes nothing.
+  expect(row).toMatchObject({ name: 'Acme', projects: 2, bookedMinor: 100000, collectedMinor: 20000, outstandingMinor: 80000 });
 });

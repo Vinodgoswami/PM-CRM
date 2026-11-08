@@ -119,7 +119,7 @@ test('the dashboard, billing and invoices total everything in the base currency'
   expect(d.otherCurrencyProjects).toBe(0);
   expect(d.kpis.bookedMinor).toBe(120000); // ₹1,00,000 at the confirmation rate 0.012
   expect(d.kpis.collectedMinor).toBe(52500); // what was actually received, at the payment's own rate
-  expect(d.kpis.outstandingMinor).toBe(12000); // ₹10,000 still due on Design, at the project's rate
+  expect(d.kpis.outstandingMinor).toBe(60000); // D-061: ₹1,00,000 − ₹50,000 still to be paid, at the project's rate
 
   const billing = (await ceo.agent.get('/api/v1/payments')).body;
   expect(billing).toMatchObject({ totalMinor: 52500, otherCurrencyPayments: 0 });

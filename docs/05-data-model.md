@@ -203,7 +203,7 @@ Append-only (trigger rejects update/delete).
 | paid (milestone)    | `Σ payments.amount` (reversals are negative)                          |
 | balance (milestone) | `amount − paid`                                                       |
 | collected (project) | `Σ paid` over its milestones                                          |
-| outstanding         | `Σ balance` over milestones with `dueDate ≤ today`                    |
+| outstanding         | `contractValue − collected` on confirmed work, never below 0 (D-061)  |
 | upsellValue         | `Σ upsellEntries.amount + Σ contractValue of child (upsell) projects` |
 
 ## Indexes
