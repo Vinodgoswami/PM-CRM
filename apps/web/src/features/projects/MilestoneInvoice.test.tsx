@@ -113,7 +113,7 @@ const paid = {
   client: { id: 'c1', name: 'Acme' },
 };
 
-test('D-049 with an invoice ID, Mark as paid pays the balance today in one click, without the form', async () => {
+test('D-054 with an invoice ID, Mark as paid asks only for the date, starting at the invoice (due) date', async () => {
   const api = stubApi({
     ...routes,
     'GET /projects/p1': { body: withInvoiceId() },
@@ -123,20 +123,32 @@ test('D-049 with an invoice ID, Mark as paid pays the balance today in one click
   renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Mark M1 as paid' });
+  expect(within(dialog).getByText('CHS/2026-27/72')).toBeInTheDocument();
+  const date = within(dialog).getByLabelText('Payment date');
+  expect(date).toHaveValue('2026-10-01'); // M1's due date in the fixture
+  await user.clear(date);
+  await user.type(date, '2026-10-03');
+  await user.click(within(dialog).getByRole('button', { name: 'Mark as paid' }));
   await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
   const post = api.calls.find((c) => c.method === 'POST')!;
-  expect(post.body).toEqual({
-    milestoneLabel: 'M1',
-    invoiceId: 'CHS/2026-27/72',
-    paymentDate: todayIn('Asia/Kolkata', new Date()),
-    amountMinor: 5000000,
-  });
+  expect(post.body).toEqual({ milestoneLabel: 'M1', invoiceId: 'CHS/2026-27/72', paymentDate: '2026-10-03', amountMinor: 5000000 });
   expect(post.headers.get('Idempotency-Key')).toBeTruthy();
-  expect(screen.queryByRole('dialog')).toBeNull();
   expect(await screen.findByText(/M1 marked as paid/)).toBeInTheDocument();
 });
 
-test('D-049 if the one-click payment is refused, the form opens filled in with the reason', async () => {
+test('D-054 a due date in the future starts the quick popup at today', async () => {
+  const d = withInvoiceId();
+  d.milestones[0] = { ...d.milestones[0]!, dueDate: '2999-01-01' };
+  vi.stubGlobal('fetch', stubApi({ ...routes, 'GET /projects/p1': { body: d } }).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Mark M1 as paid' });
+  expect(within(dialog).getByLabelText('Payment date')).toHaveValue(todayIn('Asia/Kolkata', new Date()));
+});
+
+test('D-054 a refused quick payment, or More details, opens the full form with the chosen date', async () => {
   const api = stubApi({
     ...routes,
     'GET /projects/p1': { body: withInvoiceId() },
@@ -149,9 +161,21 @@ test('D-049 if the one-click payment is refused, the form opens filled in with t
   renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
-  const dialog = await screen.findByRole('dialog');
+  const quick = await screen.findByRole('dialog', { name: 'Mark M1 as paid' });
+  await user.click(within(quick).getByRole('button', { name: 'Mark as paid' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Mark as paid' });
   expect(within(dialog).getByLabelText('Invoice ID')).toHaveValue('CHS/2026-27/72');
+  expect(within(dialog).getByLabelText('Payment date')).toHaveValue('2026-10-01');
   expect(within(dialog).getByRole('alert')).toHaveTextContent('Enter the rate yourself');
+});
+
+test('D-054 More details opens the full form', async () => {
+  vi.stubGlobal('fetch', stubApi({ ...routes, 'GET /projects/p1': { body: withInvoiceId() } }).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  await user.click(within(await screen.findByRole('dialog', { name: 'Mark M1 as paid' })).getByRole('button', { name: 'More details' }));
+  expect(await screen.findByRole('dialog', { name: 'Mark as paid' })).toBeInTheDocument();
 });
 
 test('without an invoice ID, Mark as paid opens the form as before', async () => {
