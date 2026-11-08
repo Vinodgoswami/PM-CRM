@@ -24,7 +24,7 @@ Each card: value, delta vs comparison (▲/▼ with %), 12-point sparkline, clic
 | K1  | Sales booked        | Σ expectedAmount of projects with `wonAt ∈ P` (upsell projects included) + Σ upsell entries with `date ∈ P` on projects that have a `wonAt` | Projects (won in P)   |
 | K2  | Collected           | Σ payments.amount with `paymentDate ∈ P` (reversals included)                                                                               | Completed Billing     |
 | K3  | Expected (due) in P | Σ milestone.amount with `dueDate ∈ P`                                                                                                       | Upcoming Invoices     |
-| K4  | Outstanding         | Σ balance of milestones with `dueDate ≤ T` (point-in-time, ignores P)                                                                       | Invoices → Overdue    |
+| K4  | Outstanding         | D-061: contract value − collected on confirmed work, due or not (point-in-time, ignores P)                                                  | Invoices → Overdue    |
 | K5  | Overdue             | Σ balance where `dueDate < T`, plus count of milestones and clients                                                                         | Invoices → Overdue    |
 | K6  | Due next 30 days    | Σ balance where `T ≤ dueDate ≤ T+30`                                                                                                        | Invoices → This month |
 | K7  | Pipeline            | Σ expectedAmount of LEAD + PROPOSAL projects (point-in-time)                                                                                | Projects (pipeline)   |

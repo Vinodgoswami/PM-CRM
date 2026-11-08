@@ -201,6 +201,7 @@ test('list filters, computed sort and overdue flag', async () => {
   const overdue = await post(agent, csrf, '/projects', {
     ...base,
     name: 'Overdue one',
+    expectedAmountMinor: 900, // D-061: outstanding = contract value − collected
     clientId: cid,
     status: 'ACTIVE',
     milestones: [{ title: 'Old', amountMinor: 900, dueDate: '2020-01-01' }],
@@ -208,6 +209,7 @@ test('list filters, computed sort and overdue flag', async () => {
   await post(agent, csrf, '/projects', {
     ...base,
     name: 'Small overdue',
+    expectedAmountMinor: 100,
     clientId: cid,
     status: 'ACTIVE',
     milestones: [{ title: 'Old', amountMinor: 100, dueDate: '2020-01-01' }],

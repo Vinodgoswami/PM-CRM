@@ -57,7 +57,8 @@ test('K2 collected by payment date; K3 expected by due date; K9 collection rate'
 
 test('K4/K5/K6 outstanding, overdue and due in 30 days are point-in-time', () => {
   const s = summarise(projects, FY, TODAY);
-  expect(s.outstandingMinor).toBe(30000n + 30000n);
+  // D-061: outstanding = contract value − collected on confirmed work (a: 120,000 − 70,000; b: 50,000; e: 30,000).
+  expect(s.outstandingMinor).toBe(50000n + 50000n + 30000n);
   expect(s.overdueMinor).toBe(30000n + 30000n);
   expect(s.overdueCount).toBe(2);
   expect(s.dueNext30Minor).toBe(50000n);
@@ -163,5 +164,6 @@ test('D-020 collected uses what each payment actually brought in; balances use t
   });
   const s = summarise([p], FY, TODAY);
   expect(s.collectedMinor).toBe(63000n);
-  expect(s.outstandingMinor).toBe(0n);
+  // The contract-rate amounts: 100,000 booked − 72,000 paid.
+  expect(s.outstandingMinor).toBe(28000n);
 });

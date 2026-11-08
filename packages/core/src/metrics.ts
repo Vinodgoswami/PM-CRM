@@ -84,6 +84,12 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
 
   for (const p of projects) {
     if (p.status === 'LEAD' || p.status === 'PROPOSAL') pipelineMinor += p.expectedAmountMinor;
+    // D-061: outstanding = contract value − collected on confirmed work, due or not (contract-rate amounts).
+    if (receivable(p)) {
+      const value = p.expectedAmountMinor + sum(p.upsellEntries.map((u) => u.amountMinor));
+      const left = value - sum(p.milestones.map(paidOf));
+      if (left > 0n) outstandingMinor += left;
+    }
     if (p.status === 'LOST') {
       if (inRange(p.closedAt, range)) losses += 1;
     } else if (inRange(p.wonAt, range)) wins += 1;
@@ -117,7 +123,6 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
         paidOnExpected += paid;
       }
       if (balance > 0n && m.dueDate) {
-        if (m.dueDate <= today) outstandingMinor += balance;
         if (m.dueDate < today) {
           overdueMinor += balance;
           overdueCount += 1;

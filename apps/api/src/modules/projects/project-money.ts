@@ -9,8 +9,10 @@ export const PROJECT_MONEY_INCLUDE = {
 
 type ProjectWithMoney = Pick<
   Prisma.ProjectGetPayload<{ include: typeof PROJECT_MONEY_INCLUDE }>,
-  'expectedAmountMinor' | 'upsellEntries' | 'milestones'
+  'expectedAmountMinor' | 'upsellEntries' | 'milestones' | 'status'
 >;
+
+const BOOKED: string[] = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'];
 
 export const isoDate = (d: Date | null): IsoDate | null => (d ? d.toISOString().slice(0, 10) : null);
 
@@ -25,6 +27,8 @@ export function totalsFor(project: ProjectWithMoney, today: IsoDate): ProjectTot
         dueDate: isoDate(m.dueDate),
         paidMinor: m.payments.reduce((s, p) => s + p.amountMinor, 0n),
       })),
+      // D-061: only confirmed work has money outstanding.
+      booked: BOOKED.includes(project.status),
     },
     today,
   );

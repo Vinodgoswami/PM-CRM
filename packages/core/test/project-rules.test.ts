@@ -96,7 +96,8 @@ test('projectTotals follows docs/05 derived values', () => {
     scheduledMinor: 120000n,
     unscheduledMinor: 0n,
     collectedMinor: 60000n,
-    outstandingMinor: 30000n,
+    // D-061: everything still to be paid on the contract, due or not.
+    outstandingMinor: 60000n,
     nextDueDate: '2026-12-01',
     hasOverdue: true,
   });
@@ -108,10 +109,17 @@ test('projectTotals with no milestones', () => {
     scheduledMinor: 0n,
     unscheduledMinor: 5000n,
     collectedMinor: 0n,
-    outstandingMinor: 0n,
+    outstandingMinor: 5000n,
     nextDueDate: null,
     hasOverdue: false,
   });
+});
+
+test('D-061 work not confirmed (enquiry, quote, cancelled) has nothing outstanding; overpaid never goes below 0', () => {
+  const p = { expectedAmountMinor: 5000n, upsellEntries: [], milestones: [] };
+  expect(projectTotals({ ...p, booked: false }, '2026-10-29').outstandingMinor).toBe(0n);
+  const over = { ...p, milestones: [{ amountMinor: 6000n, dueDate: '2026-09-01', paidMinor: 6000n }] };
+  expect(projectTotals(over, '2026-10-29').outstandingMinor).toBe(0n);
 });
 
 test('U-2 wouldCreateCycle detects loops through ancestors', () => {
