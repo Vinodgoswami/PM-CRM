@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 import { formatDate } from '../../../lib/dates';
 import { OptionSelect } from '../../../components/OptionSelect';
 import { documentDownloadUrl, useDeleteDocument, useDocuments, useUploadDocument } from '../api';
+import { useConfirm } from '../../../components/ConfirmDialog';
 
 type DocType = (typeof DOCUMENT_TYPES)[number];
 export const TYPE_LABEL: Record<DocType, string> = {
@@ -22,6 +23,7 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
   const docs = useDocuments(project.id);
   const upload = useUploadDocument(project.id);
   const del = useDeleteDocument(project.id);
+  const confirm = useConfirm();
   const [type, setType] = useState<DocType>('PROPOSAL');
   const inputId = useId();
 
@@ -123,7 +125,12 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
                       variant="ghost"
                       size="icon"
                       aria-label={`Delete ${d.name}`}
-                      onClick={() => window.confirm(`Delete ${d.name}?`) && del.mutate(d.id)}
+                      onClick={() =>
+                        void confirm({
+                          title: `Delete ${d.name}?`,
+                          message: `Do you really want to delete ${d.name}? This cannot be undone.`,
+                        }).then((ok) => ok && del.mutate(d.id))
+                      }
                     >
                       <Trash2 className="size-4" />
                     </Button>

@@ -9,6 +9,7 @@ import { useSession } from '../auth/api';
 import { STATUS_LABEL } from '../projects/StatusBadge';
 import { useAddContact, useArchiveClient, useClient, useUpdateContact } from './api';
 import { ClientFormDialog } from './ClientFormDialog';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 type ProjectRef = ClientDetail['projects'][number];
 
@@ -45,6 +46,7 @@ function ClientView({ client }: { client: ClientDetail }) {
   const [editing, setEditing] = useState(false);
   const [addingContact, setAddingContact] = useState(false);
   const archive = useArchiveClient(client.id);
+  const confirm = useConfirm();
   const makePrimary = useUpdateContact(client.id);
   const money = (m: number) => formatApiMoney(m, client.currency);
 
@@ -70,8 +72,18 @@ function ClientView({ client }: { client: ClientDetail }) {
               <Button
                 variant="outline"
                 onClick={() =>
-                  window.confirm(`Archive ${client.name}? Its projects stay; the client is hidden from lists.`) &&
-                  archive.mutate(undefined, { onSuccess: () => toast.success('Client archived'), onError: (e) => toast.error(e.message) })
+                  void confirm({
+                    title: `Archive ${client.name}?`,
+                    message: `Do you really want to archive ${client.name}? Its projects stay; the client is hidden from lists.`,
+                    confirmLabel: 'Archive',
+                  }).then(
+                    (ok) =>
+                      ok &&
+                      archive.mutate(undefined, {
+                        onSuccess: () => toast.success('Client archived'),
+                        onError: (e) => toast.error(e.message),
+                      }),
+                  )
                 }
               >
                 <Archive className="size-4" /> Archive

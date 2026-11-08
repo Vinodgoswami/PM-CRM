@@ -61,6 +61,7 @@ test('a photo can be removed', async () => {
   renderApp('/profile', withPhoto());
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Remove photo' }));
+  await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete' }));
   await waitFor(() => expect(api.calls.some((c) => c.method === 'DELETE' && c.path === '/me/avatar')).toBe(true));
   await waitFor(() => expect(within(screen.getByRole('region', { name: 'Profile photo' })).getByText('TU')).toBeInTheDocument());
 });

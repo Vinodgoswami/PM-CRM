@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { visibleNav } from '../../app/nav';
@@ -98,5 +98,7 @@ test('Users is its own page: people and pending invites with resend and cancel',
   await user.click(within(row).getByRole('button', { name: 'Resend link' }));
   expect(await screen.findByDisplayValue('http://localhost:5173/invite/new')).toBeInTheDocument();
   await user.click(within(row).getByRole('button', { name: 'Cancel invite' }));
+  await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'DELETE')).toBe(true));
   expect(api.calls.some((c) => c.method === 'DELETE' && c.path === '/users/invites/i1')).toBe(true);
 });

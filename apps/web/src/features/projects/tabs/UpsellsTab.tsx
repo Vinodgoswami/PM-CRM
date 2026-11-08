@@ -9,12 +9,14 @@ import { useAddUpsell, useRemoveUpsell } from '../api';
 import { StatusBadge } from '../StatusBadge';
 import { ProjectBookingSplit, projectBooking } from '../ProjectBookingSplit';
 import { MoneyInput } from '../MoneyInput';
+import { useConfirm } from '../../../components/ConfirmDialog';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function UpsellsTab({ project }: { project: ProjectDetail }) {
   const money = (m: number) => formatApiMoney(m, project.currency);
   const remove = useRemoveUpsell(project.id);
+  const confirm = useConfirm();
   return (
     <div className="space-y-8">
       <Phases project={project} />
@@ -44,7 +46,12 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
                         variant="ghost"
                         size="icon"
                         aria-label="Remove extra work amount"
-                        onClick={() => remove.mutate(u.id, { onError: (e) => toast.error(e.message) })}
+                        onClick={() =>
+                          void confirm({
+                            title: 'Delete upsell amount?',
+                            message: `Do you really want to delete the upsell of ${money(u.amountMinor)}${u.note ? ` (${u.note})` : ''}?`,
+                          }).then((ok) => ok && remove.mutate(u.id, { onError: (e) => toast.error(e.message) }))
+                        }
                       >
                         <Trash2 className="size-4" />
                       </Button>

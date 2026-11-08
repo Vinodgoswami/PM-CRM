@@ -79,14 +79,14 @@ test('creating a client validates the name, then saves', async () => {
 test('archiving asks for confirmation first', async () => {
   const api = stubApi({ 'GET /clients/c1': { body: detail }, 'POST /clients/c1/archive': { body: { ...acme, archived: true } } });
   vi.stubGlobal('fetch', api.fn);
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
   renderApp('/clients/c1', sessionFor('CEO'));
   const archive = await screen.findByRole('button', { name: 'Archive' });
   await userEvent.click(archive);
+  await userEvent.click(within(await screen.findByRole('alertdialog', { name: 'Archive Acme?' })).getByRole('button', { name: 'Cancel' }));
   expect(api.calls.some((c) => c.path === '/clients/c1/archive')).toBe(false);
   await userEvent.click(archive);
+  await userEvent.click(within(await screen.findByRole('alertdialog', { name: 'Archive Acme?' })).getByRole('button', { name: 'Archive' }));
   await waitFor(() => expect(api.calls.some((c) => c.path === '/clients/c1/archive')).toBe(true));
-  expect(confirm).toHaveBeenCalledTimes(2);
 });
 
 test('the CEO can add and edit clients (D-018)', async () => {

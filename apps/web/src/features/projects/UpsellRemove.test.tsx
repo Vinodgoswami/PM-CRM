@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
@@ -24,5 +24,6 @@ test('a refused upsell removal shows the reason', async () => {
   renderApp('/projects/p1?tab=upsells', sessionFor('SALES'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Remove extra work amount' }));
+  await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete' }));
   expect(await screen.findByText('Without this upsell, milestones would add up to more.')).toBeInTheDocument();
 });

@@ -8,6 +8,7 @@ import { apiFetch } from '../../lib/api';
 import { formatDate } from '../../lib/dates';
 import { ROLE_LABEL } from '../../lib/labels';
 import { LinkPanel } from './LinkPanel';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const invitesSchema = z.object({
   items: z.array(
@@ -34,6 +35,7 @@ export function PendingInvites() {
     onSuccess: refresh,
     onError: (e) => toast.error(e.message),
   });
+  const confirm = useConfirm();
   const cancel = useMutation({
     mutationFn: (id: string) => apiFetch(`/users/invites/${id}`, { method: 'DELETE', schema: z.unknown() }),
     onSuccess: () => {
@@ -86,7 +88,12 @@ export function PendingInvites() {
                   variant="ghost"
                   className="bg-danger/10 text-danger hover:bg-danger/20 hover:text-danger"
                   disabled={cancel.isPending}
-                  onClick={() => window.confirm(`Cancel the invite for ${i.email}?`) && cancel.mutate(i.id)}
+                  onClick={() =>
+                    void confirm({
+                      title: 'Delete invite?',
+                      message: `Do you really want to delete the invite for ${i.email}? The link will stop working.`,
+                    }).then((ok) => ok && cancel.mutate(i.id))
+                  }
                 >
                   <X className="size-4" /> Cancel invite
                 </Button>

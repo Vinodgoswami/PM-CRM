@@ -12,6 +12,7 @@ import { Field } from '../auth/Field';
 import { OptionSelect } from '../../components/OptionSelect';
 import { CURRENCIES } from '../../components/CurrencySelect';
 import { useSettings } from './api';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 /** Your own account: who you are, and changing your password (other devices are signed out). */
 export function ProfilePage() {
@@ -171,6 +172,7 @@ function PhotoPanel({ name, url }: { name: string; url: string | null }) {
     onSuccess: (r) => refresh(r.avatarUrl),
     onError: (e) => setError(e.message),
   });
+  const confirm = useConfirm();
   const remove = useMutation({
     mutationFn: () => apiFetch('/me/avatar', { method: 'DELETE', schema: z.unknown() }),
     onSuccess: () => refresh(null),
@@ -200,7 +202,16 @@ function PhotoPanel({ name, url }: { name: string; url: string | null }) {
         />
       </label>
       {url && (
-        <Button variant="ghost" size="sm" disabled={remove.isPending} onClick={() => remove.mutate()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={remove.isPending}
+          onClick={() =>
+            void confirm({ title: 'Delete your photo?', message: 'Do you really want to delete your profile photo?' }).then(
+              (ok) => ok && remove.mutate(),
+            )
+          }
+        >
           Remove photo
         </Button>
       )}
