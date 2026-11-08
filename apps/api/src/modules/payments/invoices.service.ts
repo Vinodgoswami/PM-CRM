@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { isoDate } from '../projects/project-money';
 import { convertMinor } from '@salescrm/types';
 import { projectRate } from '../fx/to-base';
+import { FxService } from '../fx/fx.service';
 import { SettingsService } from '../settings/settings.service';
 
 const DAY = 86_400_000;
@@ -20,6 +21,7 @@ export class InvoicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly fx: FxService,
   ) {}
 
   async list(user: SessionUser, q: { clientId?: string; ownerId?: string }): Promise<InvoicesResponse> {
@@ -44,6 +46,8 @@ export class InvoicesService {
             currency: true,
             fxRate: true,
             fxBaseCurrency: true,
+            createdAt: true,
+            startDate: true,
             ownerId: true,
             client: { select: { id: true, name: true } },
             owner: { select: { id: true, name: true } },
@@ -53,6 +57,14 @@ export class InvoicesService {
       orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { number: 'asc' }],
     });
 
+    // D-066: totals in the viewer's chosen currency (D-036), else the company's; a project without a saved rate into it
+    // is converted at its start date's rate (D-039, D-042).
+    const target = user.displayCurrency ?? settings.baseCurrency;
+    const projects = [...new Map(milestones.map((m) => [m.project.id, m.project])).values()];
+    const start = await this.fx.startRates(
+      projects.filter((p) => !projectRate(p, target)),
+      target,
+    );
     let otherCurrencyItems = 0;
     const groups = new Map<InvoiceItem['status'] | string, { totalMinor: bigint; items: InvoiceItem[] }>();
     for (const m of milestones) {
@@ -62,9 +74,9 @@ export class InvoicesService {
       const due = isoDate(m.dueDate);
       const key = invoiceGroup(due, today);
       const group = groups.get(key) ?? { totalMinor: 0n, items: [] };
-      // D-020: listed in its own currency, summed in the base currency at the project's saved rate (M-4 when none).
-      const rate = projectRate(m.project, settings.baseCurrency);
-      const conv = (x: bigint) => convertMinor(x, rate!, m.project.currency, settings.baseCurrency);
+      // D-020: listed in its own currency, summed in the target currency (M-4 when no rate is known).
+      const rate = projectRate(m.project, target) ?? start.get(m.project.id) ?? null;
+      const conv = (x: bigint) => convertMinor(x, rate!, m.project.currency, target);
       const baseBalance = rate ? conv(m.amountMinor) - conv(paid) : null;
       if (baseBalance !== null) group.totalMinor += baseBalance;
       else otherCurrencyItems += 1;
@@ -89,7 +101,7 @@ export class InvoicesService {
       groups.set(key, group);
     }
     return {
-      currency: settings.baseCurrency,
+      currency: target,
       otherCurrencyItems,
       groups: INVOICE_GROUP_ORDER.filter((k) => groups.has(k)).map((k) => {
         const g = groups.get(k)!;

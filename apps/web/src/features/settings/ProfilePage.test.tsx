@@ -82,3 +82,19 @@ test('D-036 you choose the currency your own dashboard is shown in', async () =>
   await choose(user, select, '');
   await waitFor(() => expect(api.calls.filter((c) => c.method === 'PATCH').at(-1)?.body).toEqual({ displayCurrency: null }));
 });
+
+test('D-066 a new currency also refreshes Upcoming Invoices and Clients', async () => {
+  vi.stubGlobal(
+    'fetch',
+    stubApi({
+      'GET /settings': { body: { companyName: 'Acme', baseCurrency: 'INR', fyStartMonth: 4, timezone: 'Asia/Kolkata', dueSoonDays: 7 } },
+      'PATCH /me/preferences': { body: { displayCurrency: 'USD' } },
+    }).fn,
+  );
+  const { queryClient } = renderApp('/profile', sessionFor('SALES'));
+  const refresh = vi.spyOn(queryClient, 'invalidateQueries');
+  const user = userEvent.setup();
+  await choose(user, await screen.findByRole('combobox', { name: 'My dashboard currency' }), 'USD');
+  await waitFor(() => expect(refresh).toHaveBeenCalledWith({ queryKey: ['invoices'] }));
+  expect(refresh).toHaveBeenCalledWith({ queryKey: ['clients'] });
+});
