@@ -185,3 +185,51 @@ test('without an invoice ID, Mark as paid opens the form as before', async () =>
   await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
   expect(await screen.findByRole('dialog')).toBeInTheDocument();
 });
+
+const paidPayment = {
+  id: 'pay1',
+  milestoneId: 'm1',
+  milestoneLabel: 'M1',
+  invoiceId: null,
+  paymentDate: '2026-07-20',
+  amountMinor: 5000000,
+  reversesPaymentId: null,
+  reversedById: null,
+  note: null,
+  createdBy: { id: 'u1', name: 'Test User' },
+  createdAt: '2026-11-08T10:00:00.000Z',
+  canEdit: true,
+  project: { id: 'p1', code: 'PRJ-0001', name: 'Website Redesign', currency: 'INR' },
+  client: { id: 'c1', name: 'Acme' },
+};
+
+test('D-055 the list shows when each milestone was paid, and editing the row changes that payment date', async () => {
+  const d = detail();
+  d.milestones[0] = { ...d.milestones[0]!, paidOn: '2026-07-17', paidPaymentId: 'pay1' };
+  const api = stubApi({
+    ...routes,
+    'GET /projects/p1': { body: d },
+    'PATCH /milestones/m1': { body: d },
+    'PATCH /payments/pay1': { body: paidPayment },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  expect(await screen.findByRole('columnheader', { name: 'Paid on' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: '17 Jul 2026' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Edit M1' }));
+  const paidOn = screen.getByLabelText('M1 paid on');
+  expect(paidOn).toHaveValue('2026-07-17');
+  await user.clear(paidOn);
+  await user.type(paidOn, '2026-07-20');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(api.calls.find((c) => c.path === '/payments/pay1')?.body).toEqual({ paymentDate: '2026-07-20' }));
+});
+
+test('D-055 an unpaid milestone shows no paid date and its edit row has no paid-on box', async () => {
+  vi.stubGlobal('fetch', stubApi(routes).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Edit M1' }));
+  expect(screen.queryByLabelText('M1 paid on')).toBeNull();
+});

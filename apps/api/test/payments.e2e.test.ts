@@ -175,3 +175,17 @@ test('D-048 the first payment with an invoice ID gives the milestone its invoice
   await pay(agent, csrf, milestoneId, { invoiceId: 'OTHER-1', paymentDate: '2026-10-06', amountMinor: 1000 });
   expect((await prisma.milestone.findUniqueOrThrow({ where: { id: milestoneId } })).invoiceId).toBe('CHS/2026-27/72');
 });
+
+test('D-055 a milestone shows the date of its latest live payment and that payment, so the date can be changed', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const { projectId, milestoneId } = await projectWithMilestone(agent, csrf);
+  const detail = async () => (await agent.get(`/api/v1/projects/${projectId}`)).body.milestones[0];
+  expect(await detail()).toMatchObject({ paidOn: null, paidPaymentId: null });
+  const first = (await pay(agent, csrf, milestoneId, { paymentDate: '2026-07-17', amountMinor: 40000 })).body;
+  const second = (await pay(agent, csrf, milestoneId, { paymentDate: '2026-08-14', amountMinor: 60000 })).body;
+  expect(await detail()).toMatchObject({ paidOn: '2026-08-14', paidPaymentId: second.id });
+  // A reversed payment no longer counts.
+  const ceo = await loginAs(app, prisma, 'CEO');
+  await ceo.agent.post(`/api/v1/payments/${second.id}/reverse`).set('X-CSRF-Token', ceo.csrf).send({ reason: 'wrong' });
+  expect(await detail()).toMatchObject({ paidOn: '2026-07-17', paidPaymentId: first.id });
+});
