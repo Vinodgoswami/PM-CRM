@@ -133,9 +133,11 @@ test('D-041 an invoice PDF fills a new milestone, with no payment (D-043: not st
   await expect(page).toHaveURL(/\/projects\/[^/?]+$/);
   await page.goto(`${page.url()}?tab=milestones&add=1`);
   await page.getByLabel(/Milestone invoice/).setInputFiles(new URL('../fixtures/invoice.pdf', import.meta.url).pathname);
-  await expect(page.getByLabel('New milestone task')).toHaveValue('Invoice INV-E2E-PDF');
+  await expect(page.getByLabel('New milestone invoice ID')).toHaveValue('INV-E2E-PDF');
+  await page.getByLabel('New milestone task').fill('E2E sprint');
   await expect(page.getByLabel('New milestone amount')).toHaveValue('100.00');
   await page.getByLabel('New milestone due date').fill('2026-12-20');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByRole('cell', { name: 'Invoice INV-E2E-PDF' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'INV-E2E-PDF', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'E2E sprint' })).toBeVisible();
 });

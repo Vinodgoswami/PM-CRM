@@ -15,6 +15,8 @@ const text = (max: number) => z.string().trim().max(max);
 
 export const milestoneInputSchema = z.object({
   title: text(200).min(1, 'Enter the milestone task'),
+  /** D-047: the invoice it is billed on. */
+  invoiceId: text(80).optional(),
   description: text(2000).optional(),
   amountMinor: positiveMinorSchema,
   dueDate: isoDateSchema.optional(),
@@ -162,6 +164,7 @@ export const projectDetailSchema = projectListItemSchema.extend({
       id: z.string(),
       number: z.number(),
       title: z.string(),
+      invoiceId: z.string().nullable().default(null),
       amountMinor: z.number(),
       dueDate: isoDateSchema.nullable(),
       paidMinor: z.number(),
@@ -192,6 +195,7 @@ export type SetParentInput = z.infer<typeof setParentSchema>;
 export const updateMilestoneSchema = z
   .object({
     title: text(200).min(1).optional(),
+    invoiceId: text(80).nullable().optional(),
     description: text(2000).nullable().optional(),
     amountMinor: positiveMinorSchema.optional(),
     dueDate: isoDateSchema.nullable().optional(),

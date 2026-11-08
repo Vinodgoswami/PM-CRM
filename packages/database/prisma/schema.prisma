@@ -231,6 +231,8 @@ model Milestone {
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   number      Int
   title       String
+  /// D-047: the invoice this milestone is billed on, apart from its task.
+  invoiceId   String?
   description String?
   amountMinor BigInt
   dueDate     DateTime? @db.Date

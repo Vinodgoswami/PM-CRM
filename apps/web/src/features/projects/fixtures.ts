@@ -41,6 +41,7 @@ export const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
       id: 'm1',
       number: 1,
       title: 'Design',
+      invoiceId: null,
       amountMinor: 10000000,
       dueDate: '2026-10-01',
       isUpsell: false,

@@ -33,21 +33,24 @@ const routes = {
   },
 };
 
-test('an invoice PDF fills the new milestone; adding it stores neither the PDF nor any payment', async () => {
+test('an invoice PDF fills the invoice ID (D-047: apart from the task), amount and due date; no PDF or payment is stored', async () => {
   const api = stubApi(routes);
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p1?tab=milestones&add=1', sessionFor('SALES'));
   const user = userEvent.setup();
-  await user.upload(await screen.findByLabelText(/Milestone invoice/), new File(['%PDF'], 'INV-88.pdf', { type: 'application/pdf' }));
-  await waitFor(() => expect(screen.getByLabelText('New milestone task')).toHaveValue('Invoice INV-88'));
+  await user.type(await screen.findByLabelText('New milestone task'), 'Sprint 3');
+  await user.upload(screen.getByLabelText(/Milestone invoice/), new File(['%PDF'], 'INV-88.pdf', { type: 'application/pdf' }));
+  await waitFor(() => expect(screen.getByLabelText('New milestone invoice ID')).toHaveValue('INV-88'));
+  expect(screen.getByLabelText('New milestone task')).toHaveValue('Sprint 3');
   expect(screen.getByLabelText('New milestone amount')).toHaveValue('20000.00');
   expect(screen.getByLabelText('New milestone due date')).toHaveValue('2026-11-20');
-  expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: task, amount, due date. Check them before adding.');
+  expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: invoice ID, amount, due date. Check them before adding.');
 
   await user.click(screen.getByRole('button', { name: 'Add' }));
   await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
   expect(api.calls.find((c) => c.path === '/projects/p1/milestones')?.body).toEqual({
-    title: 'Invoice INV-88',
+    title: 'Sprint 3',
+    invoiceId: 'INV-88',
     amountMinor: 2000000,
     dueDate: '2026-11-20',
   });
@@ -66,4 +69,32 @@ test('without a file the milestone is added by hand as before', async () => {
   await user.click(screen.getByRole('button', { name: 'Add' }));
   await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
   expect(api.calls.some((c) => c.path.includes('/documents'))).toBe(false);
+});
+
+test('the milestone list has its own Invoice ID column, and editing a row changes it', async () => {
+  const withId = detail();
+  withId.milestones[0] = { ...withId.milestones[0]!, invoiceId: 'CHS/2026-27/72' };
+  const api = stubApi({ ...routes, 'GET /projects/p1': { body: withId } });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  expect(await screen.findByRole('columnheader', { name: 'Invoice ID' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: 'CHS/2026-27/72' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: 'Design' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Edit M1' }));
+  const id = screen.getByLabelText('M1 invoice ID');
+  await user.clear(id);
+  await user.type(id, 'CHS/2026-27/96');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({ invoiceId: 'CHS/2026-27/96' }));
+});
+
+test("Mark as paid starts with the milestone's invoice ID", async () => {
+  const withId = detail();
+  withId.milestones[0] = { ...withId.milestones[0]!, invoiceId: 'CHS/2026-27/72' };
+  vi.stubGlobal('fetch', stubApi({ ...routes, 'GET /projects/p1': { body: withId } }).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  expect(await screen.findByLabelText('Invoice ID')).toHaveValue('CHS/2026-27/72');
 });

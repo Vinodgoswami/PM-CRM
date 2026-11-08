@@ -44,6 +44,7 @@ const DETAIL_INCLUDE = {
       id: true,
       number: true,
       title: true,
+      invoiceId: true,
       amountMinor: true,
       dueDate: true,
       payments: { select: { amountMinor: true } },
@@ -154,6 +155,7 @@ export class ProjectsService {
         id: m.id,
         number: m.number,
         title: m.title,
+        invoiceId: m.invoiceId,
         amountMinor: minorToJson(m.amountMinor),
         dueDate: isoDate(m.dueDate),
         // D-038: billed through an upsell amount, or part of a phase that is an upsell.
@@ -272,6 +274,7 @@ export class ProjectsService {
               create: milestones.map((m) => ({
                 number: m.number,
                 title: m.title,
+                invoiceId: m.invoiceId || null,
                 description: m.description ?? null,
                 amountMinor: minorFromJson(m.amountMinor),
                 dueDate: toDate(m.dueDate),

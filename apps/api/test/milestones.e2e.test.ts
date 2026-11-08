@@ -120,3 +120,22 @@ test('other reps cannot change milestones; the CEO can (D-018)', async () => {
   const ceo = await loginAs(app, prisma, 'CEO');
   expect((await call(ceo.agent, ceo.csrf, 'post', `/projects/${p.id}/milestones`, { title: 'Extra', amountMinor: 1 })).status).toBe(201);
 });
+
+test('D-047 a milestone keeps its own invoice ID, apart from its task; it can be changed or cleared', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const p = await project(agent, csrf);
+  const res = await call(agent, csrf, 'post', `/projects/${p.id}/milestones`, {
+    title: 'Sprint 3',
+    invoiceId: 'CHS/2026-27/72',
+    amountMinor: 5000,
+    dueDate: '2099-03-01',
+  });
+  expect(res.status).toBe(201);
+  const m = res.body.milestones[2];
+  expect(m).toMatchObject({ title: 'Sprint 3', invoiceId: 'CHS/2026-27/72' });
+  expect(res.body.milestones[0].invoiceId).toBeNull();
+  const changed = await call(agent, csrf, 'patch', `/milestones/${m.id}`, { invoiceId: 'CHS/2026-27/96' });
+  expect(changed.body.milestones[2].invoiceId).toBe('CHS/2026-27/96');
+  const cleared = await call(agent, csrf, 'patch', `/milestones/${m.id}`, { invoiceId: null });
+  expect(cleared.body.milestones[2].invoiceId).toBeNull();
+});
