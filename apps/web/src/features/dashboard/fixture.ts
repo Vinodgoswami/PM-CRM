@@ -30,6 +30,17 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
     collectedMinor: (i + 1) * 8000000,
     expectedMinor: (i + 1) * 9000000,
   })),
+  periodSeries: Array.from({ length: 12 }, (_, i) => {
+    const mm = String(i + 1).padStart(2, '0');
+    return {
+      label: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i]!,
+      from: `2026-${mm}-01`,
+      to: new Date(Date.UTC(2026, i + 1, 0)).toISOString().slice(0, 10),
+      bookedMinor: (i + 1) * 10000000,
+      collectedMinor: (i + 1) * 8000000,
+      expectedMinor: (i + 1) * 9000000,
+    };
+  }),
   forecast: Array.from({ length: 6 }, (_, i) => ({ month: `2026-${String(i + 5).padStart(2, '0')}`, scheduledMinor: (i + 1) * 5000000 })),
   aging: { d1_30: 100000000, d31_60: 50000000, d61_90: 0, d90plus: 250000000 },
   quarters: ['Q1', 'Q2', 'Q3', 'Q4'].map((label, i) => ({

@@ -9,6 +9,7 @@ import {
   invoiceGroup,
   type MetricProject,
   monthlySeries,
+  periodBuckets,
   periodRange,
   pipelineFunnel,
   quarterComparison,
@@ -293,6 +294,16 @@ export class DashboardService {
         avgDaysToPay: s.avgDaysToPay,
       },
       previous: prev ? { bookedMinor: j(prev.bookedMinor), collectedMinor: j(prev.collectedMinor) } : null,
+      // D-057: the chart's bars for the selected period (weeks, months or quarters).
+      periodSeries: periodBuckets(q.period, today, settings.fyStartMonth).map((b) => {
+        const one = summarise(metric, { from: b.from, to: b.to }, today);
+        return {
+          ...b,
+          bookedMinor: j(one.bookedMinor),
+          collectedMinor: j(one.collectedMinor),
+          expectedMinor: j(one.expectedMinor),
+        };
+      }),
       monthly: monthlySeries(metric, months, today).map((x) => ({
         month: x.month,
         bookedMinor: j(x.bookedMinor),

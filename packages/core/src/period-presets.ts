@@ -66,3 +66,56 @@ export function comparableRange(key: PeriodKey, today: IsoDate, fyStartMonth: nu
   const end = new Date(Date.parse(`${previous.from}T00:00:00Z`) + elapsed * 86_400_000).toISOString().slice(0, 10);
   return { from: previous.from, to: end < previous.to ? end : previous.to };
 }
+
+export interface PeriodBucket {
+  label: string;
+  from: IsoDate;
+  to: IsoDate;
+}
+
+const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Calendar months from the month of `from` to the month of `to`, both included. */
+function monthsBetween(from: IsoDate, to: IsoDate): PeriodBucket[] {
+  const out: PeriodBucket[] = [];
+  let [y, m] = from.split('-').map(Number) as [number, number];
+  const last = to.slice(0, 7);
+  for (;;) {
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    out.push({ label: MONTH[m - 1]!, from: `${key}-01`, to: monthEnd(y, m) });
+    if (key >= last) return out;
+    [y, m] = m === 12 ? [y + 1, 1] : [y, m + 1];
+  }
+}
+
+/**
+ * D-057: the bars of the dashboard chart for a period preset: weeks of a month, months of a quarter / year to date /
+ * financial year, quarters of two financial years, and the last 12 months for all time.
+ */
+export function periodBuckets(key: PeriodKey, today: IsoDate, fyStartMonth: number): PeriodBucket[] {
+  const range = periodRange(key, today, fyStartMonth);
+  if (key === 'ALL' || !range.from || !range.to) {
+    const [y, m] = today.split('-').map(Number) as [number, number];
+    return monthsBetween(new Date(Date.UTC(y, m - 12, 1)).toISOString().slice(0, 10), today);
+  }
+  if (key === 'THIS_MONTH') {
+    const [y, m] = today.split('-').map(Number) as [number, number];
+    const end = Number(monthEnd(y, m).slice(8));
+    const ym = today.slice(0, 7);
+    const day = (d: number) => `${ym}-${String(d).padStart(2, '0')}`;
+    const out: PeriodBucket[] = [];
+    for (let d = 1; d <= end; d += 7) {
+      const last = Math.min(d + 6, end);
+      out.push({ label: `${d}–${last} ${MONTH[m - 1]}`, from: day(d), to: day(last) });
+    }
+    return out;
+  }
+  const months = monthsBetween(range.from, range.to);
+  if (key !== 'TWO_FY') return months;
+  const out: PeriodBucket[] = [];
+  for (let i = 0; i < months.length; i += 3) {
+    const [first, , third] = [months[i]!, months[i + 1], months[i + 2] ?? months[i]!];
+    out.push({ label: `${first.label}–${third!.label} '${first.from.slice(2, 4)}`, from: first.from, to: third!.to });
+  }
+  return out;
+}

@@ -115,6 +115,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-61 | Done   | feat/quick-pay-date                    | D-054 `QuickPayDialog` in useMarkPaidFlow, dueDate/paymentDate on MarkPaidTarget; tests                                                                                                                                                                                                     |
 | P4-62 | Done   | feat/paid-on-column                    | D-055 `paidOn`/`paidPaymentId` on milestone DTO, Paid on column and edit box (PATCH /payments/:id); tests                                                                                                                                                                                   |
 | P4-63 | Done   | feat/pinned-actions                    | D-056 Actions header, sticky right column, `--surface-solid` token; test                                                                                                                                                                                                                    |
+| P4-64 | Done   | feat/period-chart                      | D-057 `periodBuckets` (core), `periodSeries` in dashboard API, chart + range drill-down; tests                                                                                                                                                                                              |
 
 ## Blockers
 
