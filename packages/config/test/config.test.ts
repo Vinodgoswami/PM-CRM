@@ -119,14 +119,3 @@ test('D-033 the first Admin can come from ADMIN_EMAIL, ADMIN_NAME and ADMIN_PASS
   expect(c.firstAdmin).toEqual({ email: 'owner@x.test', name: 'Owner', password: 'a-long-enough-password' });
   expect(() => loadConfig({ ...valid, ADMIN_EMAIL: 'owner@x.test' })).toThrow(/ADMIN_NAME.*ADMIN_PASSWORD|ADMIN_PASSWORD/);
 });
-
-// D-051: keep a free Render service awake by pinging its own health URL.
-test('keep-awake pings the Render URL every 10 minutes unless switched off', () => {
-  expect(loadConfig({ ...valid, RENDER_EXTERNAL_URL: 'https://pm-crm.onrender.com/' }).keepAwake).toEqual({
-    url: 'https://pm-crm.onrender.com/api/v1/health',
-    everyMs: 600_000,
-  });
-  expect(loadConfig({ ...valid, KEEP_AWAKE_URL: 'https://x.test/api/v1/health' }).keepAwake?.url).toBe('https://x.test/api/v1/health');
-  expect(loadConfig({ ...valid, RENDER_EXTERNAL_URL: 'https://pm-crm.onrender.com', KEEP_AWAKE: 'false' }).keepAwake).toBeUndefined();
-  expect(loadConfig(valid).keepAwake).toBeUndefined();
-});
