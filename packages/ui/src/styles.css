@@ -9,6 +9,8 @@
   /* Glass (D-029): surfaces are frosted white over a soft tinted canvas; overlays are more opaque to stay readable. */
   --surface: oklch(1 0 0 / 0.55);
   --surface-raised: oklch(1 0 0 / 0.82);
+  /* Opaque, for pinned table columns that other cells scroll under (D-056). */
+  --surface-solid: oklch(0.985 0.006 165);
   --border: oklch(0.55 0.03 160 / 0.16);
   --glass-edge: oklch(1 0 0 / 0.7);
   --glass-blur: blur(22px) saturate(170%);
@@ -57,6 +59,7 @@
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-solid: var(--surface-solid);
   --color-border: var(--border);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);

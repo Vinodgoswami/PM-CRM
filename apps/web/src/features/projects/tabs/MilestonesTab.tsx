@@ -37,6 +37,9 @@ import { MoneyInput } from '../MoneyInput';
 
 type Milestone = ProjectDetail['milestones'][number];
 
+/** D-056: pinned to the right edge with a solid background, so scrolled cells pass under it. */
+const PIN = 'sticky right-0 z-10 bg-surface-solid shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]';
+
 export function MilestonesTab({ project }: { project: ProjectDetail }) {
   const { data: session } = useSession();
   // P-8: payments only on won work; the server enforces the same rule.
@@ -74,7 +77,8 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
             <TH>Paid on</TH>
             <TH className="text-right">Balance</TH>
             <TH>Status</TH>
-            <TH />
+            {/* D-056: the actions stay in view while the other columns scroll under them. */}
+            <TH className={`${PIN} text-right`}>Actions</TH>
           </TR>
         </THead>
         <TBody>
@@ -119,7 +123,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                 <TD>
                   <MilestoneStatusBadge status={m.status} />
                 </TD>
-                <TD className="space-x-1 text-right">
+                <TD className={`${PIN} space-x-1 text-right`}>
                   {canPay && m.balanceMinor > 0 && (
                     <Button
                       size="sm"
@@ -189,7 +193,8 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
               <TD className="text-right tabular-nums">{money(totals.paid)}</TD>
               <TD />
               <TD className="text-right tabular-nums">{money(totals.amount - totals.paid)}</TD>
-              <TD colSpan={2} />
+              <TD />
+              <TD className={PIN} />
             </TR>
           )}
         </TBody>
@@ -444,7 +449,8 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
           <Input aria-label={`M${milestone.number} paid on`} type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} />
         )}
       </TD>
-      <TD colSpan={3} className="space-x-2 text-right">
+      <TD colSpan={2} />
+      <TD className={`${PIN} space-x-2 text-right`}>
         <Button
           size="sm"
           disabled={update.isPending || reset.isPending || editPayment.isPending}

@@ -233,3 +233,11 @@ test('D-055 an unpaid milestone shows no paid date and its edit row has no paid-
   await user.click(await screen.findByRole('button', { name: 'Edit M1' }));
   expect(screen.queryByLabelText('M1 paid on')).toBeNull();
 });
+
+test('D-056 the actions column has a title and stays pinned while the table scrolls', async () => {
+  vi.stubGlobal('fetch', stubApi(routes).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const header = await screen.findByRole('columnheader', { name: 'Actions' });
+  expect(header.className).toMatch(/\bsticky\b/);
+  expect(screen.getByRole('button', { name: 'Edit M1' }).closest('td')!.className).toMatch(/\bsticky\b/);
+});
