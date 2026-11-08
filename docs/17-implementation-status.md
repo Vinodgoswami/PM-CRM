@@ -117,6 +117,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-63 | Done   | feat/pinned-actions                    | D-056 Actions header, sticky right column, `--surface-solid` token; test                                                                                                                                                                                                                    |
 | P4-64 | Done   | feat/period-chart                      | D-057 `periodBuckets` (core), `periodSeries` in dashboard API, chart + range drill-down; tests                                                                                                                                                                                              |
 | P4-65 | Done   | feat/bulk-pay                          | D-058 tick boxes + selection bar in MilestonesTab, `BulkPayDialog`; tests                                                                                                                                                                                                                   |
+| P4-66 | Done   | fix/upsell-remove-feedback             | D-059 upsell removal error shown; MS-5 wording for removal; tests                                                                                                                                                                                                                           |
 
 ## Blockers
 

@@ -71,3 +71,17 @@ test('an upsell raises the limit, and the booking cannot drop below the mileston
   const lower = await call(agent, csrf, 'patch', `/projects/${p.id}`, { expectedAmountMinor: 90000, updatedAt: added.body.updatedAt });
   expect(rule(lower)).toEqual([400, { rule: 'MS-5' }]);
 });
+
+test('D-059 removing an upsell the milestones still need says so in words', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const p = (await create(agent, csrf, [{ title: 'A', amountMinor: 100000, dueDate: '2099-01-01' }])).body;
+  const withUpsell = await call(agent, csrf, 'post', `/projects/${p.id}/upsells`, { amountMinor: 20000, date: '2026-01-01' });
+  await call(agent, csrf, 'post', `/projects/${p.id}/milestones`, { title: 'Extra', amountMinor: 20000, dueDate: '2099-02-01' });
+  const entryId = withUpsell.body.upsellEntries[0].id;
+  const res = await call(agent, csrf, 'delete', `/projects/${p.id}/upsells/${entryId}`);
+  expect(rule(res)).toEqual([400, { rule: 'MS-5' }]);
+  expect(res.body.error.message).toMatch(
+    /^Without this upsell, milestones would add up to .+, more than the project's value of .+\. Lower or delete a milestone first, or raise the booking amount\.$/,
+  );
+  expect(await prisma.upsellEntry.count({ where: { id: entryId } })).toBe(1);
+});

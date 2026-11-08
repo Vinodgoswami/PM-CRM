@@ -388,7 +388,7 @@ export class ProjectsService {
    * MS-5 (D-044): a project's (or phase's) milestones add up to at most its contract value, the booking plus upsells.
    * Called inside the writing transaction, after the change, so a refusal rolls the change back.
    */
-  async assertMilestonesWithinValue(tx: Prisma.TransactionClient, projectId: string): Promise<void> {
+  async assertMilestonesWithinValue(tx: Prisma.TransactionClient, projectId: string, removingUpsell = false): Promise<void> {
     const p = await tx.project.findUniqueOrThrow({
       where: { id: projectId },
       select: {
@@ -401,10 +401,14 @@ export class ProjectsService {
     const value = p.upsellEntries.reduce((s, u) => s + u.amountMinor, p.expectedAmountMinor);
     const scheduled = p.milestones.reduce((s, m) => s + m.amountMinor, 0n);
     if (scheduled > value) {
+      const [total, limit] = [formatMoney(scheduled, p.currency), formatMoney(value, p.currency)];
+      // D-059: removing an upsell gets its own wording, so it is clear what blocks it.
       throw new RuleViolation(
         'MS-5',
-        `Milestones add up to ${formatMoney(scheduled, p.currency)}, more than the project's value of ${formatMoney(value, p.currency)}. ` +
-          'Lower a milestone or raise the booking amount.',
+        removingUpsell
+          ? `Without this upsell, milestones would add up to ${total}, more than the project's value of ${limit}. ` +
+              'Lower or delete a milestone first, or raise the booking amount.'
+          : `Milestones add up to ${total}, more than the project's value of ${limit}. Lower a milestone or raise the booking amount.`,
       );
     }
   }
@@ -582,7 +586,7 @@ export class ProjectsService {
         for (const [i, m] of rest.entries()) await tx.milestone.update({ where: { id: m.id }, data: { number: 1000 + i } });
         for (const [i, m] of rest.entries()) await tx.milestone.update({ where: { id: m.id }, data: { number: i + 1 } });
       }
-      await this.assertMilestonesWithinValue(tx, id);
+      await this.assertMilestonesWithinValue(tx, id, true);
       await this.audit.record(tx, {
         actorId: user.id,
         action: 'project.upsell.remove',

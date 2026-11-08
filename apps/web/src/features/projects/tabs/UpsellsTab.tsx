@@ -40,7 +40,12 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
                   <TD className="text-right tabular-nums">{money(u.amountMinor)}</TD>
                   {project.canEdit && (
                     <TD>
-                      <Button variant="ghost" size="icon" aria-label="Remove extra work amount" onClick={() => remove.mutate(u.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Remove extra work amount"
+                        onClick={() => remove.mutate(u.id, { onError: (e) => toast.error(e.message) })}
+                      >
                         <Trash2 className="size-4" />
                       </Button>
                     </TD>
