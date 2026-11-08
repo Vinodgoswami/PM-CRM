@@ -168,6 +168,9 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                 <TD className="max-w-64 truncate">
                   {m.title}
                   {m.isUpsell && <span className="ml-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium">Upsell</span>}
+                  {m.recurringSeriesId && (
+                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Recurring</span>
+                  )}
                 </TD>
                 <TD className="text-right tabular-nums">{money(m.amountMinor)}</TD>
                 <TD>{formatDate(m.dueDate)}</TD>
@@ -255,6 +258,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
           )}
         </TBody>
       </Table>
+      {project.recurring.length > 0 && <RecurringList project={project} />}
       {project.canEdit && <AddMilestone project={project} openAtStart={params.has('add')} />}
       {pay.dialog}
       {bulk && (
@@ -278,6 +282,97 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
   );
 }
 
+/** D-063: the project's monthly recurring milestones, with how far each has got; extend or stop them. */
+function RecurringList({ project }: { project: ProjectDetail }) {
+  const qc = useQueryClient();
+  const confirm = useConfirm();
+  const [extending, setExtending] = useState<string | null>(null);
+  const [months, setMonths] = useState('12');
+  const money = (m: number) => formatApiMoney(m, project.currency);
+  const act = useMutation({
+    mutationFn: ({ id, action, body }: { id: string; action: 'extend' | 'stop'; body?: object }) =>
+      apiFetch(`/recurring/${id}/${action}`, { method: 'POST', body, schema: projectDetailSchema }),
+    onSuccess: (updated) => {
+      qc.setQueryData(projectKeys.detail(updated.id), updated);
+      for (const k of [['projects'], ['dashboard'], ['invoices']]) void qc.invalidateQueries({ queryKey: k });
+    },
+  });
+  const run = (id: string, action: 'extend' | 'stop', body?: object, done?: string) =>
+    act.mutate({ id, action, body }, { onSuccess: () => done && toast.success(done), onError: (e) => toast.error(e.message) });
+
+  return (
+    <section aria-label="Recurring milestones" className="space-y-2 rounded-lg bg-surface p-4 shadow-card">
+      <h3 className="text-sm font-semibold">Recurring milestones</h3>
+      <ul className="divide-y divide-border">
+        {project.recurring.map((r) => (
+          <li key={r.id} className="space-y-2 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="font-medium">{r.title}</span>
+              <span className="text-text-muted">
+                {money(r.amountMinor)} a month · from {formatDate(r.startDate)} · {r.createdCount} of {r.count} created
+                {r.nextDate ? ` · next ${formatDate(r.nextDate)}` : ' · complete'}
+              </span>
+              {project.canEdit && (
+                <span className="ml-auto flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    aria-label={`Extend ${r.title}`}
+                    onClick={() => setExtending(extending === r.id ? null : r.id)}
+                  >
+                    Extend
+                  </Button>
+                  {r.nextDate && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Stop ${r.title}`}
+                      onClick={() =>
+                        void confirm({
+                          title: `Stop ${r.title}?`,
+                          message: `Do you really want to stop ${r.title}? The ${r.createdCount} invoices already created stay; no more are added.`,
+                          confirmLabel: 'Stop',
+                        }).then((ok) => ok && run(r.id, 'stop', undefined, `${r.title} stopped`))
+                      }
+                    >
+                      Stop
+                    </Button>
+                  )}
+                </span>
+              )}
+            </div>
+            {extending === r.id && (
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const n = Number(months);
+                  if (!Number.isInteger(n) || n < 1 || n > 120) return toast.error('Enter 1–120 months');
+                  run(r.id, 'extend', { months: n }, `${r.title} extended by ${n} months`);
+                  setExtending(null);
+                }}
+              >
+                <Input
+                  aria-label="Months to add"
+                  type="number"
+                  min={1}
+                  max={120}
+                  className="h-9 w-28"
+                  value={months}
+                  onChange={(e) => setMonths(e.target.value)}
+                />
+                <Button size="sm" type="submit" disabled={act.isPending}>
+                  Add months
+                </Button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /**
  * D-038: a milestone is added to this project or one of its phases, and is either part of the contract or an upsell
  * (an upsell amount billed through this new milestone).
@@ -291,6 +386,10 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const [due, setDue] = useState('');
   const [target, setTarget] = useState(project.id);
   const [kind, setKind] = useState<'CONTRACT' | 'UPSELL'>('CONTRACT');
+  // D-063: a monthly recurring milestone: first invoice date and how many invoices.
+  const [recurring, setRecurring] = useState(false);
+  const [start, setStart] = useState('');
+  const [count, setCount] = useState('12');
   const [key, setKey] = useState(0);
   const [invoice, setInvoice] = useState<File | null>(null);
   const [filled, setFilled] = useState<string | null>(null);
@@ -302,22 +401,28 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const money = (m: number) => formatApiMoney(m, project.currency);
   const add = useMutation({
     mutationFn: () =>
-      kind === 'UPSELL'
-        ? apiFetch(`/projects/${target}/upsells`, {
+      recurring
+        ? apiFetch(`/projects/${target}/recurring`, {
             method: 'POST',
-            body: { amountMinor: amount.minor!, date: new Date().toISOString().slice(0, 10), note: title.trim(), dueDate: due },
+            body: { title: title.trim(), amountMinor: amount.minor!, startDate: start, count: Number(count) },
             schema: projectDetailSchema,
           })
-        : apiFetch(`/projects/${target}/milestones`, {
-            method: 'POST',
-            body: {
-              title,
-              ...(invoiceId.trim() ? { invoiceId: invoiceId.trim() } : {}),
-              amountMinor: amount.minor!,
-              ...(due ? { dueDate: due } : {}),
-            },
-            schema: projectDetailSchema,
-          }),
+        : kind === 'UPSELL'
+          ? apiFetch(`/projects/${target}/upsells`, {
+              method: 'POST',
+              body: { amountMinor: amount.minor!, date: new Date().toISOString().slice(0, 10), note: title.trim(), dueDate: due },
+              schema: projectDetailSchema,
+            })
+          : apiFetch(`/projects/${target}/milestones`, {
+              method: 'POST',
+              body: {
+                title,
+                ...(invoiceId.trim() ? { invoiceId: invoiceId.trim() } : {}),
+                amountMinor: amount.minor!,
+                ...(due ? { dueDate: due } : {}),
+              },
+              schema: projectDetailSchema,
+            }),
     onSuccess: (updated) => {
       qc.setQueryData(projectKeys.detail(updated.id), updated);
       for (const k of [['projects'], ['dashboard'], ['invoices']]) void qc.invalidateQueries({ queryKey: k });
@@ -370,8 +475,14 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
         e.preventDefault();
         if (!title.trim()) return toast.error('Enter the milestone task');
         if (amount.minor === null) return toast.error(amount.error ?? 'Enter an amount');
-        if (!due) return toast.error('Choose a due date');
-        if (kind === 'CONTRACT' && left !== null && amount.minor > left)
+        if (recurring) {
+          const n = Number(count);
+          if (!start) return toast.error('Choose the first invoice date');
+          if (!Number.isInteger(n) || n < 1 || n > 120) return toast.error('Enter the number of invoices (1–120)');
+          if (left !== null && amount.minor * n > left)
+            return toast.error(`${n} invoices of ${money(amount.minor)} is more than the ${money(left)} left in this project's value.`);
+        } else if (!due) return toast.error('Choose a due date');
+        if (!recurring && kind === 'CONTRACT' && left !== null && amount.minor > left)
           return toast.error(`That's more than the ${money(left)} left in this project's value. Lower it, or add the extra as an Upsell.`);
         add.mutate(undefined, {
           onSuccess: () => {
@@ -389,9 +500,16 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
             setTitle('');
             setInvoiceId('');
             setDue('');
+            setStart('');
             setAmount({ minor: null, error: null });
             setKey((k) => k + 1);
-            toast.success(where ? `Milestone added to Phase ${where.phase}` : 'Milestone added');
+            toast.success(
+              recurring
+                ? 'Recurring milestone added: invoices due so far are created now, the rest on their dates'
+                : where
+                  ? `Milestone added to Phase ${where.phase}`
+                  : 'Milestone added',
+            );
           },
           onError: (err) => toast.error(err.message),
         });
@@ -414,47 +532,97 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
             ))}
           </OptionSelect>
         )}
-        <OptionSelect
-          id="new-milestone-type"
-          aria-label="Milestone type"
-          className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-          value={kind}
-          onValueChange={(v) => setKind(v as 'CONTRACT' | 'UPSELL')}
-        >
-          <option value="CONTRACT">Contract — part of the booked amount</option>
-          <option value="UPSELL">Upsell — new work, adds to the booking</option>
-        </OptionSelect>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="new-milestone-invoice">Milestone invoice (optional)</Label>
-        <SlipDropzone
-          id="new-milestone-invoice"
-          file={invoice}
-          onChange={(f) => void chooseInvoice(f)}
-          onError={(m) => m && toast.error(m)}
-        />
-        {filled && (
-          <p role="status" className="text-xs text-text-muted">
-            {filled}
-          </p>
+        {!recurring && (
+          <OptionSelect
+            id="new-milestone-type"
+            aria-label="Milestone type"
+            className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
+            value={kind}
+            onValueChange={(v) => setKind(v as 'CONTRACT' | 'UPSELL')}
+          >
+            <option value="CONTRACT">Contract — part of the booked amount</option>
+            <option value="UPSELL">Upsell — new work, adds to the booking</option>
+          </OptionSelect>
         )}
       </div>
-      <div className="grid gap-2 sm:grid-cols-[11rem_1fr_12rem_10rem_auto] sm:items-start">
-        <Input
-          aria-label="New milestone invoice ID (optional)"
-          placeholder="Invoice ID (optional)"
-          value={invoiceId}
-          onChange={(e) => setInvoiceId(e.target.value)}
+      <label className="flex w-fit items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="size-4 accent-primary"
+          checked={recurring}
+          onChange={(e) => {
+            setRecurring(e.target.checked);
+            if (e.target.checked) setKind('CONTRACT');
+          }}
         />
+        Recurring monthly
+      </label>
+      {!recurring && (
+        <div className="space-y-1.5">
+          <Label htmlFor="new-milestone-invoice">Milestone invoice (optional)</Label>
+          <SlipDropzone
+            id="new-milestone-invoice"
+            file={invoice}
+            onChange={(f) => void chooseInvoice(f)}
+            onError={(m) => m && toast.error(m)}
+          />
+          {filled && (
+            <p role="status" className="text-xs text-text-muted">
+              {filled}
+            </p>
+          )}
+        </div>
+      )}
+      {recurring && (
+        <div aria-hidden className="hidden gap-2 text-xs text-text-muted sm:grid sm:grid-cols-[1fr_12rem_10rem_8rem_auto]">
+          <span>Task</span>
+          <span>Amount per invoice</span>
+          <span>First invoice date</span>
+          <span>No. of invoices</span>
+          <span />
+        </div>
+      )}
+      <div
+        className={`grid gap-2 sm:items-start ${recurring ? 'sm:grid-cols-[1fr_12rem_10rem_8rem_auto]' : 'sm:grid-cols-[11rem_1fr_12rem_10rem_auto]'}`}
+      >
+        {!recurring && (
+          <Input
+            aria-label="New milestone invoice ID (optional)"
+            placeholder="Invoice ID (optional)"
+            value={invoiceId}
+            onChange={(e) => setInvoiceId(e.target.value)}
+          />
+        )}
         <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
         <MoneyInput
           key={amountShown.key}
-          aria-label="New milestone amount"
+          aria-label={recurring ? 'Amount per invoice' : 'New milestone amount'}
           currency={project.currency}
           defaultMinor={amountShown.minor}
           onValue={(minor, error) => setAmount({ minor, error })}
         />
-        <Input aria-label="New milestone due date" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        {recurring ? (
+          <>
+            <Input
+              aria-label="First invoice date"
+              type="date"
+              title="First invoice date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
+            <Input
+              aria-label="Number of invoices"
+              type="number"
+              min={1}
+              max={120}
+              title="Number of invoices"
+              value={count}
+              onChange={(e) => setCount(e.target.value)}
+            />
+          </>
+        ) : (
+          <Input aria-label="New milestone due date" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        )}
         <div className="flex gap-2">
           <Button type="submit" disabled={add.isPending}>
             Add
@@ -464,6 +632,12 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           </Button>
         </div>
       </div>
+      {recurring && (
+        <p className="text-xs text-text-muted">
+          One invoice a month on the first invoice date&apos;s day. Invoices due up to today are created now; each later one appears on its
+          date.
+        </p>
+      )}
       {kind === 'CONTRACT' && left !== null && <p className="text-xs text-text-muted">{money(left)} left to put in milestones</p>}
       {kind === 'UPSELL' && (
         <p className="text-xs text-text-muted">Adds this amount to the booking as an upsell and bills it through this milestone.</p>

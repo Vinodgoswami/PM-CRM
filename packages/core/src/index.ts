@@ -10,3 +10,4 @@ export * from './period-presets';
 export * from './project-status';
 export * from './project-totals';
 export * from './upsell';
+export * from './recurring';

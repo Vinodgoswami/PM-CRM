@@ -172,12 +172,29 @@ export const projectDetailSchema = projectListItemSchema.extend({
       /** D-055: date of the latest payment still standing, and that payment (its date can be changed). */
       paidOn: isoDateSchema.nullable().default(null),
       paidPaymentId: z.string().nullable().default(null),
+      /** D-063: the recurring series that created it, if any. */
+      recurringSeriesId: z.string().nullable().default(null),
       isUpsell: z.boolean().default(false),
       status: z.enum(['PAID', 'OVERDUE', 'PARTIALLY_PAID', 'DUE_SOON', 'SCHEDULED', 'UNSCHEDULED']),
     }),
   ),
   scheduledMinor: z.number(),
   unscheduledMinor: z.number(),
+  /** D-063: monthly recurring milestones; each month's milestone is created on its date. */
+  recurring: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        amountMinor: z.number(),
+        startDate: isoDateSchema,
+        count: z.number(),
+        createdCount: z.number(),
+        /** The next invoice date still to come, null when all are created. */
+        nextDate: isoDateSchema.nullable(),
+      }),
+    )
+    .default([]),
   updatedAt: z.string(),
   canEdit: z.boolean(),
 });
@@ -207,3 +224,14 @@ export const updateMilestoneSchema = z
 export type UpdateMilestoneInput = z.infer<typeof updateMilestoneSchema>;
 
 export const reorderMilestonesSchema = z.object({ ids: z.array(z.string().min(1)).min(1).max(50) });
+
+/** D-063: a monthly recurring milestone: `count` invoices of `amountMinor`, on the start date's day each month. */
+export const createRecurringSchema = z.object({
+  title: text(160).min(1, 'Enter the milestone task'),
+  amountMinor: positiveMinorSchema,
+  startDate: isoDateSchema,
+  count: z.number().int().min(1, 'At least one invoice').max(120, 'At most 120 invoices'),
+});
+export type CreateRecurringInput = z.infer<typeof createRecurringSchema>;
+
+export const extendRecurringSchema = z.object({ months: z.number().int().min(1).max(120) });

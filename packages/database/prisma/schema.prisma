@@ -56,35 +56,36 @@ enum AuthTokenKind {
 }
 
 model User {
-  id           String    @id @default(cuid(2))
-  name         String
-  email        String    @unique
-  passwordHash String?
-  role         Role
+  id              String    @id @default(cuid(2))
+  name            String
+  email           String    @unique
+  passwordHash    String?
+  role            Role
   /// Profile photo in private storage (avatars/<userId>/…); null = initials are shown.
-  avatarKey    String?
+  avatarKey       String?
   /// D-036: the currency this person views the dashboard in; null = the company base currency.
   displayCurrency String?
-  active       Boolean   @default(true)
+  active          Boolean   @default(true)
   /// D-024: the CEO a project manager reports to (their team); null for everyone else, or a PM not yet assigned.
-  managerId    String?
-  manager      User?     @relation("Team", fields: [managerId], references: [id])
-  team         User[]    @relation("Team")
-  lastLoginAt  DateTime? @db.Timestamptz(3)
-  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  managerId       String?
+  manager         User?     @relation("Team", fields: [managerId], references: [id])
+  team            User[]    @relation("Team")
+  lastLoginAt     DateTime? @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
 
   sessions        Session[]
-  ownedProjects   Project[]     @relation("ProjectOwner")
-  createdProjects Project[]     @relation("ProjectCreator")
+  ownedProjects   Project[]         @relation("ProjectOwner")
+  createdProjects Project[]         @relation("ProjectCreator")
   createdClients  Client[]
   payments        Payment[]
   documents       Document[]
   auditLogs       AuditLog[]
-  authTokens      AuthToken[]   @relation("AuthTokenUser")
-  issuedTokens    AuthToken[]   @relation("AuthTokenIssuer")
+  authTokens      AuthToken[]       @relation("AuthTokenUser")
+  issuedTokens    AuthToken[]       @relation("AuthTokenIssuer")
   upsellEntries   UpsellEntry[]
   milestones      Milestone[]
+  recurringSeries RecurringSeries[]
 
   @@index([managerId])
 }
@@ -199,9 +200,10 @@ model Project {
   createdAt           DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
 
-  upsellEntries UpsellEntry[]
-  milestones    Milestone[]
-  documents     Document[]
+  upsellEntries   UpsellEntry[]
+  milestones      Milestone[]
+  recurringSeries RecurringSeries[]
+  documents       Document[]
 
   @@index([status, ownerId])
   @@index([wonAt])
@@ -209,18 +211,18 @@ model Project {
 }
 
 model UpsellEntry {
-  id          String   @id @default(cuid(2))
+  id          String     @id @default(cuid(2))
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   amountMinor BigInt
-  date        DateTime @db.Date
+  date        DateTime   @db.Date
   note        String?
   /// D-038: the milestone this upsell amount is billed through (created with it).
   milestoneId String?    @unique
   milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
 
   @@index([projectId])
 }
@@ -241,35 +243,40 @@ model Milestone {
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
 
-  payments Payment[]
-  upsellEntry UpsellEntry?
+  payments          Payment[]
+  upsellEntry       UpsellEntry?
+  /// D-063: set on milestones created by a recurring series, with their position in it (0-based).
+  recurringSeriesId String?
+  recurringSeries   RecurringSeries? @relation(fields: [recurringSeriesId], references: [id], onDelete: SetNull)
+  recurringIndex    Int?
 
   @@unique([projectId, number])
+  @@unique([recurringSeriesId, recurringIndex])
   @@index([dueDate])
 }
 
 model Payment {
-  id                String    @id @default(cuid(2))
+  id                String     @id @default(cuid(2))
   milestoneId       String
-  milestone         Milestone @relation(fields: [milestoneId], references: [id])
+  milestone         Milestone  @relation(fields: [milestoneId], references: [id])
   milestoneLabel    String
   invoiceId         String?
-  paymentDate       DateTime  @db.Date
+  paymentDate       DateTime   @db.Date
   amountMinor       BigInt
   /// FX (D-020): the same money in the company's base currency at the payment day's rate (both amounts are recorded).
   baseCurrency      String?
-  fxRate            Decimal?  @db.Decimal(20, 10)
+  fxRate            Decimal?   @db.Decimal(20, 10)
   baseAmountMinor   BigInt?
   /// Client-generated key from the Mark-as-paid dialog: a retried request returns the same payment.
-  idempotencyKey    String?   @unique
-  reversesPaymentId String?   @unique
-  reversesPayment   Payment?  @relation("Reversal", fields: [reversesPaymentId], references: [id])
-  reversedBy        Payment?  @relation("Reversal")
+  idempotencyKey    String?    @unique
+  reversesPaymentId String?    @unique
+  reversesPayment   Payment?   @relation("Reversal", fields: [reversesPaymentId], references: [id])
+  reversedBy        Payment?   @relation("Reversal")
   note              String?
   createdById       String
-  createdBy         User      @relation(fields: [createdById], references: [id])
-  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
+  createdBy         User       @relation(fields: [createdById], references: [id])
+  createdAt         DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime   @updatedAt @db.Timestamptz(3)
   /// D-026: invoices or payment slips stored against this payment.
   documents         Document[]
 
@@ -336,4 +343,23 @@ model FxRate {
   fetchedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([date, from, to])
+}
+
+/// D-063: a monthly recurring milestone: `count` invoices on the start date's day each month, each created when due.
+model RecurringSeries {
+  id           String      @id @default(cuid(2))
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  amountMinor  BigInt
+  startDate    DateTime    @db.Date
+  count        Int
+  /// How many of the series' milestones exist (or existed); the next one created is at this position.
+  createdCount Int         @default(0)
+  createdById  String
+  createdBy    User        @relation(fields: [createdById], references: [id])
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+  milestones   Milestone[]
+
+  @@index([projectId])
 }
