@@ -128,3 +128,8 @@ Neon's free compute pauses after about 5 minutes without queries. The API waits 
 (`connect_timeout` / `pool_timeout`, added to `DATABASE_URL` unless you set them) and runs a request again, up to twice,
 when it meets a stale or not-yet-ready connection. The log shows `Database not ready …; retry 1` when that happens.
 If requests still fail, check the Neon console for a suspended compute or a used-up monthly allowance.
+
+## Currency shown by default (D-067)
+
+People who have not picked a currency in Profile see amounts in US dollars. To change that default, set
+`DEFAULT_VIEW_CURRENCY` (a 3-letter code such as `INR`) in Render → Environment; nothing needs setting for dollars.

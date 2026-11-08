@@ -1,6 +1,7 @@
 import { type ProjectDetail, type ProjectListItem } from '@salescrm/schemas';
 
 export const listItem = (over: Partial<ProjectListItem> = {}): ProjectListItem => ({
+  view: null,
   id: 'p1',
   code: 'PRJ-0001',
   name: 'Website Redesign',

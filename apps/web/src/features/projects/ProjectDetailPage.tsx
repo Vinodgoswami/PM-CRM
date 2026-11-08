@@ -32,7 +32,7 @@ import {
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { ApiError } from '../../lib/api';
-import { formatApiMoney } from '../../lib/money';
+import { formatViewMoney } from '../../lib/money';
 import { useChangeStatus, useProject } from './api';
 import { STATUS_LABEL, StatusBadge } from './StatusBadge';
 import { ActivityTab } from './tabs/ActivityTab';
@@ -71,7 +71,7 @@ export function ProjectDetailPage() {
 function ProjectView({ project }: { project: ProjectDetail }) {
   // The open tab is in the address (?tab=…): it survives the project reloading after a payment and can be linked.
   const [params, setParams] = useSearchParams();
-  const money = (minor: number) => formatApiMoney(minor, project.currency);
+  const money = (minor: number) => formatViewMoney(minor, project.currency, project.view);
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">

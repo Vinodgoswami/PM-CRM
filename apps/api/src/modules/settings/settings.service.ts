@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { type AppConfig } from '@salescrm/config';
 import { changedFields, type IsoDate, todayIn } from '@salescrm/core';
 import { Prisma } from '@salescrm/database';
 import { type Settings, type UpdateSettingsInput } from '@salescrm/schemas';
@@ -7,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { can } from '@salescrm/auth/permissions';
 import { forbidden } from '../../common/errors';
 import { PrismaService } from '../prisma/prisma.module';
+import { APP_CONFIG } from '../../config.module';
 
 const SETTINGS_ID = 1;
 
@@ -25,7 +27,13 @@ export class SettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
+
+  /** D-067: the currency this viewer sees amounts in: their own choice, else the app default (US dollars), else the company's. */
+  async viewCurrency(user: { displayCurrency?: string | null } | undefined): Promise<string> {
+    return user?.displayCurrency ?? this.config.defaultViewCurrency ?? (await this.get()).baseCurrency;
+  }
 
   /** The single settings row, created with the schema defaults on first read. */
   private async load(tx: Prisma.TransactionClient = this.prisma): Promise<Settings> {
@@ -42,6 +50,11 @@ export class SettingsService {
 
   async get(): Promise<Settings> {
     return toDto(await this.load());
+  }
+
+  /** What GET /settings shows: the settings plus the app's default view currency (D-067). */
+  async forDisplay(): Promise<Settings> {
+    return { ...(await this.get()), defaultViewCurrency: this.config.defaultViewCurrency ?? null };
   }
 
   /** "Today" in the company timezone: the reference date for due / overdue / outstanding (docs/04 § Time). */

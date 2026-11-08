@@ -29,6 +29,7 @@ import { ClientsService } from '../clients/clients.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { SettingsService } from '../settings/settings.service';
 import { FxService } from '../fx/fx.service';
+import { projectRate } from '../fx/to-base';
 import { isoDate, PROJECT_MONEY_INCLUDE, totalsFor } from './project-money';
 import { generateRecurring } from './recurring-generate';
 
@@ -84,6 +85,7 @@ function lastPayment(payments: { id: string; paymentDate: Date; reversesPaymentI
 function toListItem(p: ListRow, today: IsoDate): ProjectListItem {
   const t = totalsFor(p, today);
   return {
+    view: null, // D-067: filled in by the caller, which knows the viewer
     id: p.id,
     code: p.code,
     name: p.name,
@@ -218,7 +220,31 @@ export class ProjectsService {
 
   async get(id: string, user: SessionUser): Promise<ProjectDetail> {
     const [project, settings, today] = await Promise.all([this.load(id, user), this.settings.get(), this.settings.today()]);
-    return this.toDetail(project, user, today, settings.dueSoonDays);
+    const view = (await this.viewRates([project], user)).get(project.id)!;
+    return { ...this.toDetail(project, user, today, settings.dueSoonDays), view };
+  }
+
+  /**
+   * D-067: each project's rate into the viewer's currency: its saved rate, else the rate on its start date (D-039 /
+   * D-042); null when none is available, and the project is then shown in its own currency.
+   */
+  private async viewRates(
+    projects: {
+      id: string;
+      currency: string;
+      fxRate: Prisma.Decimal | null;
+      fxBaseCurrency: string | null;
+      createdAt: Date;
+      startDate: Date | null;
+    }[],
+    user: SessionUser,
+  ): Promise<Map<string, { currency: string; rate: string | null }>> {
+    const currency = await this.settings.viewCurrency(user);
+    const start = await this.fx.startRates(
+      projects.filter((p) => !projectRate(p, currency)),
+      currency,
+    );
+    return new Map(projects.map((p) => [p.id, { currency, rate: projectRate(p, currency) ?? start.get(p.id) ?? null }]));
   }
 
   async list(user: SessionUser, q: ProjectListQuery) {
@@ -235,7 +261,9 @@ export class ProjectsService {
     };
     const today = await this.settings.today();
     // Computed columns (contract value, outstanding, next due) are derived in core, so sort/paginate after the DB filter.
-    let items = (await this.prisma.project.findMany({ where, include: LIST_INCLUDE })).map((p) => toListItem(p, today));
+    const rows = await this.prisma.project.findMany({ where, include: LIST_INCLUDE });
+    const rates = await this.viewRates(rows, user);
+    let items = rows.map((p) => ({ ...toListItem(p, today), view: rates.get(p.id)! }));
     if (q.hasOverdue !== undefined) items = items.filter((i) => i.hasOverdue === q.hasOverdue);
     const sorter = SORTERS[q.sort];
     items.sort((a, b) => (q.dir === 'desc' ? -sorter(a, b) : sorter(a, b)));

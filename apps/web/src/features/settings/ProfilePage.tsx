@@ -110,7 +110,9 @@ const slotSchema = z.object({ key: z.string(), url: z.string(), headers: z.recor
 /** D-036: the currency your own dashboard is shown in; other people's views are not affected. */
 function DashboardCurrency({ current }: { current: string | null }) {
   const qc = useQueryClient();
-  const base = useSettings().data?.baseCurrency ?? '…';
+  const settings = useSettings().data;
+  // D-067: what "not chosen" means: the app default (US dollars), else the company currency.
+  const fallback = settings?.defaultViewCurrency ?? settings?.baseCurrency ?? '…';
   const save = useMutation({
     mutationFn: (displayCurrency: string | null) =>
       apiFetch('/me/preferences', {
@@ -136,8 +138,8 @@ function DashboardCurrency({ current }: { current: string | null }) {
         onValueChange={(v) => save.mutate(v || null)}
         disabled={save.isPending}
       >
-        <option value="">Company currency ({base})</option>
-        {CURRENCIES.filter((c) => c.code !== base).map((c) => (
+        <option value="">Default ({fallback})</option>
+        {CURRENCIES.filter((c) => c.code !== fallback).map((c) => (
           <option key={c.code} value={c.code}>
             {c.code} — {c.name}
           </option>

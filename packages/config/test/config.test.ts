@@ -16,6 +16,7 @@ test('valid env produces typed config with defaults', () => {
     storage: { driver: 'local', localDir: './uploads' },
     fx: { provider: 'frankfurter' },
     email: { transport: 'log', from: 'Project Management CRM <no-reply@localhost>' },
+    defaultViewCurrency: 'USD', // D-067
   });
 });
 

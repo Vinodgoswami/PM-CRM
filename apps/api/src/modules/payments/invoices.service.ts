@@ -59,7 +59,7 @@ export class InvoicesService {
 
     // D-066: totals in the viewer's chosen currency (D-036), else the company's; a project without a saved rate into it
     // is converted at its start date's rate (D-039, D-042).
-    const target = user.displayCurrency ?? settings.baseCurrency;
+    const target = await this.settings.viewCurrency(user);
     const projects = [...new Map(milestones.map((m) => [m.project.id, m.project])).values()];
     const start = await this.fx.startRates(
       projects.filter((p) => !projectRate(p, target)),

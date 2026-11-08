@@ -12,7 +12,7 @@ export class SettingsController {
   @Get()
   @Authenticated()
   get(): Promise<Settings> {
-    return this.settings.get();
+    return this.settings.forDisplay();
   }
 
   @Patch()

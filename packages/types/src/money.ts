@@ -38,7 +38,8 @@ export function toMinor(input: string, currency: string): bigint {
   return BigInt(whole + fraction.padEnd(digits, '0'));
 }
 
-export function formatMoney(minor: bigint, currency: string, locale = 'en-IN'): string {
+/** D-067: lakh/crore grouping for rupees, international grouping for everything else ($286,584.99). */
+export function formatMoney(minor: bigint, currency: string, locale = currency === 'INR' ? 'en-IN' : 'en-US'): string {
   const digits = currencyDigits(currency);
   const negative = minor < 0n;
   const abs = (negative ? -minor : minor).toString().padStart(digits + 1, '0');
