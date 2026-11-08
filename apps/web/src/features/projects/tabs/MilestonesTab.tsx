@@ -24,6 +24,7 @@ import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { useEditPayment } from '../../payments/api';
 import { useMarkPaidFlow } from '../../payments/useMarkPaidFlow';
+import { BulkPayDialog } from '../../payments/BulkPayDialog';
 import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
 import { parseInvoiceText } from '../../payments/invoice-text';
 import { readPdfText } from '../../payments/readPdfText';
@@ -58,6 +59,19 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
     [next[i], next[i + by]] = [next[i + by]!, next[i]!];
     reorder.mutate(next, { onError: (e) => toast.error(e.message) });
   };
+  // D-058: tick unpaid milestones and mark them paid together, each on its own date.
+  const unpaid = canPay ? project.milestones.filter((m) => m.balanceMinor > 0) : [];
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const selected = unpaid.filter((m) => picked.has(m.id));
+  const [bulk, setBulk] = useState(false);
+  const toggle = (id: string) =>
+    setPicked((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const columns = canPay ? 11 : 10;
   const totals = project.milestones.reduce((s, m) => ({ amount: s.amount + m.amountMinor, paid: s.paid + m.paidMinor }), {
     amount: 0,
     paid: 0,
@@ -65,9 +79,33 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
 
   return (
     <div className="space-y-4">
+      {selected.length > 0 && (
+        <div className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm">
+          <span className="font-medium">{selected.length} selected</span>
+          <Button size="sm" className="ml-auto" onClick={() => setBulk(true)}>
+            <BadgeCheck className="size-4" /> Mark {selected.length} as paid
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
       <Table>
         <THead>
           <TR>
+            {canPay && (
+              <TH className="w-8">
+                {unpaid.length > 1 && (
+                  <input
+                    type="checkbox"
+                    aria-label="Select all unpaid"
+                    className="size-4 accent-primary"
+                    checked={selected.length === unpaid.length}
+                    onChange={(e) => setPicked(e.target.checked ? new Set(unpaid.map((m) => m.id)) : new Set())}
+                  />
+                )}
+              </TH>
+            )}
             <TH>#</TH>
             <TH>Invoice ID</TH>
             <TH>Task</TH>
@@ -84,7 +122,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
         <TBody>
           {project.milestones.length === 0 && (
             <TR>
-              <TD colSpan={10} className="py-6 text-center text-text-muted">
+              <TD colSpan={columns} className="py-6 text-center text-text-muted">
                 No milestones yet.
               </TD>
             </TR>
@@ -95,6 +133,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                 key={m.id}
                 project={project}
                 milestone={m}
+                selectable={canPay}
                 onDone={() => {
                   setEditing(null);
                   if (params.has('edit'))
@@ -109,6 +148,19 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
               />
             ) : (
               <TR key={m.id}>
+                {canPay && (
+                  <TD>
+                    {m.balanceMinor > 0 && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select M${m.number}`}
+                        className="size-4 accent-primary"
+                        checked={picked.has(m.id)}
+                        onChange={() => toggle(m.id)}
+                      />
+                    )}
+                  </TD>
+                )}
                 <TD className="font-medium">M{m.number}</TD>
                 <TD className="whitespace-nowrap">{m.invoiceId ?? <span className="text-text-muted">—</span>}</TD>
                 <TD className="max-w-64 truncate">
@@ -187,7 +239,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
           )}
           {project.milestones.length > 0 && (
             <TR className="font-semibold hover:bg-transparent">
-              <TD colSpan={3}>Total</TD>
+              <TD colSpan={canPay ? 4 : 3}>Total</TD>
               <TD className="text-right tabular-nums">{money(totals.amount)}</TD>
               <TD />
               <TD className="text-right tabular-nums">{money(totals.paid)}</TD>
@@ -201,6 +253,23 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
       </Table>
       {project.canEdit && <AddMilestone project={project} openAtStart={params.has('add')} />}
       {pay.dialog}
+      {bulk && (
+        <BulkPayDialog
+          targets={selected.map((m) => ({
+            milestoneId: m.id,
+            number: m.number,
+            title: m.title,
+            invoiceId: m.invoiceId,
+            dueDate: m.dueDate,
+            balanceMinor: m.balanceMinor,
+            currency: project.currency,
+          }))}
+          onClose={() => {
+            setBulk(false);
+            setPicked(new Set());
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -399,7 +468,18 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   );
 }
 
-function EditRow({ project, milestone, onDone }: { project: ProjectDetail; milestone: Milestone; onDone: () => void }) {
+function EditRow({
+  project,
+  milestone,
+  selectable,
+  onDone,
+}: {
+  project: ProjectDetail;
+  milestone: Milestone;
+  /** D-058: the table has a tick-box column first. */
+  selectable: boolean;
+  onDone: () => void;
+}) {
   const update = useUpdateMilestone(project.id);
   const reset = useResetMilestone();
   const [title, setTitle] = useState(milestone.title);
@@ -425,6 +505,7 @@ function EditRow({ project, milestone, onDone }: { project: ProjectDetail; miles
 
   return (
     <TR className="bg-accent/40">
+      {selectable && <TD />}
       <TD className="font-medium">M{milestone.number}</TD>
       <TD>
         <Input aria-label={`M${milestone.number} invoice ID`} value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} />
