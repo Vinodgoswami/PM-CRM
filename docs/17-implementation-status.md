@@ -114,6 +114,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-60 | Done   | chore/remove-keep-awake                | D-053 keep-awake ping (D-051) removed: config, timer, tests, deploy-guide section                                                                                                                                                                                                           |
 | P4-61 | Done   | feat/quick-pay-date                    | D-054 `QuickPayDialog` in useMarkPaidFlow, dueDate/paymentDate on MarkPaidTarget; tests                                                                                                                                                                                                     |
 | P4-62 | Done   | feat/paid-on-column                    | D-055 `paidOn`/`paidPaymentId` on milestone DTO, Paid on column and edit box (PATCH /payments/:id); tests                                                                                                                                                                                   |
+| P4-63 | Done   | feat/pinned-actions                    | D-056 Actions header, sticky right column, `--surface-solid` token; test                                                                                                                                                                                                                    |
 
 ## Blockers
 
