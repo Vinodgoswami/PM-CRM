@@ -108,6 +108,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-54 | Done   | feat/milestone-invoice-id              | D-047 `Milestone.invoiceId` + migration `20261108120000_milestone_invoice_id`; list column, add/edit fields, PDF fill, Mark-as-paid prefill; tests                                                                                                                                          |
 | P4-55 | Done   | feat/invoice-id-from-payment           | D-048 Add milestone without Invoice ID; payment create copies its invoice ID to the milestone when empty; tests                                                                                                                                                                             |
 | P4-56 | Done   | feat/one-click-paid                    | D-049 `useMarkPaidFlow` (Milestones + Upcoming Invoices), invoice items carry invoiceId, optional Invoice ID on Add milestone, crash ref in all-exceptions filter; tests                                                                                                                    |
+| P4-57 | Done   | fix/db-wake-up                         | D-050 `wake-up.ts` (URL timeouts, `isDatabaseWakeUpError`, `withWakeUpRetry`, `RetryOnDatabaseWakeUp` interceptor), session guard retry; tests                                                                                                                                              |
 
 ## Blockers
 
