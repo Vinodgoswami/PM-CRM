@@ -177,7 +177,7 @@ test('D-064 a new project billed monthly gets its booking and recurring mileston
   await page.getByRole('radio', { name: 'Recurring monthly' }).click();
   await page.getByLabel('Amount per invoice').fill('1,000');
   await page.getByLabel('Number of invoices').fill('12');
-  await page.getByLabel('First invoice date').fill('2026-04-01');
+  await page.getByLabel('Start date').fill('2026-04-01');
   await expect(page.getByText(/Booking .*12,000\.00 \(12 × /)).toBeVisible();
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.getByRole('heading', { name: /E2E Monthly/ })).toBeVisible();

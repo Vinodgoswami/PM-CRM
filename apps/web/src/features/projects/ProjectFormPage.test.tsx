@@ -417,14 +417,18 @@ test('D-064 a project billed monthly asks for amount per invoice and invoices; t
   await user.type(screen.getByLabelText('Amount per invoice'), '1,000');
   await user.clear(screen.getByLabelText('Number of invoices'));
   await user.type(screen.getByLabelText('Number of invoices'), '12');
-  const first = screen.getByLabelText('First invoice date');
-  await user.clear(first);
-  await user.type(first, '2026-04-01');
+  // D-065: one date: the project starts on its first invoice date.
+  expect(screen.queryByLabelText('First invoice date')).toBeNull();
+  const start = screen.getByLabelText('Start date');
+  await user.clear(start);
+  await user.type(start, '2026-04-01');
+  expect(screen.getByText('The first invoice is raised on the start date, then one on the same day each month.')).toBeInTheDocument();
   expect(screen.getByText(/Booking ₹12,000\.00 \(12 × ₹1,000\.00\)/)).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Create project' }));
   await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
   expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({
     expectedAmountMinor: 1200000,
+    startDate: '2026-04-01',
     recurring: { amountMinor: 100000, startDate: '2026-04-01', count: 12 },
     milestones: [],
   });

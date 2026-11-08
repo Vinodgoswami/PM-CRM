@@ -123,6 +123,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-69 | Done   | feat/bulk-pay-ui                       | D-062 BulkPayDialog layout, total, per-row progress; test                                                                                                                                                                                                                                   |
 | P4-70 | Done   | feat/recurring-milestones              | D-063 `RecurringSeries` + migration `20261108200000_recurring_series`, core `recurringDates`/`dueRecurringIndexes`, RecurringService/Controller/catch-up interceptor, MS-5 pending, UI form + series list + badge; API, web and E2E tests                                                   |
 | P4-71 | Done   | feat/recurring-project                 | D-064 `recurring` on createProjectSchema, series created in ProjectsService.create (`generateRecurring` shared), Billing choice on the form; API, web and E2E tests                                                                                                                         |
+| P4-72 | Done   | fix/one-start-date                     | D-065 recurring project uses Start date as first invoice date; layout; tests                                                                                                                                                                                                                |
 
 ## Blockers
 

@@ -83,8 +83,6 @@ function CreateProject() {
   const [billing, setBilling] = useState<'FIXED' | 'RECURRING'>('FIXED');
   const [perInvoice, setPerInvoice] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [invoices, setInvoices] = useState('12');
-  // null: follows the start date until the first invoice date is changed.
-  const [firstInvoice, setFirstInvoice] = useState<string | null>(null);
   const monthly = billing === 'RECURRING';
   const invoiceCount = Number(invoices);
   const recurringTotal =
@@ -118,9 +116,7 @@ function CreateProject() {
       expectedAmountMinor: (monthly ? recurringTotal : expected.minor) ?? undefined,
       currency,
       ...(parentProjectId ? { parentProjectId, phaseKind } : {}),
-      ...(monthly && perInvoice.minor !== null
-        ? { recurring: { amountMinor: perInvoice.minor, startDate: firstInvoice ?? startDate, count: invoiceCount } }
-        : {}),
+      ...(monthly && perInvoice.minor !== null ? { recurring: { amountMinor: perInvoice.minor, startDate, count: invoiceCount } } : {}),
       milestones: monthly
         ? []
         : rows.map((r) => ({
@@ -136,7 +132,8 @@ function CreateProject() {
     if (monthly) {
       if (perInvoice.minor === null) found['recurring.amountMinor'] = perInvoice.error ?? 'Enter the amount per invoice';
       if (!Number.isInteger(invoiceCount) || invoiceCount < 1 || invoiceCount > 120) found['recurring.count'] = 'Enter 1–120 invoices';
-      if (!(firstInvoice ?? startDate)) found['recurring.startDate'] = 'Choose the first invoice date';
+      // D-065: the first invoice is raised on the start date.
+      if (!startDate) found.startDate = 'Choose the start date (the first invoice date)';
     } else if (expected.minor === null) found.expectedAmountMinor = expected.error ?? 'Enter the booking amount';
     if (mustChoose && !ownerId) found.ownerId = 'Choose the project manager for this project.';
     if (!monthly)
@@ -281,19 +278,6 @@ function CreateProject() {
                     onChange={(e) => setInvoices(e.target.value)}
                   />
                 </Field>
-                <Field id="first-invoice" label="First invoice date" error={errors['recurring.startDate']}>
-                  <Input
-                    id="first-invoice"
-                    type="date"
-                    value={firstInvoice ?? startDate}
-                    onChange={(e) => setFirstInvoice(e.target.value)}
-                  />
-                </Field>
-                <p className="self-end pb-2 text-sm text-text-muted">
-                  {recurringTotal !== null
-                    ? `Booking ${formatApiMoney(recurringTotal, currency)} (${invoiceCount} × ${formatApiMoney(perInvoice.minor!, currency)})`
-                    : 'The booking is the amount per invoice × the number of invoices.'}
-                </p>
               </>
             ) : (
               <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>
@@ -304,6 +288,16 @@ function CreateProject() {
             <Field id="start-date" label="Start date" error={errors.startDate}>
               <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </Field>
+            {monthly && (
+              <div className="space-y-1 rounded-lg bg-accent/60 px-3 py-2.5 text-sm sm:col-span-2">
+                <p className="font-semibold">
+                  {recurringTotal !== null
+                    ? `Booking ${formatApiMoney(recurringTotal, currency)} (${invoiceCount} × ${formatApiMoney(perInvoice.minor!, currency)})`
+                    : 'Booking = amount per invoice × number of invoices'}
+                </p>
+                <p className="text-text-muted">The first invoice is raised on the start date, then one on the same day each month.</p>
+              </div>
+            )}
             {isAdmin && (
               <Field id="owner" label={OWNER} error={errors.ownerId}>
                 <OptionSelect
