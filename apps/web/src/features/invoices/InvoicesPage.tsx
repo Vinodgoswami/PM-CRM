@@ -112,6 +112,7 @@ export function InvoicesPage() {
                       number: i.number,
                       title: i.title,
                       invoiceId: i.invoiceId,
+                      dueDate: i.dueDate,
                       balanceMinor: i.balanceMinor,
                       currency: i.currency,
                     })

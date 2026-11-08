@@ -17,6 +17,10 @@ export interface MarkPaidTarget {
   title: string;
   /** D-047: the milestone's own invoice ID, used as the starting value. */
   invoiceId?: string | null;
+  /** D-054: the milestone's due date (the date read from its invoice), the quick popup's starting payment date. */
+  dueDate?: string | null;
+  /** D-054: a payment date already chosen (in the quick popup), used instead of today. */
+  paymentDate?: string;
   balanceMinor: number;
   currency: string;
 }
@@ -45,7 +49,7 @@ export function MarkPaidDialog({
   const sending = useRef(false);
   const [label, setLabel] = useState(`M${target.number}`);
   const [invoiceId, setInvoiceId] = useState(target.invoiceId ?? '');
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(target.paymentDate ?? today);
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: target.balanceMinor, error: null });
   const [error, setError] = useState<string | null>(initialError ?? null);

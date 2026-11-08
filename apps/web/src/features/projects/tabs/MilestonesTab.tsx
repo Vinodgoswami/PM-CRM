@@ -121,13 +121,13 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                     <Button
                       size="sm"
                       aria-label={`Mark M${m.number} as paid`}
-                      disabled={pay.busyId === m.id}
                       onClick={() =>
                         pay.start({
                           milestoneId: m.id,
                           number: m.number,
                           title: m.title,
                           invoiceId: m.invoiceId,
+                          dueDate: m.dueDate,
                           balanceMinor: m.balanceMinor,
                           currency: project.currency,
                         })
