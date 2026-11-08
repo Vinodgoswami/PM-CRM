@@ -16,6 +16,8 @@ export interface AppConfig {
   email: EmailConfig;
   /** Built website to serve from the API (one-host deployment, e.g. Render); unset when a dev server or host serves it. */
   webDistDir?: string;
+  /** D-067: the currency amounts are shown in for someone who has not chosen one; unset = the company currency. */
+  defaultViewCurrency?: string;
   /** D-033: create this Admin at startup when the database has none (hosts without a shell, e.g. Render free). */
   firstAdmin?: { email: string; name: string; password: string };
 }
@@ -68,6 +70,10 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().optional(),
   ADMIN_NAME: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
+  DEFAULT_VIEW_CURRENCY: z
+    .string()
+    .regex(/^[A-Z]{3}$/, 'must be a 3-letter currency code')
+    .default('USD'),
 });
 
 // Values copied from examples or CI must never reach production.
@@ -91,6 +97,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     fx: { provider: e.FX_PROVIDER },
     email: emailFrom(e),
     ...(e.WEB_DIST_DIR ? { webDistDir: e.WEB_DIST_DIR } : {}),
+    defaultViewCurrency: e.DEFAULT_VIEW_CURRENCY,
     ...firstAdminFrom(e),
   };
   if (config.nodeEnv === 'production') {

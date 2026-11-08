@@ -15,8 +15,10 @@ export const settingsSchema = z.object({
   fyStartMonth: z.number().int().min(1).max(12),
   timezone: z.string().refine(isTimeZone, 'Unknown timezone'),
   dueSoonDays: z.number().int().min(1).max(60),
+  /** D-067: read-only: the currency shown to someone who has not chosen one (null = the company currency). */
+  defaultViewCurrency: z.string().nullable().optional(),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
-export const updateSettingsSchema = settingsSchema.partial();
+export const updateSettingsSchema = settingsSchema.omit({ defaultViewCurrency: true }).partial();
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;

@@ -16,7 +16,7 @@ export class DashboardController {
   @Get()
   @RequirePermission('dashboard.own')
   async get(@CurrentUser() user: SessionUser, @Query(new ZodValidationPipe(dashboardQuerySchema)) q: DashboardQuery): Promise<Dashboard> {
-    const to = user.displayCurrency;
+    const to = await this.settings.viewCurrency(user);
     const [settings, today] = await Promise.all([this.settings.get(), this.settings.today()]);
     if (!to || to === settings.baseCurrency) return this.dashboard.get(user, q);
     // D-036 / D-039: the viewer's own currency; each project converts at its own starting rate.

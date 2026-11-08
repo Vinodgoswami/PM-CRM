@@ -4,7 +4,7 @@ import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR, toast } 
 import { Paperclip, Pencil, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { formatDate } from '../../../lib/dates';
-import { formatApiMoney } from '../../../lib/money';
+import { formatViewMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { useAttachSlip, usePayments } from '../../payments/api';
 import { SlipLinks } from '../../payments/SlipLinks';
@@ -62,7 +62,7 @@ export function PaymentsTab({ project }: { project: ProjectDetail }) {
                 </TD>
                 <TD>{p.invoiceId ?? '—'}</TD>
                 <TD className="text-right font-medium tabular-nums">
-                  {formatApiMoney(p.amountMinor, p.project.currency)}
+                  {formatViewMoney(p.amountMinor, p.project.currency, project.view)}
                   <BaseAmount payment={p} />
                 </TD>
                 <TD>

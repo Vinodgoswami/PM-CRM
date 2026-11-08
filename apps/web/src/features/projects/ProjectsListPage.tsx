@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useSession } from '../auth/api';
 import { formatDate } from '../../lib/dates';
-import { formatApiMoney } from '../../lib/money';
+import { formatViewMoney } from '../../lib/money';
 import { useProjects } from './api';
 import { StatusBadge } from './StatusBadge';
 
@@ -20,7 +20,7 @@ const VIEWS = [
 
 const col = createColumnHelper<ProjectListItem>();
 const money = (key: 'contractValueMinor' | 'collectedMinor' | 'outstandingMinor') => (p: ProjectListItem) =>
-  formatApiMoney(p[key], p.currency);
+  formatViewMoney(p[key], p.currency, p.view);
 
 const COLUMNS = [
   col.accessor('code', { header: 'Code', meta: { sort: 'code' } }),

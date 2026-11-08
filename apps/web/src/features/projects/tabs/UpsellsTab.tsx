@@ -4,7 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { formatDate } from '../../../lib/dates';
-import { formatApiMoney } from '../../../lib/money';
+import { formatViewMoney } from '../../../lib/money';
 import { useAddUpsell, useRemoveUpsell } from '../api';
 import { StatusBadge } from '../StatusBadge';
 import { ProjectBookingSplit, projectBooking } from '../ProjectBookingSplit';
@@ -14,7 +14,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function UpsellsTab({ project }: { project: ProjectDetail }) {
-  const money = (m: number) => formatApiMoney(m, project.currency);
+  const money = (m: number) => formatViewMoney(m, project.currency, project.view);
   const remove = useRemoveUpsell(project.id);
   const confirm = useConfirm();
   return (
@@ -70,7 +70,7 @@ export function UpsellsTab({ project }: { project: ProjectDetail }) {
 
 /** D-028: the original project is Phase 1; upsell work is added as Phase 2, 3, … with its own booking and milestones. */
 function Phases({ project }: { project: ProjectDetail }) {
-  const money = (m: number) => formatApiMoney(m, project.currency);
+  const money = (m: number) => formatViewMoney(m, project.currency, project.view);
   if (project.parent) {
     return (
       <section className="rounded-lg border border-border bg-accent/40 p-4 text-sm">

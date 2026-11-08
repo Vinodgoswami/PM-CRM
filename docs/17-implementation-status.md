@@ -125,6 +125,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-71 | Done   | feat/recurring-project                 | D-064 `recurring` on createProjectSchema, series created in ProjectsService.create (`generateRecurring` shared), Billing choice on the form; API, web and E2E tests                                                                                                                         |
 | P4-72 | Done   | fix/one-start-date                     | D-065 recurring project uses Start date as first invoice date; layout; tests                                                                                                                                                                                                                |
 | P4-73 | Done   | feat/invoices-my-currency              | D-066 InvoicesService target = displayCurrency, startRates; Profile refreshes invoices/clients; tests                                                                                                                                                                                       |
+| P4-74 | Done   | feat/view-currency                     | D-067 `SettingsService.viewCurrency`, DEFAULT_VIEW_CURRENCY config, project `view` rate, `formatViewMoney` on project screens, Profile Default label, en-US grouping; tests                                                                                                                 |
 
 ## Blockers
 

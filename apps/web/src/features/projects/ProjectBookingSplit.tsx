@@ -1,5 +1,5 @@
 import { type ProjectDetail } from '@salescrm/schemas';
-import { formatApiMoney } from '../../lib/money';
+import { formatViewMoney } from '../../lib/money';
 
 /**
  * D-028 / D-037: initial booking (this project plus phases that are part of its scope) + upsell (extra-work amounts
@@ -14,7 +14,7 @@ export function projectBooking(project: ProjectDetail) {
 }
 
 export function ProjectBookingSplit({ project }: { project: ProjectDetail }) {
-  const money = (m: number) => formatApiMoney(m, project.currency);
+  const money = (m: number) => formatViewMoney(m, project.currency, project.view);
   const { initial, upsell, total } = projectBooking(project);
   const share = (m: number) => (total > 0 ? `${(m * 100) / total}%` : '0%');
   return (

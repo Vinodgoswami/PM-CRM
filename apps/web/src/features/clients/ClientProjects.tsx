@@ -1,6 +1,6 @@
 import { Skeleton } from '@salescrm/ui';
 import { Link } from 'react-router';
-import { formatApiMoney } from '../../lib/money';
+import { formatViewMoney } from '../../lib/money';
 import { useProjects } from '../projects/api';
 import { StatusBadge } from '../projects/StatusBadge';
 
@@ -26,7 +26,7 @@ export function ClientProjects({ clientId, clientName }: { clientId: string; cli
           </div>
           <ul className="space-y-1.5">
             {data.items.map((p) => {
-              const money = (m: number) => formatApiMoney(m, p.currency);
+              const money = (m: number) => formatViewMoney(m, p.currency, p.view);
               const released = p.contractValueMinor > 0 ? Math.min(100, Math.round((p.collectedMinor / p.contractValueMinor) * 100)) : 0;
               return (
                 <li key={p.id}>

@@ -61,3 +61,8 @@ test('parseRate accepts positive decimals up to 10 places and nothing else', () 
   expect(parseRate(' 84.15 ')).toBe('84.15');
   for (const bad of ['0', '-1', 'abc', '1e3', '0.12345678901', '']) expect(() => parseRate(bad)).toThrow();
 });
+
+test('D-067 dollars use international grouping; rupees keep lakh grouping', () => {
+  expect(formatMoney(28658499n, 'USD')).toBe('$286,584.99');
+  expect(formatMoney(28658499n, 'INR')).toBe('₹2,86,584.99');
+});

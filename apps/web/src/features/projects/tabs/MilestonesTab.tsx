@@ -20,7 +20,7 @@ import { ArrowDown, ArrowUp, BadgeCheck, Pencil, Plus, Trash2 } from 'lucide-rea
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { formatDate } from '../../../lib/dates';
-import { formatApiMoney } from '../../../lib/money';
+import { formatApiMoney, formatViewMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
 import { useEditPayment } from '../../payments/api';
 import { useMarkPaidFlow } from '../../payments/useMarkPaidFlow';
@@ -47,7 +47,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
   // P-8: payments only on won work; the server enforces the same rule.
   const booked = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'].includes(project.status);
   const canPay = booked && project.canEdit && !!session && can(session.user, 'payments.create', { ownerId: project.owner.id });
-  const money = (m: number) => formatApiMoney(m, project.currency);
+  const money = (m: number) => formatViewMoney(m, project.currency, project.view);
   const pay = useMarkPaidFlow();
   const confirm = useConfirm();
   // Upcoming Invoices links here with ?edit=<milestone id> to open that row ready to change.
@@ -669,7 +669,7 @@ function EditRow({
   const editPayment = useEditPayment(milestone.paidPaymentId ?? '');
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState('');
-  const money = (m: number) => formatApiMoney(m, project.currency);
+  const money = (m: number) => formatViewMoney(m, project.currency, project.view);
 
   const saveMilestone = (minor: number) =>
     update.mutate(

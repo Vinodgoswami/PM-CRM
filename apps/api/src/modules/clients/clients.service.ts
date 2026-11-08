@@ -177,8 +177,7 @@ export class ClientsService {
       }),
       this.prisma.client.count({ where }),
     ]);
-    const [today, settings] = await Promise.all([this.settings.today(), this.settings.get()]);
-    const target = viewer?.displayCurrency ?? settings.baseCurrency;
+    const [today, target] = await Promise.all([this.settings.today(), this.settings.viewCurrency(viewer)]);
     const projects = rows.flatMap((r) => r.projects).filter((p) => !projectRate(p, target));
     const start = await this.fx.startRates(projects, target);
     return { items: rows.map((r) => toListItem(r, today, target, start)), page: query.page, pageSize: query.pageSize, total };

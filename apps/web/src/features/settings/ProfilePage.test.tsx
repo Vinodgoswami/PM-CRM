@@ -76,7 +76,7 @@ test('D-036 you choose the currency your own dashboard is shown in', async () =>
   renderApp('/profile', sessionFor('SALES'));
   const user = userEvent.setup();
   const select = await screen.findByRole('combobox', { name: 'My dashboard currency' });
-  await waitFor(() => expect(select).toHaveTextContent('Company currency (INR)'));
+  await waitFor(() => expect(select).toHaveTextContent('Default (INR)'));
   await choose(user, select, 'USD');
   await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ displayCurrency: 'USD' }));
   await choose(user, select, '');
@@ -97,4 +97,27 @@ test('D-066 a new currency also refreshes Upcoming Invoices and Clients', async 
   await choose(user, await screen.findByRole('combobox', { name: 'My dashboard currency' }), 'USD');
   await waitFor(() => expect(refresh).toHaveBeenCalledWith({ queryKey: ['invoices'] }));
   expect(refresh).toHaveBeenCalledWith({ queryKey: ['clients'] });
+});
+
+test('D-067 the default view currency (US dollars) is named, and rupees can be chosen explicitly', async () => {
+  const api = stubApi({
+    'GET /settings': {
+      body: {
+        companyName: 'Acme',
+        baseCurrency: 'INR',
+        fyStartMonth: 4,
+        timezone: 'Asia/Kolkata',
+        dueSoonDays: 7,
+        defaultViewCurrency: 'USD',
+      },
+    },
+    'PATCH /me/preferences': { body: { displayCurrency: 'INR' } },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/profile', sessionFor('SALES'));
+  const user = userEvent.setup();
+  const select = await screen.findByRole('combobox', { name: 'My dashboard currency' });
+  await waitFor(() => expect(select).toHaveTextContent('Default (USD)'));
+  await choose(user, select, 'INR');
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ displayCurrency: 'INR' }));
 });

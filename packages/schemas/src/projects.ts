@@ -108,7 +108,11 @@ export type ProjectListQuery = z.infer<typeof projectListQuerySchema>;
 
 const ref = z.object({ id: z.string(), name: z.string() });
 
+/** D-067: the viewer's currency and this project's rate into it (null when none is known: shown in its own currency). */
+export const viewRateSchema = z.object({ currency: z.string(), rate: z.string().nullable() });
+
 export const projectListItemSchema = z.object({
+  view: viewRateSchema.nullable().default(null),
   id: z.string(),
   code: z.string(),
   name: z.string(),

@@ -2,7 +2,7 @@ import { type ProjectDetail } from '@salescrm/schemas';
 import { Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
 import { Link } from 'react-router';
 import { formatDate } from '../../../lib/dates';
-import { formatApiMoney } from '../../../lib/money';
+import { formatViewMoney } from '../../../lib/money';
 import { StatusBadge } from '../StatusBadge';
 import { ProjectBookingSplit } from '../ProjectBookingSplit';
 
@@ -59,9 +59,9 @@ export function OverviewTab({ project }: { project: ProjectDetail }) {
                 <TR key={m.id}>
                   <TD>M{m.number}</TD>
                   <TD>{m.title}</TD>
-                  <TD className="text-right tabular-nums">{formatApiMoney(m.amountMinor, project.currency)}</TD>
+                  <TD className="text-right tabular-nums">{formatViewMoney(m.amountMinor, project.currency, project.view)}</TD>
                   <TD>{formatDate(m.dueDate)}</TD>
-                  <TD className="text-right tabular-nums">{formatApiMoney(m.paidMinor, project.currency)}</TD>
+                  <TD className="text-right tabular-nums">{formatViewMoney(m.paidMinor, project.currency, project.view)}</TD>
                 </TR>
               ))}
             </TBody>
