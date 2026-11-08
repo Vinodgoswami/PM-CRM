@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { setQueryClient } from '../lib/query-client';
 import { routes } from '../app/router';
+import { ConfirmProvider } from '../components/ConfirmDialog';
 
 /** Renders the real route tree at `path` with the session cache pre-filled (null = signed out). */
 export function renderApp(path: string, session: SessionResponse | null | undefined) {
@@ -14,7 +15,9 @@ export function renderApp(path: string, session: SessionResponse | null | undefi
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ConfirmProvider>
+        <RouterProvider router={router} />
+      </ConfirmProvider>
     </QueryClientProvider>,
   );
   return { router, queryClient };

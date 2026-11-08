@@ -35,6 +35,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../lib/api';
 import { OptionSelect } from '../../../components/OptionSelect';
 import { MoneyInput } from '../MoneyInput';
+import { useConfirm } from '../../../components/ConfirmDialog';
 
 type Milestone = ProjectDetail['milestones'][number];
 
@@ -48,6 +49,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
   const canPay = booked && project.canEdit && !!session && can(session.user, 'payments.create', { ownerId: project.owner.id });
   const money = (m: number) => formatApiMoney(m, project.currency);
   const pay = useMarkPaidFlow();
+  const confirm = useConfirm();
   // Upcoming Invoices links here with ?edit=<milestone id> to open that row ready to change.
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<string | null>(() => (project.canEdit ? params.get('edit') : null));
@@ -224,8 +226,10 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                           variant="ghost"
                           aria-label={`Delete M${m.number}`}
                           onClick={() =>
-                            window.confirm(`Delete M${m.number} ${m.title}?`) &&
-                            del.mutate(m.id, { onError: (e) => toast.error(e.message) })
+                            void confirm({
+                              title: `Delete M${m.number}?`,
+                              message: `Do you really want to delete M${m.number} ${m.title}? This cannot be undone.`,
+                            }).then((ok) => ok && del.mutate(m.id, { onError: (e) => toast.error(e.message) }))
                           }
                         >
                           <Trash2 className="size-4" />
