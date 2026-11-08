@@ -1,4 +1,5 @@
 import { Body, Controller, Get, type INestApplication, Post } from '@nestjs/common';
+import { Prisma } from '@salescrm/database';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, expect, test } from 'vitest';
@@ -23,6 +24,11 @@ class ErrorsTestController {
   @Get('bigint')
   bigint() {
     return { amountMinor: 125000n };
+  }
+
+  @Get('db')
+  db(): never {
+    throw new Prisma.PrismaClientKnownRequestError('Transaction already closed: secret detail', { code: 'P2028', clientVersion: 'test' });
   }
 
   @Get('boom')
@@ -75,4 +81,11 @@ test('unexpected errors hide their message', async () => {
   expect(JSON.stringify(res.body)).not.toContain('boom');
   // A short reference ties the message the user sees to the logged stack trace.
   expect(res.body.error.message).toMatch(/^Something went wrong \(ref [0-9a-f]{8}\)$/);
+});
+
+test('a database error shows its code (never its message) beside the reference', async () => {
+  const res = await request(app.getHttpServer()).get('/api/v1/test-errors/db');
+  expect(res.status).toBe(500);
+  expect(res.body.error.message).toMatch(/^Something went wrong \(ref [0-9a-f]{8}, P2028\)$/);
+  expect(JSON.stringify(res.body)).not.toContain('secret');
 });

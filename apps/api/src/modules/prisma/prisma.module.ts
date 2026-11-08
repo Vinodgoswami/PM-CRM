@@ -2,12 +2,12 @@ import { Global, Inject, Injectable, Module, type OnModuleDestroy } from '@nestj
 import { type AppConfig } from '@salescrm/config';
 import { PrismaClient } from '@salescrm/database';
 import { APP_CONFIG } from '../../config.module';
-import { databaseUrlWithTimeouts } from './wake-up';
+import { databaseUrlWithTimeouts, TRANSACTION_OPTIONS } from './wake-up';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   constructor(@Inject(APP_CONFIG) config: AppConfig) {
-    super({ datasources: { db: { url: databaseUrlWithTimeouts(config.databaseUrl) } } });
+    super({ datasources: { db: { url: databaseUrlWithTimeouts(config.databaseUrl) } }, transactionOptions: TRANSACTION_OPTIONS });
   }
 
   async onModuleDestroy(): Promise<void> {
