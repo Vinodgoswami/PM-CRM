@@ -18,8 +18,6 @@ export interface AppConfig {
   webDistDir?: string;
   /** D-033: create this Admin at startup when the database has none (hosts without a shell, e.g. Render free). */
   firstAdmin?: { email: string; name: string; password: string };
-  /** D-051: ping this URL on a timer so a free host (Render) does not put the service to sleep. */
-  keepAwake?: { url: string; everyMs: number };
 }
 
 export type EmailConfig =
@@ -70,10 +68,6 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().optional(),
   ADMIN_NAME: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
-  /** Set by Render on every web service. */
-  RENDER_EXTERNAL_URL: z.url().optional(),
-  KEEP_AWAKE_URL: z.url().optional(),
-  KEEP_AWAKE: z.enum(['true', 'false']).default('true'),
 });
 
 // Values copied from examples or CI must never reach production.
@@ -98,7 +92,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     email: emailFrom(e),
     ...(e.WEB_DIST_DIR ? { webDistDir: e.WEB_DIST_DIR } : {}),
     ...firstAdminFrom(e),
-    ...keepAwakeFrom(e),
   };
   if (config.nodeEnv === 'production') {
     const problems: string[] = [];
@@ -109,13 +102,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     if (problems.length) throw new ConfigError(problems);
   }
   return config;
-}
-
-/** D-051: every 10 minutes, under Render's 15 idle minutes; the health URL does not touch the database. */
-function keepAwakeFrom(e: z.infer<typeof envSchema>): Pick<AppConfig, 'keepAwake'> {
-  if (e.KEEP_AWAKE === 'false') return {};
-  const url = e.KEEP_AWAKE_URL ?? (e.RENDER_EXTERNAL_URL ? `${e.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/api/v1/health` : undefined);
-  return url ? { keepAwake: { url, everyMs: 10 * 60_000 } } : {};
 }
 
 function firstAdminFrom(e: z.infer<typeof envSchema>): Pick<AppConfig, 'firstAdmin'> {
