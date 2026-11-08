@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { type AppConfig } from '@salescrm/config';
-import { dueRecurringIndexes, type IsoDate, recurringDates } from '@salescrm/core';
-import { type Prisma } from '@salescrm/database';
+import { type IsoDate } from '@salescrm/core';
 import { type CreateRecurringInput, type ProjectDetail } from '@salescrm/schemas';
 import { minorFromJson } from '@salescrm/types';
 import { type SessionUser } from '../../common/current-user';
@@ -10,11 +9,10 @@ import { APP_CONFIG } from '../../config.module';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { SettingsService } from '../settings/settings.service';
-import { isoDate } from './project-money';
 import { ProjectsService } from './projects.service';
+import { generateRecurring, titleOf } from './recurring-generate';
 
 const toDate = (d: string) => new Date(`${d}T00:00:00Z`);
-const titleOf = (title: string, i: number, count: number) => `${title} (${i + 1}/${count})`;
 
 /**
  * D-063: monthly recurring milestones. A series makes `count` milestones on the start date's day each month; each is
@@ -62,7 +60,7 @@ export class RecurringService implements OnApplicationBootstrap {
       select: { id: true, count: true, createdCount: true },
     });
     for (const s of open.filter((x) => x.createdCount < x.count)) {
-      await this.prisma.$transaction((tx) => this.generate(tx, s.id, today));
+      await this.prisma.$transaction((tx) => generateRecurring(tx, s.id, today));
     }
   }
 
@@ -80,7 +78,7 @@ export class RecurringService implements OnApplicationBootstrap {
           createdById: user.id,
         },
       });
-      await this.generate(tx, series.id, today);
+      await generateRecurring(tx, series.id, today);
       // MS-5: the whole series, months still to come included, must fit the project's value.
       await this.projects.assertMilestonesWithinValue(tx, projectId);
       await this.audit.record(tx, {
@@ -134,7 +132,7 @@ export class RecurringService implements OnApplicationBootstrap {
           await tx.milestone.update({ where: { id: m.id }, data: { title: titleOf(s.title, m.recurringIndex, count) } });
         }
       }
-      await this.generate(tx, seriesId, today);
+      await generateRecurring(tx, seriesId, today);
       await this.projects.assertMilestonesWithinValue(tx, s.projectId);
       await this.audit.record(tx, {
         actorId: user.id,
@@ -147,34 +145,5 @@ export class RecurringService implements OnApplicationBootstrap {
       return s.projectId;
     });
     return this.projects.get(projectId, user);
-  }
-
-  /** Creates the series' milestones due by `today`, numbered after the project's last milestone. */
-  private async generate(tx: Prisma.TransactionClient, seriesId: string, today: IsoDate): Promise<void> {
-    await tx.$queryRaw`SELECT id FROM "RecurringSeries" WHERE id = ${seriesId} FOR UPDATE`;
-    const s = await tx.recurringSeries.findUniqueOrThrow({ where: { id: seriesId } });
-    const start = isoDate(s.startDate)!;
-    const due = dueRecurringIndexes(start, s.count, s.createdCount, today);
-    if (due.length === 0) return;
-    const dates = recurringDates(start, s.count);
-    // Same lock as other milestone writes on the project, so numbers stay 1..n (MS-1).
-    await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${s.projectId} FOR UPDATE`;
-    let number = (await tx.milestone.aggregate({ where: { projectId: s.projectId }, _max: { number: true } }))._max.number ?? 0;
-    for (const i of due) {
-      number += 1;
-      await tx.milestone.create({
-        data: {
-          projectId: s.projectId,
-          number,
-          title: titleOf(s.title, i, s.count),
-          amountMinor: s.amountMinor,
-          dueDate: toDate(dates[i]!),
-          createdById: s.createdById,
-          recurringSeriesId: s.id,
-          recurringIndex: i,
-        },
-      });
-    }
-    await tx.recurringSeries.update({ where: { id: s.id }, data: { createdCount: due.at(-1)! + 1 } });
   }
 }

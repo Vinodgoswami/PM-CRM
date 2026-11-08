@@ -130,3 +130,29 @@ test('MS-5: the whole series must fit the booking when it is created or extended
   const oneOff = await call(agent, csrf, 'post', `/projects/${p.id}/milestones`, { title: 'X', amountMinor: 1, dueDate: '2099-06-01' });
   expect(oneOff.body.error.details).toEqual({ rule: 'MS-5' });
 });
+
+test('D-064 a new project can be billed monthly: the series is created with it, booking = amount × invoices', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const res = await call(agent, csrf, 'post', '/projects', {
+    name: 'Mr Cashback',
+    expectedAmountMinor: 1200000,
+    status: 'ACTIVE',
+    currency: 'USD',
+    newClient: { name: 'Innovation Labs Limited' },
+    recurring: { amountMinor: 100000, startDate: '2020-01-01', count: 12 },
+  });
+  expect(res.status).toBe(201);
+  expect(res.body.expectedAmountMinor).toBe(1200000);
+  expect(res.body.recurring).toEqual([expect.objectContaining({ title: 'Mr Cashback', amountMinor: 100000, count: 12, createdCount: 12 })]);
+  expect(res.body.milestones).toHaveLength(12);
+  expect(res.body.milestones[0]).toMatchObject({ title: 'Mr Cashback (1/12)', dueDate: '2020-01-01', amountMinor: 100000 });
+  // The booking must cover the whole series.
+  const short = await call(agent, csrf, 'post', '/projects', {
+    name: 'Short',
+    expectedAmountMinor: 100000,
+    status: 'ACTIVE',
+    newClient: { name: `C ${Math.random()}` },
+    recurring: { amountMinor: 100000, startDate: '2099-01-01', count: 2 },
+  });
+  expect([short.status, short.body.error.details]).toEqual([400, { rule: 'MS-5' }]);
+});

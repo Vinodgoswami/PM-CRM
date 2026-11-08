@@ -402,3 +402,30 @@ test('MS-5 milestones adding up to more than the booking amount stop the project
   ).toBeInTheDocument();
   expect(api.calls.some((c) => c.method === 'POST')).toBe(false);
 });
+
+test('D-064 a project billed monthly asks for amount per invoice and invoices; the booking is worked out', async () => {
+  const api = stubApi({ 'GET /clients': clients, 'POST /projects': created, ...projectRoutes });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/new', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText('Project name'), 'Mr Cashback');
+  await user.click(screen.getByRole('combobox', { name: 'Client' }));
+  await user.type(screen.getByPlaceholderText('Search clients…'), 'ac');
+  await user.click(await screen.findByRole('option', { name: 'Acme' }));
+  await user.click(screen.getByRole('radio', { name: 'Recurring monthly' }));
+  expect(screen.queryByLabelText('Booking amount')).toBeNull();
+  await user.type(screen.getByLabelText('Amount per invoice'), '1,000');
+  await user.clear(screen.getByLabelText('Number of invoices'));
+  await user.type(screen.getByLabelText('Number of invoices'), '12');
+  const first = screen.getByLabelText('First invoice date');
+  await user.clear(first);
+  await user.type(first, '2026-04-01');
+  expect(screen.getByText(/Booking ₹12,000\.00 \(12 × ₹1,000\.00\)/)).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Create project' }));
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  expect(api.calls.find((c) => c.method === 'POST')!.body).toMatchObject({
+    expectedAmountMinor: 1200000,
+    recurring: { amountMinor: 100000, startDate: '2026-04-01', count: 12 },
+    milestones: [],
+  });
+});
