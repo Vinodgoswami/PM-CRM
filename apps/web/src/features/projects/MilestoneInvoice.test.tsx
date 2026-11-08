@@ -1,4 +1,5 @@
-import { screen, waitFor } from '@testing-library/react';
+import { todayIn } from '@salescrm/core';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { renderApp, sessionFor, stubApi } from '../../test/render';
@@ -33,24 +34,24 @@ const routes = {
   },
 };
 
-test('an invoice PDF fills amount and due date; D-048: no invoice ID at creation, no PDF or payment stored', async () => {
+test('an invoice PDF fills the optional invoice ID (D-049), amount and due date; no PDF or payment is stored', async () => {
   const api = stubApi(routes);
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p1?tab=milestones&add=1', sessionFor('SALES'));
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText('New milestone task'), 'Sprint 3');
   await user.upload(screen.getByLabelText(/Milestone invoice/), new File(['%PDF'], 'INV-88.pdf', { type: 'application/pdf' }));
-  await waitFor(() => expect(screen.getByLabelText('New milestone amount')).toHaveValue('20000.00'));
-  expect(screen.queryByLabelText('New milestone invoice ID')).toBeNull();
+  await waitFor(() => expect(screen.getByLabelText('New milestone invoice ID (optional)')).toHaveValue('INV-88'));
   expect(screen.getByLabelText('New milestone task')).toHaveValue('Sprint 3');
   expect(screen.getByLabelText('New milestone amount')).toHaveValue('20000.00');
   expect(screen.getByLabelText('New milestone due date')).toHaveValue('2026-11-20');
-  expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: amount, due date. Check them before adding.');
+  expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: invoice ID, amount, due date. Check them before adding.');
 
   await user.click(screen.getByRole('button', { name: 'Add' }));
   await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
   expect(api.calls.find((c) => c.path === '/projects/p1/milestones')?.body).toEqual({
     title: 'Sprint 3',
+    invoiceId: 'INV-88',
     amountMinor: 2000000,
     dueDate: '2026-11-20',
   });
@@ -68,6 +69,7 @@ test('without a file the milestone is added by hand as before', async () => {
   await user.type(screen.getByLabelText('New milestone due date'), '2026-12-01');
   await user.click(screen.getByRole('button', { name: 'Add' }));
   await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
+  expect(api.calls.find((c) => c.path === '/projects/p1/milestones')?.body).not.toHaveProperty('invoiceId');
   expect(api.calls.some((c) => c.path.includes('/documents'))).toBe(false);
 });
 
@@ -89,12 +91,73 @@ test('the milestone list has its own Invoice ID column, and editing a row change
   await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({ invoiceId: 'CHS/2026-27/96' }));
 });
 
-test("Mark as paid starts with the milestone's invoice ID", async () => {
-  const withId = detail();
-  withId.milestones[0] = { ...withId.milestones[0]!, invoiceId: 'CHS/2026-27/72' };
-  vi.stubGlobal('fetch', stubApi({ ...routes, 'GET /projects/p1': { body: withId } }).fn);
+const withInvoiceId = () => {
+  const d = detail();
+  d.milestones[0] = { ...d.milestones[0]!, invoiceId: 'CHS/2026-27/72' };
+  return d;
+};
+const paid = {
+  id: 'pay9',
+  milestoneId: 'm1',
+  milestoneLabel: 'M1',
+  invoiceId: 'CHS/2026-27/72',
+  paymentDate: '2026-11-08',
+  amountMinor: 5000000,
+  reversesPaymentId: null,
+  reversedById: null,
+  note: null,
+  createdBy: { id: 'u1', name: 'Test User' },
+  createdAt: '2026-11-08T10:00:00.000Z',
+  canEdit: true,
+  project: { id: 'p1', code: 'PRJ-0001', name: 'Website Redesign', currency: 'INR' },
+  client: { id: 'c1', name: 'Acme' },
+};
+
+test('D-049 with an invoice ID, Mark as paid pays the balance today in one click, without the form', async () => {
+  const api = stubApi({
+    ...routes,
+    'GET /projects/p1': { body: withInvoiceId() },
+    'POST /milestones/m1/payments': { status: 201, body: paid },
+  });
+  vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
-  expect(await screen.findByLabelText('Invoice ID')).toHaveValue('CHS/2026-27/72');
+  await waitFor(() => expect(api.calls.some((c) => c.method === 'POST')).toBe(true));
+  const post = api.calls.find((c) => c.method === 'POST')!;
+  expect(post.body).toEqual({
+    milestoneLabel: 'M1',
+    invoiceId: 'CHS/2026-27/72',
+    paymentDate: todayIn('Asia/Kolkata', new Date()),
+    amountMinor: 5000000,
+  });
+  expect(post.headers.get('Idempotency-Key')).toBeTruthy();
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(await screen.findByText(/M1 marked as paid/)).toBeInTheDocument();
+});
+
+test('D-049 if the one-click payment is refused, the form opens filled in with the reason', async () => {
+  const api = stubApi({
+    ...routes,
+    'GET /projects/p1': { body: withInvoiceId() },
+    'POST /milestones/m1/payments': {
+      status: 400,
+      body: { error: { code: 'VALIDATION_FAILED', message: 'No exchange rate is available. Enter the rate yourself.' } },
+    },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByLabelText('Invoice ID')).toHaveValue('CHS/2026-27/72');
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('Enter the rate yourself');
+});
+
+test('without an invoice ID, Mark as paid opens the form as before', async () => {
+  vi.stubGlobal('fetch', stubApi(routes).fn);
+  renderApp('/projects/p1?tab=milestones', sessionFor('SALES'));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Mark M1 as paid' }));
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
 });

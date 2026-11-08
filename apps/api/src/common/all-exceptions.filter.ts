@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import { type Response } from 'express';
 import { AppError } from './errors';
@@ -33,7 +34,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
-    this.logger.error(exception instanceof Error ? exception.stack : String(exception));
-    res.status(500).json({ error: { code: 'INTERNAL', message: 'Something went wrong' } });
+    // The reference is shown to the user and logged with the stack, so the log line for a report is easy to find.
+    const ref = randomBytes(4).toString('hex');
+    this.logger.error(`[ref ${ref}] ${exception instanceof Error ? exception.stack : String(exception)}`);
+    res.status(500).json({ error: { code: 'INTERNAL', message: `Something went wrong (ref ${ref})` } });
   }
 }

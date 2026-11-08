@@ -22,7 +22,7 @@ import { useSearchParams } from 'react-router';
 import { formatDate } from '../../../lib/dates';
 import { formatApiMoney } from '../../../lib/money';
 import { useSession } from '../../auth/api';
-import { MarkPaidDialog, type MarkPaidTarget } from '../../payments/MarkPaidDialog';
+import { useMarkPaidFlow } from '../../payments/useMarkPaidFlow';
 import { MilestoneStatusBadge } from '../../payments/MilestoneStatusBadge';
 import { parseInvoiceText } from '../../payments/invoice-text';
 import { readPdfText } from '../../payments/readPdfText';
@@ -42,7 +42,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
   const booked = ['WON', 'ACTIVE', 'ON_HOLD', 'COMPLETED'].includes(project.status);
   const canPay = booked && project.canEdit && !!session && can(session.user, 'payments.create', { ownerId: project.owner.id });
   const money = (m: number) => formatApiMoney(m, project.currency);
-  const [paying, setPaying] = useState<MarkPaidTarget | null>(null);
+  const pay = useMarkPaidFlow();
   // Upcoming Invoices links here with ?edit=<milestone id> to open that row ready to change.
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<string | null>(() => (project.canEdit ? params.get('edit') : null));
@@ -121,8 +121,9 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
                     <Button
                       size="sm"
                       aria-label={`Mark M${m.number} as paid`}
+                      disabled={pay.busyId === m.id}
                       onClick={() =>
-                        setPaying({
+                        pay.start({
                           milestoneId: m.id,
                           number: m.number,
                           title: m.title,
@@ -190,7 +191,7 @@ export function MilestonesTab({ project }: { project: ProjectDetail }) {
         </TBody>
       </Table>
       {project.canEdit && <AddMilestone project={project} openAtStart={params.has('add')} />}
-      {paying && <MarkPaidDialog target={paying} onClose={() => setPaying(null)} />}
+      {pay.dialog}
     </div>
   );
 }
@@ -203,6 +204,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
   const qc = useQueryClient();
   const [open, setOpen] = useState(openAtStart);
   const [title, setTitle] = useState('');
+  const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState<{ minor: number | null; error: string | null }>({ minor: null, error: null });
   const [due, setDue] = useState('');
   const [target, setTarget] = useState(project.id);
@@ -226,7 +228,12 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           })
         : apiFetch(`/projects/${target}/milestones`, {
             method: 'POST',
-            body: { title, amountMinor: amount.minor!, ...(due ? { dueDate: due } : {}) },
+            body: {
+              title,
+              ...(invoiceId.trim() ? { invoiceId: invoiceId.trim() } : {}),
+              amountMinor: amount.minor!,
+              ...(due ? { dueDate: due } : {}),
+            },
             schema: projectDetailSchema,
           }),
     onSuccess: (updated) => {
@@ -246,7 +253,11 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
       /* unreadable PDF: treated like one without text */
     }
     const got: string[] = [];
-    // D-048: a milestone gets its invoice ID when the invoice comes in with a payment, not when it is created.
+    // D-049: the invoice ID is optional; it is filled only when the PDF has one (else a payment can bring it, D-048).
+    if (fields.invoiceId) {
+      setInvoiceId(fields.invoiceId);
+      got.push('invoice ID');
+    }
     if (fields.amountMinor !== undefined) {
       setAmount({ minor: fields.amountMinor, error: null });
       setAmountShown((a) => ({ key: a.key + 1, minor: fields.amountMinor }));
@@ -294,6 +305,7 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
             setFilled(null);
             setAmountShown((a) => ({ key: a.key + 1 }));
             setTitle('');
+            setInvoiceId('');
             setDue('');
             setAmount({ minor: null, error: null });
             setKey((k) => k + 1);
@@ -345,7 +357,13 @@ function AddMilestone({ project, openAtStart }: { project: ProjectDetail; openAt
           </p>
         )}
       </div>
-      <div className="grid gap-2 sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-start">
+      <div className="grid gap-2 sm:grid-cols-[11rem_1fr_12rem_10rem_auto] sm:items-start">
+        <Input
+          aria-label="New milestone invoice ID (optional)"
+          placeholder="Invoice ID (optional)"
+          value={invoiceId}
+          onChange={(e) => setInvoiceId(e.target.value)}
+        />
         <Input aria-label="New milestone task" placeholder="Task" value={title} onChange={(e) => setTitle(e.target.value)} />
         <MoneyInput
           key={amountShown.key}

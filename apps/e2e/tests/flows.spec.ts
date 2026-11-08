@@ -112,9 +112,10 @@ test('D-022 the Admin lands on the dashboard (figures, counts, no names) and can
 test('D-040 an invoice PDF fills the Mark-as-paid fields; typing stays possible', async ({ page }) => {
   await signIn(page, 'pm1');
   await page.goto('/invoices');
+  // D-049: a milestone that already has an invoice ID is paid in one click; the last row is a seeded one without.
   await page
     .getByRole('button', { name: /^Mark M\d+ .+ as paid$/ })
-    .first()
+    .last()
     .click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel(/Invoice or payment slip/).setInputFiles(new URL('../fixtures/invoice.pdf', import.meta.url).pathname);

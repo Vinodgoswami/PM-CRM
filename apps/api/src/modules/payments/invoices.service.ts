@@ -72,6 +72,7 @@ export class InvoicesService {
         milestoneId: m.id,
         number: m.number,
         title: m.title,
+        invoiceId: m.invoiceId,
         amountMinor: minorToJson(m.amountMinor),
         balanceMinor: minorToJson(balance),
         baseBalanceMinor: baseBalance === null ? null : minorToJson(baseBalance),

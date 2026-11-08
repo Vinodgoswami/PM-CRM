@@ -11,6 +11,8 @@ export const invoiceItemSchema = z.object({
   milestoneId: z.string(),
   number: z.number(),
   title: z.string(),
+  /** D-047/D-049: the milestone's invoice ID; with one, Mark as paid works in one click. */
+  invoiceId: z.string().nullable().default(null),
   amountMinor: minorSchema,
   balanceMinor: minorSchema,
   /** D-020: the balance in the company's base currency at the project's saved rate (null when it has none). */
