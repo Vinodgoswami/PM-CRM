@@ -140,6 +140,10 @@ export class PaymentsService {
           },
           include: PAYMENT_INCLUDE,
         });
+        // D-048: a milestone has no invoice ID until its invoice comes in with a payment; the first one sticks.
+        if (created.invoiceId && !milestone.invoiceId) {
+          await tx.milestone.update({ where: { id: milestoneId }, data: { invoiceId: created.invoiceId } });
+        }
         await this.audit.record(tx, {
           actorId: user.id,
           action: 'payment.create',

@@ -165,3 +165,13 @@ test('the database rejects a negative payment that is not a reversal', async () 
     }),
   ).rejects.toThrow();
 });
+
+test('D-048 the first payment with an invoice ID gives the milestone its invoice ID; a later one does not replace it', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const { milestoneId } = await projectWithMilestone(agent, csrf);
+  await pay(agent, csrf, milestoneId, { paymentDate: '2026-10-05', amountMinor: 1000 });
+  expect((await prisma.milestone.findUniqueOrThrow({ where: { id: milestoneId } })).invoiceId).toBeNull();
+  await pay(agent, csrf, milestoneId, { invoiceId: 'CHS/2026-27/72', paymentDate: '2026-10-05', amountMinor: 1000 });
+  await pay(agent, csrf, milestoneId, { invoiceId: 'OTHER-1', paymentDate: '2026-10-06', amountMinor: 1000 });
+  expect((await prisma.milestone.findUniqueOrThrow({ where: { id: milestoneId } })).invoiceId).toBe('CHS/2026-27/72');
+});

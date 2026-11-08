@@ -33,24 +33,24 @@ const routes = {
   },
 };
 
-test('an invoice PDF fills the invoice ID (D-047: apart from the task), amount and due date; no PDF or payment is stored', async () => {
+test('an invoice PDF fills amount and due date; D-048: no invoice ID at creation, no PDF or payment stored', async () => {
   const api = stubApi(routes);
   vi.stubGlobal('fetch', api.fn);
   renderApp('/projects/p1?tab=milestones&add=1', sessionFor('SALES'));
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText('New milestone task'), 'Sprint 3');
   await user.upload(screen.getByLabelText(/Milestone invoice/), new File(['%PDF'], 'INV-88.pdf', { type: 'application/pdf' }));
-  await waitFor(() => expect(screen.getByLabelText('New milestone invoice ID')).toHaveValue('INV-88'));
+  await waitFor(() => expect(screen.getByLabelText('New milestone amount')).toHaveValue('20000.00'));
+  expect(screen.queryByLabelText('New milestone invoice ID')).toBeNull();
   expect(screen.getByLabelText('New milestone task')).toHaveValue('Sprint 3');
   expect(screen.getByLabelText('New milestone amount')).toHaveValue('20000.00');
   expect(screen.getByLabelText('New milestone due date')).toHaveValue('2026-11-20');
-  expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: invoice ID, amount, due date. Check them before adding.');
+  expect(screen.getByRole('status')).toHaveTextContent('Filled from INV-88.pdf: amount, due date. Check them before adding.');
 
   await user.click(screen.getByRole('button', { name: 'Add' }));
   await waitFor(() => expect(api.calls.some((c) => c.path === '/projects/p1/milestones')).toBe(true));
   expect(api.calls.find((c) => c.path === '/projects/p1/milestones')?.body).toEqual({
     title: 'Sprint 3',
-    invoiceId: 'INV-88',
     amountMinor: 2000000,
     dueDate: '2026-11-20',
   });
