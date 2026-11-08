@@ -121,3 +121,10 @@ password uses **Forgot password?** on the sign-in page (email needed); the Admin
 | Document upload fails                                            | CORS step (3.3) run with the exact address; bucket name; `S3_REGION`; credential scopes |
 | Invites are "Not emailed"                                        | Brevo sender verified and `BREVO_API_KEY` correct; Render's log shows Brevo's reason    |
 | First visit is slow                                              | The free service was asleep; it wakes in 30–60 s                                        |
+
+## Neon waking up (D-050)
+
+Neon's free compute pauses after about 5 minutes without queries. The API waits up to 30 seconds for it to wake
+(`connect_timeout` / `pool_timeout`, added to `DATABASE_URL` unless you set them) and runs a request again, up to twice,
+when it meets a stale or not-yet-ready connection. The log shows `Database not ready …; retry 1` when that happens.
+If requests still fail, check the Neon console for a suspended compute or a used-up monthly allowance.

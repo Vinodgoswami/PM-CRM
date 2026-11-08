@@ -1,5 +1,5 @@
 import { type DynamicModule, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { type AppConfig } from '@salescrm/config';
 import { LoggerModule } from 'nestjs-pino';
 import { CsrfGuard } from './common/csrf.guard';
@@ -18,6 +18,7 @@ import { HealthController } from './modules/health/health.controller';
 import { ImportsModule } from './modules/imports/imports.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { RetryOnDatabaseWakeUp } from './modules/prisma/wake-up';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StorageModule } from './modules/storage/storage.module';
@@ -60,6 +61,8 @@ export class AppModule {
         { provide: APP_GUARD, useClass: SessionGuard },
         { provide: APP_GUARD, useClass: CsrfGuard },
         { provide: APP_GUARD, useClass: PermissionGuard },
+        // D-050: a request that met a waking database runs again before the user sees an error.
+        { provide: APP_INTERCEPTOR, useValue: new RetryOnDatabaseWakeUp() },
       ],
     };
   }
