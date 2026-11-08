@@ -1,6 +1,6 @@
 import { ALLOWED_DOCUMENT_MIME_TYPES, DOCUMENT_TYPES, MAX_DOCUMENT_BYTES, type ProjectDetail } from '@salescrm/schemas';
 import { Button, EmptyState, Label, Skeleton, Table, TBody, TD, TH, THead, TR, toast } from '@salescrm/ui';
-import { Download, Trash2, Upload } from 'lucide-react';
+import { Download, FileText, Trash2, UploadCloud } from 'lucide-react';
 import { useId, useState } from 'react';
 import { formatDate } from '../../../lib/dates';
 import { OptionSelect } from '../../../components/OptionSelect';
@@ -26,6 +26,7 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
   const confirm = useConfirm();
   const [type, setType] = useState<DocType>('PROPOSAL');
   const inputId = useId();
+  const [over, setOver] = useState(false);
 
   const onFile = (file: File | undefined) => {
     if (!file) return;
@@ -38,42 +39,67 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
   return (
     <div className="space-y-4">
       {project.canEdit && (
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-border p-4">
-          <div className="space-y-1.5">
-            <Label htmlFor={`${inputId}-type`}>Type</Label>
-            <OptionSelect
-              id={`${inputId}-type`}
-              className="h-9 rounded-md border border-border bg-surface px-3 text-sm"
-              value={type}
-              onValueChange={(v) => setType(v as DocType)}
+        <section aria-label="Documents upload" className="space-y-3 rounded-xl bg-surface p-4 shadow-card">
+          <div className="grid gap-3 sm:grid-cols-[12rem_1fr] sm:items-end">
+            <div className="space-y-1.5">
+              <Label htmlFor={`${inputId}-type`} className="block">
+                Type
+              </Label>
+              <OptionSelect
+                id={`${inputId}-type`}
+                className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm"
+                value={type}
+                onValueChange={(v) => setType(v as DocType)}
+              >
+                {DOCUMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {TYPE_LABEL[t]}
+                  </option>
+                ))}
+              </OptionSelect>
+            </div>
+            <label
+              htmlFor={inputId}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOver(true);
+              }}
+              onDragLeave={() => setOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setOver(false);
+                onFile(e.dataTransfer.files[0]);
+              }}
+              className={`flex h-11 cursor-pointer items-center gap-3 rounded-lg border border-dashed px-3 transition-colors focus-within:ring-2 focus-within:ring-primary ${
+                over ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60 hover:bg-accent'
+              } ${upload.isPending ? 'pointer-events-none opacity-60' : ''}`}
             >
-              {DOCUMENT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABEL[t]}
-                </option>
-              ))}
-            </OptionSelect>
+              <UploadCloud className="size-4 shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 truncate text-sm">
+                {upload.isPending ? (
+                  'Uploading…'
+                ) : (
+                  <>
+                    <span className="font-medium text-primary">Choose a file</span>{' '}
+                    <span className="text-text-muted">or drag it here · PDF, Office, PNG, JPG or ZIP · up to 25 MB</span>
+                  </>
+                )}
+              </span>
+              <input
+                id={inputId}
+                type="file"
+                className="sr-only"
+                aria-label="Upload a document"
+                accept={ALLOWED_DOCUMENT_MIME_TYPES.join(',')}
+                disabled={upload.isPending}
+                onChange={(e) => {
+                  onFile(e.target.files?.[0]);
+                  e.target.value = '';
+                }}
+              />
+            </label>
           </div>
-          <label
-            htmlFor={inputId}
-            className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-contrast"
-          >
-            <Upload className="size-4" /> {upload.isPending ? 'Uploading…' : 'Choose file'}
-          </label>
-          <input
-            id={inputId}
-            type="file"
-            className="sr-only"
-            aria-label="Upload a document"
-            accept={ALLOWED_DOCUMENT_MIME_TYPES.join(',')}
-            disabled={upload.isPending}
-            onChange={(e) => {
-              onFile(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />
-          <p className="text-xs text-text-muted">PDF, Office, PNG, JPG or ZIP · up to 25 MB</p>
-        </div>
+        </section>
       )}
 
       {docs.isPending ? (
@@ -81,7 +107,15 @@ export function DocumentsTab({ project }: { project: ProjectDetail }) {
       ) : docs.isError ? (
         <EmptyState title="Could not load documents" />
       ) : docs.data.items.length === 0 ? (
-        <EmptyState title="No documents yet" description="Proposals, SOWs and contracts for this project appear here." />
+        <div className="flex items-center gap-3 rounded-xl bg-surface px-4 py-5 shadow-card">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-text-muted">
+            <FileText className="size-5" aria-hidden />
+          </span>
+          <div>
+            <p className="font-medium">No documents yet</p>
+            <p className="text-sm text-text-muted">Proposals, SOWs and contracts for this project appear here.</p>
+          </div>
+        </div>
       ) : (
         <Table>
           <THead>
