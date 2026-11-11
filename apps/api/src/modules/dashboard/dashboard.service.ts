@@ -110,6 +110,8 @@ export class DashboardService {
     const range = periodRange(q.period, today, settings.fyStartMonth);
     const r = range.from && range.to ? { from: range.from, to: range.to } : EVER;
     const s = summarise(metric, r, today);
+    // D-069: the headline is everything contracted so far, whatever the period.
+    const ever = summarise(metric, EVER, today);
     const prevRange = comparableRange(q.period, today, settings.fyStartMonth);
     const prev = prevRange.from && prevRange.to ? summarise(metric, { from: prevRange.from, to: prevRange.to }, today) : null;
 
@@ -292,6 +294,9 @@ export class DashboardService {
         winRate: s.winRate,
         avgDealMinor: s.wonCount > 0 ? j(s.wonExpectedMinor / BigInt(s.wonCount)) : null,
         avgDaysToPay: s.avgDaysToPay,
+        totalContractedMinor: j(ever.bookedMinor),
+        totalProjects: ever.wonCount,
+        dueInPeriodMinor: j(s.dueInPeriodMinor),
       },
       previous: prev ? { bookedMinor: j(prev.bookedMinor), collectedMinor: j(prev.collectedMinor) } : null,
       // D-057: the chart's bars for the selected period (weeks, months or quarters).

@@ -8,9 +8,13 @@ test('the dashboard greets the user and shows the headline numbers', async () =>
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);
   renderApp('/', sessionFor('CEO'));
   expect(await screen.findByRole('heading', { name: /Welcome back, Test/ })).toBeInTheDocument();
-  const collected = await screen.findByRole('region', { name: 'Collected' });
-  await waitFor(() => expect(within(collected).getByText('₹1,20,00,000.00')).toBeInTheDocument());
-  expect(within(collected).getByText('+20%')).toBeInTheDocument();
+  // D-069: the headline is everything contracted; received and due follow the period.
+  const hero = await screen.findByRole('region', { name: 'Total contracted' });
+  await waitFor(() => expect(within(hero).getByText('₹3,00,00,000.00')).toBeInTheDocument());
+  expect(within(hero).getByText('Received').closest('div')).toHaveTextContent('₹1,20,00,000.00');
+  expect(within(hero).getByText('Due').closest('div')).toHaveTextContent('₹40,00,000.00');
+  expect(within(hero).getByText('Projects').closest('div')).toHaveTextContent('12');
+  expect(hero).not.toHaveTextContent('Confirmation rate');
   expect(screen.getByRole('region', { name: 'Outstanding' })).toHaveTextContent('7 overdue');
   expect(screen.getByText('75%')).toBeInTheDocument();
 });
@@ -58,20 +62,7 @@ test('other-currency projects are called out, not silently mixed in', async () =
   expect(await screen.findByText(/2 projects in other currencies have no exchange rate yet/)).toBeInTheDocument();
 });
 
-test('K11 win rate shows in the headline card', async () => {
-  vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);
-  renderApp('/', sessionFor('CEO'));
-  const collected = await screen.findByRole('region', { name: 'Collected' });
-  expect(within(collected).getByText('Confirmation rate').nextElementSibling).toHaveTextContent('60%');
-});
-
-test('K11 win rate is a dash when nothing was won or lost', async () => {
-  const base = dashboard();
-  vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard({ kpis: { ...base.kpis, winRate: null } }) } }).fn);
-  renderApp('/', sessionFor('CEO'));
-  const collected = await screen.findByRole('region', { name: 'Collected' });
-  expect(within(collected).getByText('Confirmation rate').nextElementSibling).toHaveTextContent('—');
-});
+// D-069: the confirmation rate left the headline card; the team table and Compare still show it.
 
 test('D-028 the dashboard splits total booking into initial booking and upsell', async () => {
   vi.stubGlobal('fetch', stubApi({ 'GET /dashboard': { body: dashboard() } }).fn);

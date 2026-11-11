@@ -23,7 +23,7 @@ test('the dashboard speaks project-manager language', async () => {
   await screen.findByRole('region', { name: 'Team performance' });
   expect(document.body.textContent).not.toMatch(SALES_WORDS);
   expect(screen.getByRole('region', { name: 'Key figures' })).toHaveTextContent('Total booking');
-  expect(screen.getByRole('region', { name: 'Collected' })).toHaveTextContent('Confirmation rate');
+  expect(screen.getByRole('region', { name: 'Total contracted' })).toHaveTextContent('Received');
   expect(screen.getByRole('region', { name: 'Team performance' })).toHaveTextContent('Project manager');
 });
 

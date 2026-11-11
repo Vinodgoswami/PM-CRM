@@ -22,6 +22,9 @@ export const dashboard = (over: Partial<Dashboard> = {}): Dashboard => ({
     winRate: 0.6,
     avgDealMinor: 187500000,
     avgDaysToPay: 4.5,
+    totalContractedMinor: 3000000000,
+    totalProjects: 12,
+    dueInPeriodMinor: 400000000,
   },
   previous: { bookedMinor: 2000000000, collectedMinor: 1000000000 },
   monthly: Array.from({ length: 12 }, (_, i) => ({

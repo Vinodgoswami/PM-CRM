@@ -233,3 +233,19 @@ test('D-057 the chart series follows the period: weeks of a month, months of a y
   expect(year).toHaveLength(12);
   expect(year[0]).toMatchObject({ label: expect.any(String), from: expect.stringMatching(/-01$/) });
 });
+
+test('D-069 the headline is everything contracted; received and due follow the period', async () => {
+  const rep = await loginAs(app, prisma, 'SALES');
+  await wonProjectWithPayment(rep.agent, rep.csrf, 'Acme', 100000);
+  const k = (await rep.agent.get('/api/v1/dashboard?period=THIS_FY')).body.kpis;
+  expect(k).toMatchObject({ totalContractedMinor: 100000, totalProjects: 1, collectedMinor: 50000, dueInPeriodMinor: 50000 });
+});
+
+test('D-069 a project entered as confirmed counts from its start date, not the day it was entered', async () => {
+  const { agent, csrf } = await loginAs(app, prisma, 'SALES');
+  const res = await agent
+    .post('/api/v1/projects')
+    .set('X-CSRF-Token', csrf)
+    .send({ name: 'Old work', expectedAmountMinor: 1000, status: 'ACTIVE', startDate: '2026-04-01', newClient: { name: 'Past' } });
+  expect(res.body.wonAt).toBe('2026-04-01');
+});

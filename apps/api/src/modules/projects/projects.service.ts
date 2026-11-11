@@ -324,7 +324,8 @@ export class ProjectsService {
             expectedAmountMinor: minorFromJson(input.expectedAmountMinor),
             currency: input.currency ?? client.currency,
             ...fx,
-            wonAt: toDate(dates.wonAt),
+            // D-069: work entered after it began counts as confirmed from its start date, not the day it was entered.
+            wonAt: toDate(dates.wonAt && input.startDate && input.startDate < dates.wonAt ? input.startDate : dates.wonAt),
             tags: input.tags,
             parentProjectId: input.parentProjectId ?? null,
             phaseKind: input.phaseKind ?? 'UPSELL',

@@ -52,6 +52,8 @@ export interface Summary {
   overdueMinor: bigint;
   overdueCount: number;
   dueNext30Minor: bigint;
+  /** D-069: unpaid balance of confirmed milestones falling due in the range. */
+  dueInPeriodMinor: bigint;
   pipelineMinor: bigint;
   wonCount: number;
   /** K12 numerator: expected amount of every project won in the period (upsell projects included). */
@@ -73,6 +75,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
   let overdueMinor = 0n;
   let overdueCount = 0;
   let dueNext30Minor = 0n;
+  let dueInPeriodMinor = 0n;
   let pipelineMinor = 0n;
   let wonCount = 0;
   let wonExpectedMinor = 0n;
@@ -121,6 +124,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
       if (inRange(m.dueDate, range)) {
         expectedMinor += m.amountMinor;
         paidOnExpected += paid;
+        if (balance > 0n) dueInPeriodMinor += balance;
       }
       if (balance > 0n && m.dueDate) {
         if (m.dueDate < today) {
@@ -141,6 +145,7 @@ export function summarise(projects: MetricProject[], range: MetricRange, today: 
     overdueMinor,
     overdueCount,
     dueNext30Minor,
+    dueInPeriodMinor,
     pipelineMinor,
     wonCount,
     wonExpectedMinor,
