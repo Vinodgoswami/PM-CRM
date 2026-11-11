@@ -38,7 +38,7 @@ test('the Admin’s dashboard shows people counts, business figures and upcoming
       .fn,
   );
   renderApp('/', sessionFor('ADMIN'));
-  expect(await screen.findByRole('region', { name: 'Collected' })).toBeInTheDocument();
+  expect(await screen.findByRole('region', { name: 'Total contracted' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'Key figures' })).toHaveTextContent('Total booking');
   const people = await screen.findByRole('region', { name: 'People and work' });
   expect(within(people).getByText('Project managers').closest('div')).toHaveTextContent('3');

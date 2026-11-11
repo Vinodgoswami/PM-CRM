@@ -25,6 +25,11 @@ const kpis = z.object({
   avgDealMinor: minorSchema.nullable(),
   /** K10: mean days from due date to payment; negative = paid early. */
   avgDaysToPay: z.number().nullable(),
+  /** D-069: everything contracted on confirmed work, all time (the headline), and how many confirmed projects. */
+  totalContractedMinor: minorSchema.default(0),
+  totalProjects: z.number().default(0),
+  /** D-069: unpaid balance of milestones falling due in the period. */
+  dueInPeriodMinor: minorSchema.default(0),
 });
 
 export const dashboardSchema = z.object({

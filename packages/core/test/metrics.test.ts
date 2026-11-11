@@ -167,3 +167,8 @@ test('D-020 collected uses what each payment actually brought in; balances use t
   // The contract-rate amounts: 100,000 booked − 72,000 paid.
   expect(s.outstandingMinor).toBe(28000n);
 });
+
+test('D-069 due in the period = unpaid balance of milestones due in it (confirmed work only)', () => {
+  // a: 30,000 left on the Sep milestone; b: 50,000 due in Nov; e's March milestone is before this FY.
+  expect(summarise(projects, FY, TODAY).dueInPeriodMinor).toBe(30000n + 50000n);
+});

@@ -127,6 +127,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-73 | Done   | feat/invoices-my-currency              | D-066 InvoicesService target = displayCurrency, startRates; Profile refreshes invoices/clients; tests                                                                                                                                                                                       |
 | P4-74 | Done   | feat/view-currency                     | D-067 `SettingsService.viewCurrency`, DEFAULT_VIEW_CURRENCY config, project `view` rate, `formatViewMoney` on project screens, Profile Default label, en-US grouping; tests                                                                                                                 |
 | P4-75 | Done   | fix/documents-ui                       | D-068 DocumentsTab layout                                                                                                                                                                                                                                                                   |
+| P4-76 | Done   | feat/headline-card                     | D-069 `dueInPeriodMinor` (core), kpis totalContracted/totalProjects/dueInPeriod, hero card, wonAt from start date on create; tests                                                                                                                                                          |
 
 ## Blockers
 

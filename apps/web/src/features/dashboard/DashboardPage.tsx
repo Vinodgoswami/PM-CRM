@@ -1,7 +1,7 @@
 import { can } from '@salescrm/auth/permissions';
 import { type Dashboard } from '@salescrm/schemas';
 import { Button, EmptyState, Skeleton, Table, TBody, TD, TH, THead, TR } from '@salescrm/ui';
-import { ArrowUpRight, CalendarClock, Download, FileDown, Info, Plus, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, Download, FileDown, Info, Plus, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
@@ -29,21 +29,6 @@ import { useCountUp } from './useCountUp';
 
 const pct = (current: number, previous: number | undefined) =>
   previous === undefined || previous === 0 ? null : Math.round(((current - previous) / previous) * 100);
-
-function Delta({ value, inverse = false }: { value: number | null; inverse?: boolean }) {
-  if (value === null) return null;
-  const good = inverse ? value <= 0 : value >= 0;
-  const Icon = value >= 0 ? TrendingUp : TrendingDown;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${good ? 'bg-white/90 text-primary' : 'bg-danger/15 text-danger'}`}
-    >
-      <Icon className="size-3" aria-hidden />
-      {value >= 0 ? '+' : ''}
-      {value}%
-    </span>
-  );
-}
 
 const CornerLink = ({ to, label }: { to: string; label: string }) => (
   <Link
@@ -171,7 +156,8 @@ export function DashboardPage() {
 function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) {
   const k = data.kpis;
   const money = (m: number) => formatApiMoney(m, data.currency);
-  const collected = useCountUp(k.collectedMinor);
+  // D-069: the headline is everything contracted so far; the row below follows the selected period.
+  const contracted = useCountUp(k.totalContractedMinor);
   const outstanding = useCountUp(k.outstandingMinor);
   const [series, setSeries] = useState<'collected' | 'booked'>('collected');
   const [drill, setDrill] = useState<{ from: string; to: string } | null>(null);
@@ -238,7 +224,7 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
       )}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <motion.section
-          aria-label="Collected"
+          aria-label="Total contracted"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative min-w-0 overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary-strong p-6 text-primary-contrast shadow-card lg:col-span-4"
@@ -246,26 +232,26 @@ function DashboardBody({ data, ownerId }: { data: Dashboard; ownerId: string }) 
           <div aria-hidden className="absolute -top-16 -right-12 size-56 rounded-full bg-white/10" />
           <div aria-hidden className="absolute -bottom-20 left-10 size-44 rounded-full bg-white/5" />
           <div className="relative flex h-full flex-col justify-between gap-8">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-semibold text-white/80">Collected</p>
-                <p className="text-xs text-white/60">{periodText}</p>
-              </div>
-              <Delta value={pct(k.collectedMinor, data.previous?.collectedMinor)} />
+            <div>
+              <p className="text-sm font-semibold text-white/80">Total contracted</p>
+              <p className="text-xs text-white/60">All confirmed work, all time</p>
             </div>
-            <p className="text-4xl font-extrabold tracking-tight tabular-nums">{money(collected)}</p>
-            <div className="flex items-end justify-between text-sm">
-              <div>
-                <p className="text-white/70">Contracted</p>
-                <p className="font-bold">{money(k.bookedMinor)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-white/70">Projects confirmed</p>
-                <p className="font-bold">{k.wonCount}</p>
-              </div>
-              <div className="text-right" title="Confirmed ÷ (confirmed + cancelled) in this period">
-                <p className="text-white/70">Confirmation rate</p>
-                <p className="font-bold">{k.winRate === null ? '—' : `${Math.round(k.winRate * 100)}%`}</p>
+            <p className="text-4xl font-extrabold tracking-tight tabular-nums">{money(contracted)}</p>
+            <div className="space-y-2">
+              <p className="text-xs text-white/60">{periodText}</p>
+              <div className="flex items-end justify-between gap-3 text-sm">
+                <div title="Payments received in the selected period">
+                  <p className="text-white/70">Received</p>
+                  <p className="font-bold tabular-nums">{money(k.collectedMinor)}</p>
+                </div>
+                <div className="text-center" title="Unpaid amounts on milestones falling due in the selected period">
+                  <p className="text-white/70">Due</p>
+                  <p className="font-bold tabular-nums">{money(k.dueInPeriodMinor)}</p>
+                </div>
+                <div className="text-right" title="Confirmed projects, all time">
+                  <p className="text-white/70">Projects</p>
+                  <p className="font-bold">{k.totalProjects}</p>
+                </div>
               </div>
             </div>
           </div>
