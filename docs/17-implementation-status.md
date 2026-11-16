@@ -129,6 +129,7 @@ Updated in every PR. Task ids from [13-roadmap.md](13-roadmap.md).
 | P4-75 | Done   | fix/documents-ui                       | D-068 DocumentsTab layout                                                                                                                                                                                                                                                                   |
 | P4-76 | Done   | feat/headline-card                     | D-069 `dueInPeriodMinor` (core), kpis totalContracted/totalProjects/dueInPeriod, hero card, wonAt from start date on create; tests                                                                                                                                                          |
 | P4-77 | Done   | fix/won-at-backfill                    | D-070 migration moving wonAt to an earlier startDate; test runs its SQL                                                                                                                                                                                                                     |
+| P4-78 | Done   | feat/move-phase                        | D-071 parentProjectId on updateProjectSchema, assertParent on move, Phase of select on Edit; tests                                                                                                                                                                                          |
 
 ## Blockers
 

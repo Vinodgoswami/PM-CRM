@@ -2,6 +2,7 @@ import { can } from '@salescrm/auth/permissions';
 import { createProjectSchema, type ProjectDetail, updateProjectSchema, userListItemSchema } from '@salescrm/schemas';
 import { Button, Card, EmptyState, Input, Label, Skeleton, toast } from '@salescrm/ui';
 import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Pencil } from 'lucide-react';
@@ -13,7 +14,7 @@ import { ApiError, apiFetch } from '../../lib/api';
 import { useSession } from '../auth/api';
 import { useClient } from '../clients/api';
 import { useSettings } from '../settings/api';
-import { uploadDocument, useCreateProject, useProject, useUpdateProject } from './api';
+import { uploadDocument, useCreateProject, useProject, useProjects, useUpdateProject } from './api';
 import { type ClientChoice, ClientCombobox } from './ClientCombobox';
 import { type MilestoneRow, MilestoneRowsEditor } from './MilestoneRowsEditor';
 import { OWNER } from '../../lib/labels';
@@ -377,11 +378,20 @@ function EditForm({ project }: { project: ProjectDetail }) {
   });
   const [errors, setErrors] = useState<Errors>({});
   const [phaseKind, setPhaseKind] = useState<'UPSELL' | 'SCOPE'>(project.phaseKind ?? 'UPSELL');
+  // D-071: a phase made under the wrong project can move to another main project of the same client.
+  const qc = useQueryClient();
+  const [parentId, setParentId] = useState(project.parent?.id ?? '');
+  const siblings = useProjects(
+    new URLSearchParams({ clientId: project.client.id, pageSize: '100', sort: 'code' }).toString(),
+    !!project.parent,
+  );
+  const parents = (siblings.data?.items ?? []).filter((p) => p.id !== project.id && !p.parentProjectId);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = updateProjectSchema.safeParse({
       ...(project.parent && phaseKind !== project.phaseKind ? { phaseKind } : {}),
+      ...(project.parent && parentId && parentId !== project.parent.id ? { parentProjectId: parentId } : {}),
       name,
       description,
       ...(clientId && clientId !== project.client.id ? { clientId } : {}),
@@ -398,6 +408,8 @@ function EditForm({ project }: { project: ProjectDetail }) {
     if (!parsed.success || Object.keys(found).length) return;
     update.mutate(parsed.data, {
       onSuccess: () => {
+        // D-071: the old and the new original project both list their phases.
+        if (parsed.data.parentProjectId) void qc.invalidateQueries({ queryKey: ['projects'] });
         toast.success('Project saved');
         navigate(`/projects/${project.id}`);
       },
@@ -445,9 +457,21 @@ function EditForm({ project }: { project: ProjectDetail }) {
             />
           </Field>
           {project.parent && (
-            <Field id="phase-kind" label="Phase type">
-              <PhaseKindSelect id="phase-kind" value={phaseKind} onChange={setPhaseKind} />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="phase-of" label="Phase of">
+                <OptionSelect id="phase-of" className={selectClass} value={parentId} onValueChange={setParentId}>
+                  {parents.length === 0 && <option value={project.parent.id}>{`${project.parent.code} ${project.parent.name}`}</option>}
+                  {parents.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {`${p.code} ${p.name}`}
+                    </option>
+                  ))}
+                </OptionSelect>
+              </Field>
+              <Field id="phase-kind" label="Phase type">
+                <PhaseKindSelect id="phase-kind" value={phaseKind} onChange={setPhaseKind} />
+              </Field>
+            </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="expected" label="Booking amount" error={errors.expectedAmountMinor}>

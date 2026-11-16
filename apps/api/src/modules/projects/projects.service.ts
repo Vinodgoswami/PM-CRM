@@ -407,6 +407,12 @@ export class ProjectsService {
       }
       if (input.clientId && input.clientId !== before.clientId) await this.assertClientMove(tx, before, input.clientId);
       if (input.phaseKind && !before.parentProjectId) throw new RuleViolation('U-4', 'Only a phase of another project has a phase type.');
+      // D-071: a phase made under the wrong project moves to another project of the same client (U-2 checks both).
+      const moveTo = input.parentProjectId && input.parentProjectId !== before.parentProjectId ? input.parentProjectId : null;
+      if (moveTo) {
+        if (!before.parentProjectId) throw new RuleViolation('U-4', 'Only a phase can be moved to another project.');
+        await this.assertParent(tx, user, id, input.clientId ?? before.clientId, moveTo);
+      }
       const startDate = input.startDate !== undefined ? input.startDate : isoDate(before.startDate);
       const durationValue = input.durationValue !== undefined ? input.durationValue : before.durationValue;
       const durationUnit = input.durationUnit !== undefined ? input.durationUnit : before.durationUnit;
@@ -419,6 +425,7 @@ export class ProjectsService {
           ...(input.tags !== undefined ? { tags: input.tags } : {}),
           ...(input.clientId !== undefined ? { clientId: input.clientId } : {}),
           ...(input.phaseKind !== undefined ? { phaseKind: input.phaseKind } : {}),
+          ...(moveTo ? { parentProjectId: moveTo } : {}),
           ...(input.currency !== undefined && input.currency !== before.currency ? { currency: input.currency, ...fx } : {}),
           ...(input.expectedAmountMinor !== undefined ? { expectedAmountMinor: minorFromJson(input.expectedAmountMinor) } : {}),
           startDate: toDate(startDate),
@@ -432,6 +439,7 @@ export class ProjectsService {
       const pick = (p: typeof after) => ({
         name: p.name,
         clientId: p.clientId,
+        parentProjectId: p.parentProjectId,
         phaseKind: p.phaseKind,
         description: p.description,
         tags: p.tags,
