@@ -74,6 +74,8 @@ export const updateProjectSchema = z.object({
   phaseKind: z.enum(['UPSELL', 'SCOPE']).optional(),
   /** D-027: move the project to another client billed in the same currency. */
   clientId: z.string().min(1).optional(),
+  /** D-071: move a phase to another project of the same client. */
+  parentProjectId: z.string().min(1).optional(),
   /** Optimistic concurrency: the `updatedAt` the client last saw. */
   updatedAt: z.string().min(1),
 });

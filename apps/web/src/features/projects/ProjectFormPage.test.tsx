@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { choose, renderApp, sessionFor, stubApi } from '../../test/render';
-import { detail } from './fixtures';
+import { detail, listItem } from './fixtures';
 
 const clients = {
   body: {
@@ -432,4 +432,42 @@ test('D-064 a project billed monthly asks for amount per invoice and invoices; t
     recurring: { amountMinor: 100000, startDate: '2026-04-01', count: 12 },
     milestones: [],
   });
+});
+
+test('D-071 a phase can be moved to another project of the same client', async () => {
+  const phase = detail({
+    id: 'p9',
+    code: 'PRJ-0009',
+    name: 'Computer Vision',
+    parent: { id: 'v1', code: 'PRJ-0005', name: 'Volterra' },
+    phase: 2,
+    phaseKind: 'UPSELL',
+  });
+  const siblings = [
+    listItem({ id: 'v1', code: 'PRJ-0005', name: 'Volterra' }),
+    listItem({ id: 'pd', code: 'PRJ-0002', name: 'Padeliv' }),
+    listItem({ id: 'p9', code: 'PRJ-0009', name: 'Computer Vision', parentProjectId: 'v1' }),
+  ];
+  const api = stubApi({
+    ...projectRoutes,
+    'GET /projects/p9': { body: phase },
+    'GET /clients': clients,
+    'GET /projects': { body: { items: siblings, page: 1, pageSize: 100, total: 3 } },
+    'PATCH /projects/p9': { body: phase },
+  });
+  vi.stubGlobal('fetch', api.fn);
+  renderApp('/projects/p9/edit', sessionFor('SALES'));
+  const user = userEvent.setup();
+  const select = await screen.findByRole('combobox', { name: 'Phase of' });
+  await waitFor(() => expect(select).toHaveTextContent('PRJ-0005 Volterra'));
+  await choose(user, select, 'pd');
+  await user.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({ parentProjectId: 'pd' }));
+});
+
+test('D-071 a project that is not a phase has no Phase of choice', async () => {
+  vi.stubGlobal('fetch', stubApi({ ...projectRoutes, 'GET /clients': clients }).fn);
+  renderApp('/projects/p9/edit', sessionFor('SALES'));
+  expect(await screen.findByLabelText('Booking amount')).toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'Phase of' })).toBeNull();
 });
